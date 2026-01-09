@@ -378,8 +378,9 @@ function updateRacePhysics() {
     // Physics runs during approach and racing phases
     if (raceState.phase !== 'approach' && raceState.phase !== 'racing') return;
 
-    const acceleration = raceState.maxSpeed * 0.015; // Acceleration rate
-    const deceleration = raceState.maxSpeed * 0.008; // Deceleration when not throttling
+    // SLOW acceleration - pontoon reaches ~13 MPH at start, takes time to build speed
+    const acceleration = raceState.maxSpeed * 0.004; // Much slower acceleration
+    const deceleration = raceState.maxSpeed * 0.003; // Slower deceleration too
 
     if (raceState.throttle > 0) {
         // Accelerate towards max speed
@@ -1174,7 +1175,7 @@ function showRaceResults() {
 
     // Generate class competitors with speeds around the player
     // Player finishes 2nd from last in their class
-    const boatClass = selectedStarterBoat === 'sundancer' ? 'Pontoon Class' : 'Ski Boat Class';
+    const boatClass = selectedStarterBoat === 'sundancer' ? 'Pontoon "Still Running" Class' : 'Ski Boat Class';
     const classCompetitors = generateClassRankings(finalSpeed, boatClass, playerName, activeBoat.name);
 
     // Find player position (should be 2nd from last)
@@ -1269,7 +1270,7 @@ function generateClassRankings(playerSpeed, boatClass, playerName, playerBoatNam
         { driver: 'Propwash Pete', boat: '1981 Ski Centurion' },
     ];
 
-    const drivers = boatClass === 'Pontoon Class' ? pontoonDrivers : skiBoatDrivers;
+    const drivers = boatClass.includes('Pontoon') ? pontoonDrivers : skiBoatDrivers;
 
     // Generate speeds - player is 2nd from last
     // Fastest competitor is about 15-20% faster than player
@@ -1814,8 +1815,9 @@ function drawPixelWater(ctx, w, h, px) {
 
 // Draw 12-bit pixel art pontoon boat
 function drawPixelPontoon(ctx, w, h, px) {
-    const centerX = w / 2;
-    const boatY = h * 0.35;
+    // Canvas is 280x160, so use absolute positions that work
+    const centerX = 140;
+    const centerY = 80;
 
     // Helper to draw pixel blocks
     function rect(x, y, width, height, color) {
@@ -1824,53 +1826,52 @@ function drawPixelPontoon(ctx, w, h, px) {
     }
 
     // Shadow on water
-    rect(centerX - 90, h * 0.75, 180, px * 2, 'rgba(0,0,0,0.3)');
+    rect(40, 130, 200, 8, 'rgba(0,0,0,0.25)');
 
-    // Left pontoon (aluminum) - prominent
-    rect(centerX - 100, boatY + 60, 200, 20, '#A0A0A0');
-    rect(centerX - 100, boatY + 60, 200, 8, '#C0C0C0');  // Highlight
-    rect(centerX - 105, boatY + 55, 15, 25, '#909090');  // Nose cap
+    // Left pontoon (aluminum) - the two tubes
+    rect(35, 95, 195, 18, '#A0A0A0');
+    rect(35, 95, 195, 6, '#C8C8C8');  // Highlight
+    rect(25, 92, 15, 22, '#888888');  // Front cap
 
-    // Right pontoon (partially visible behind)
-    rect(centerX - 85, boatY + 80, 170, 16, '#707070');
-    rect(centerX - 90, boatY + 78, 12, 18, '#606060');  // Nose cap
+    // Right pontoon (behind, darker)
+    rect(45, 115, 175, 14, '#686868');
+    rect(35, 113, 15, 16, '#585858');  // Front cap
 
-    // Deck - tan/cream colored
-    rect(centerX - 90, boatY + 15, 180, 50, '#E8DCC8');
-    rect(centerX - 90, boatY + 15, 180, 8, '#F5EDE0');  // Top highlight
+    // Deck - tan/cream
+    rect(40, 50, 185, 50, '#E8DCC8');
+    rect(40, 50, 185, 8, '#F5EDE0');  // Top edge highlight
 
-    // Maroon/burgundy stripe - THE signature look
-    rect(centerX - 90, boatY + 30, 180, 12, '#722F37');
-    rect(centerX - 90, boatY + 30, 180, 4, '#8B3A42');  // Stripe highlight
+    // MAROON STRIPE - signature Sundancer look
+    rect(40, 65, 185, 15, '#722F37');
+    rect(40, 65, 185, 5, '#8B4247');  // Stripe highlight
 
     // Bimini top (canvas canopy)
-    rect(centerX - 70, boatY - 25, 140, 35, '#E8DCC0');
-    rect(centerX - 70, boatY - 25, 140, 8, '#F0E8D8');  // Top highlight
-    // Bimini poles
-    rect(centerX - 65, boatY + 5, 4, 20, '#C0C0C0');
-    rect(centerX + 60, boatY + 5, 4, 20, '#C0C0C0');
+    rect(60, 15, 130, 40, '#E8DCC0');
+    rect(60, 15, 130, 10, '#F5EEE0');  // Top highlight
+    // Support poles
+    rect(65, 50, 5, 15, '#B0B0B0');
+    rect(180, 50, 5, 15, '#B0B0B0');
 
-    // Wraparound seating (tan)
-    rect(centerX - 80, boatY + 20, 30, 25, '#D4C4A8');
-    rect(centerX + 50, boatY + 20, 30, 25, '#D4C4A8');
+    // Wraparound seating
+    rect(50, 58, 40, 30, '#D4C4A8');
+    rect(165, 58, 40, 30, '#D4C4A8');
 
     // Front railing
-    rect(centerX - 85, boatY + 12, 170, 3, '#D0D0D0');
+    rect(45, 48, 175, 4, '#C0C0C0');
 
-    // Evinrude outboard motor
-    rect(centerX + 85, boatY + 35, 20, 35, '#1A1A1A');
-    rect(centerX + 90, boatY + 30, 12, 8, '#2A2A2A');  // Motor head
-    rect(centerX + 88, boatY + 70, 8, 15, '#333333');  // Lower unit
+    // Evinrude 88hp outboard motor (black)
+    rect(220, 60, 22, 45, '#1A1A1A');
+    rect(225, 55, 14, 8, '#2A2A2A');  // Cowling
+    rect(222, 105, 10, 18, '#252525');  // Lower unit
 
-    // Small wake behind motor
-    rect(centerX + 100, boatY + 65, px * 3, px, '#FFFFFF');
-    rect(centerX + 108, boatY + 68, px * 2, px, 'rgba(255,255,255,0.7)');
+    // Wake spray
+    rect(238, 95, 12, 4, '#FFFFFF');
+    rect(245, 100, 8, 3, 'rgba(255,255,255,0.7)');
 }
 
 // Draw 12-bit pixel art ski boat
 function drawPixelSkiBoat(ctx, w, h, px) {
-    const centerX = w / 2;
-    const boatY = h * 0.4;
+    // Canvas is 280x160, use absolute positions
 
     function rect(x, y, width, height, color) {
         ctx.fillStyle = color;
@@ -1878,53 +1879,60 @@ function drawPixelSkiBoat(ctx, w, h, px) {
     }
 
     // Shadow on water
-    rect(centerX - 80, h * 0.75, 160, px * 2, 'rgba(0,0,0,0.3)');
+    rect(55, 130, 170, 8, 'rgba(0,0,0,0.25)');
 
     // Main hull - RED fiberglass
-    // Hull body
-    rect(centerX - 75, boatY + 15, 160, 35, '#CC0000');
-    rect(centerX - 75, boatY + 15, 160, 10, '#DD2222');  // Top highlight
+    rect(45, 70, 175, 45, '#CC0000');
+    rect(45, 70, 175, 12, '#E02020');  // Top highlight
 
-    // Bow (pointed front)
+    // Bow (pointed front) - triangle shape
     ctx.fillStyle = '#CC0000';
     ctx.beginPath();
-    ctx.moveTo(centerX + 85, boatY + 15);
-    ctx.lineTo(centerX + 110, boatY + 30);
-    ctx.lineTo(centerX + 85, boatY + 50);
+    ctx.moveTo(220, 70);
+    ctx.lineTo(255, 92);
+    ctx.lineTo(220, 115);
+    ctx.closePath();
+    ctx.fill();
+    // Bow highlight
+    ctx.fillStyle = '#E02020';
+    ctx.beginPath();
+    ctx.moveTo(220, 70);
+    ctx.lineTo(245, 85);
+    ctx.lineTo(220, 85);
     ctx.closePath();
     ctx.fill();
 
-    // White racing stripe
-    rect(centerX - 75, boatY + 28, 160, 8, '#FFFFFF');
-    rect(centerX - 75, boatY + 28, 160, 3, '#F8F8F8');  // Stripe highlight
+    // WHITE RACING STRIPE - signature look
+    rect(45, 88, 175, 12, '#FFFFFF');
+    rect(45, 88, 175, 4, '#F0F0F0');
 
-    // Stern (back)
-    rect(centerX - 80, boatY + 20, 10, 25, '#AA0000');
+    // Stern (back/transom)
+    rect(30, 75, 20, 35, '#AA0000');
 
     // Windshield
-    rect(centerX, boatY, 40, 18, '#87CEEB');
-    rect(centerX, boatY, 40, 6, '#A0DEF8');  // Glass highlight
-    rect(centerX - 2, boatY - 2, 44, 4, '#C0C0C0');  // Chrome frame
+    rect(140, 45, 50, 28, '#87CEEB');
+    rect(140, 45, 50, 8, '#A8E0F8');  // Glass glare
+    rect(138, 42, 54, 5, '#C0C0C0');  // Chrome frame
 
-    // Interior (visible cockpit)
-    rect(centerX - 60, boatY + 5, 55, 20, '#2A2A2A');
-    rect(centerX + 42, boatY + 5, 35, 20, '#2A2A2A');
+    // Interior cockpit (dark)
+    rect(55, 55, 80, 25, '#2A2A2A');
+    rect(192, 55, 25, 25, '#2A2A2A');
 
-    // Seats
-    rect(centerX - 50, boatY + 8, 35, 12, '#1A1A1A');
-    rect(centerX + 48, boatY + 8, 25, 12, '#1A1A1A');
+    // Driver & passenger seats
+    rect(65, 60, 30, 15, '#1A1A1A');
+    rect(100, 60, 30, 15, '#1A1A1A');
 
-    // Ski tow pylon
-    rect(centerX + 25, boatY - 15, 8, 20, '#C0C0C0');
-    rect(centerX + 22, boatY - 18, 14, 6, '#D0D0D0');
+    // Ski tow pylon (chrome)
+    rect(168, 25, 10, 25, '#C0C0C0');
+    rect(164, 20, 18, 8, '#D8D8D8');
 
-    // Inboard engine cover (rear deck)
-    rect(centerX - 70, boatY + 5, 15, 15, '#BB0000');
+    // Engine cover (rear deck hump)
+    rect(50, 58, 20, 18, '#BB0000');
 
-    // Wake spray
-    rect(centerX - 85, boatY + 40, px * 4, px * 2, '#FFFFFF');
-    rect(centerX - 95, boatY + 45, px * 3, px, 'rgba(255,255,255,0.8)');
-    rect(centerX - 100, boatY + 50, px * 2, px, 'rgba(255,255,255,0.5)');
+    // Wake spray behind boat
+    rect(18, 95, 16, 6, '#FFFFFF');
+    rect(8, 102, 12, 4, 'rgba(255,255,255,0.8)');
+    rect(0, 108, 8, 3, 'rgba(255,255,255,0.5)');
 }
 
 function drawSundancerPreview(ctx, w, h) {
