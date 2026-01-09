@@ -1810,6 +1810,85 @@ aside h3 {
     box-shadow: 0 5px 20px rgba(139, 90, 60, 0.4);
 }
 
+/* ==================== TRAILER SCENE ==================== */
+#trailer-scene {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+}
+
+#trailer-canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+}
+
+.trailer-narrative {
+    position: absolute;
+    bottom: 15%;
+    left: 50%;
+    transform: translateX(-50%);
+    text-align: center;
+    width: 80%;
+    max-width: 700px;
+}
+
+.narrative-text {
+    font-size: 1.8rem;
+    color: #fff;
+    text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.8);
+    font-family: 'Cabin', sans-serif;
+    font-style: italic;
+    opacity: 1;
+    transition: opacity 0.5s ease;
+}
+
+.narrative-text.hidden {
+    display: none;
+}
+
+.narrative-text.fade-in {
+    animation: fadeIn 0.5s ease forwards;
+}
+
+.narrative-text.fade-out {
+    animation: fadeOut 0.5s ease forwards;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeOut {
+    from { opacity: 1; }
+    to { opacity: 0; }
+}
+
+.skip-btn {
+    position: absolute;
+    bottom: 30px;
+    right: 30px;
+    padding: 10px 25px;
+    background: rgba(0, 0, 0, 0.5);
+    color: #aaa;
+    border: 1px solid #555;
+    border-radius: 5px;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.skip-btn:hover {
+    background: rgba(0, 0, 0, 0.8);
+    color: #fff;
+    border-color: #888;
+}
+
 /* Garage Boat Display */
 .garage-boat {
     padding: 15px;
@@ -2261,4 +2340,275 @@ aside h3 {
     .resource {
         padding: 5px 8px;
     }
+}
+
+/* ==================== VISUAL ENHANCEMENTS ==================== */
+
+/* Animated resource value changes */
+.resource span:nth-child(2) {
+    transition: transform 0.3s ease, color 0.3s ease;
+}
+
+.resource.pulse span:nth-child(2) {
+    animation: resourcePulse 0.5s ease;
+}
+
+@keyframes resourcePulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.3); color: var(--sunset-gold); }
+    100% { transform: scale(1); }
+}
+
+/* Enhanced resource cards with hover */
+.resource {
+    transition: all 0.3s ease;
+}
+
+.resource:hover {
+    transform: translateY(-2px) scale(1.02);
+    box-shadow: 0 6px 20px rgba(42, 74, 66, 0.25);
+}
+
+/* Glassmorphism effect for panels */
+.glass-panel {
+    background: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+/* Header glow animation */
+#game-header {
+    animation: headerGlow 8s ease-in-out infinite;
+}
+
+@keyframes headerGlow {
+    0%, 100% { box-shadow: 0 8px 32px rgba(42, 74, 66, 0.2); }
+    50% { box-shadow: 0 8px 40px rgba(212, 168, 85, 0.3); }
+}
+
+/* Enhanced building items */
+.building-item {
+    position: relative;
+    overflow: hidden;
+}
+
+.building-item::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+    transition: left 0.5s ease;
+}
+
+.building-item:hover::before {
+    left: 100%;
+}
+
+/* Control button improvements */
+.control-btn {
+    position: relative;
+    overflow: hidden;
+}
+
+.control-btn::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    background: rgba(255,255,255,0.3);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    transition: width 0.3s ease, height 0.3s ease;
+}
+
+.control-btn:active::after {
+    width: 100%;
+    height: 100%;
+}
+
+/* Job location badge styles */
+.job-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    background: linear-gradient(145deg, #27ae60 0%, #1e8449 100%);
+    color: white;
+    font-size: 0.7rem;
+    font-weight: 700;
+    border-radius: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    animation: hiringPulse 2s ease-in-out infinite;
+}
+
+@keyframes hiringPulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(39, 174, 96, 0.5); }
+    50% { box-shadow: 0 0 0 6px rgba(39, 174, 96, 0); }
+}
+
+/* Job location cards */
+.job-card {
+    background: linear-gradient(145deg, rgba(255,255,255,0.95) 0%, rgba(39, 174, 96, 0.1) 100%);
+    border: 2px solid rgba(39, 174, 96, 0.3);
+    border-radius: 15px 25px 15px 25px;
+    padding: 15px;
+    margin-bottom: 10px;
+}
+
+.job-card:hover {
+    border-color: var(--forest-green);
+    box-shadow: 0 8px 25px rgba(39, 174, 96, 0.2);
+}
+
+.job-card h4 {
+    color: var(--forest-green);
+    margin: 0 0 8px 0;
+}
+
+.job-card .wage {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--sunset-gold);
+}
+
+.job-card .discount {
+    font-size: 0.85rem;
+    color: var(--lake-blue);
+    background: rgba(61, 107, 94, 0.1);
+    padding: 4px 8px;
+    border-radius: 8px;
+    display: inline-block;
+}
+
+/* Work button */
+.work-btn {
+    background: linear-gradient(145deg, #27ae60 0%, #1e8449 100%);
+    color: white;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    width: 100%;
+    margin-top: 10px;
+}
+
+.work-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(39, 174, 96, 0.4);
+}
+
+/* Story progress indicator */
+.story-progress {
+    position: fixed;
+    bottom: 80px;
+    left: 20px;
+    background: rgba(42, 74, 66, 0.9);
+    color: white;
+    padding: 10px 15px;
+    border-radius: 10px 20px 10px 20px;
+    font-size: 0.85rem;
+    z-index: 100;
+    animation: fadeInUp 0.5s ease;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Enhanced tooltip */
+#tooltip {
+    animation: tooltipFade 0.2s ease;
+}
+
+@keyframes tooltipFade {
+    from { opacity: 0; transform: translateY(5px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Water shimmer effect (applied via JS) */
+.water-shimmer {
+    animation: waterShimmer 3s ease-in-out infinite;
+}
+
+@keyframes waterShimmer {
+    0%, 100% { filter: brightness(1); }
+    50% { filter: brightness(1.05); }
+}
+
+/* Mini-map enhancements */
+.minimap-container {
+    border: 3px solid var(--bark-brown);
+    border-radius: 10px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+}
+
+/* Enhanced modal backdrop */
+.modal {
+    backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(5px);
+}
+
+/* Loading shimmer for cards */
+@keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+}
+
+.loading-shimmer {
+    background: linear-gradient(90deg,
+        rgba(255,255,255,0) 0%,
+        rgba(255,255,255,0.5) 50%,
+        rgba(255,255,255,0) 100%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+}
+
+/* Category button active state enhancement */
+.category-btn.active {
+    position: relative;
+}
+
+.category-btn.active::after {
+    content: '';
+    position: absolute;
+    bottom: -3px;
+    left: 20%;
+    width: 60%;
+    height: 3px;
+    background: var(--sunset-gold);
+    border-radius: 2px;
+}
+
+/* Seasonal color variations */
+.season-spring { --season-accent: #7cb342; }
+.season-summer { --season-accent: #fdd835; }
+.season-fall { --season-accent: #ff8f00; }
+.season-winter { --season-accent: #90caf9; }
+
+/* Income positive/negative indicators */
+.income-positive { color: var(--forest-green) !important; }
+.income-negative { color: var(--clay-red) !important; }
+
+/* Smooth page transitions */
+.page-transition {
+    animation: pageSlide 0.3s ease;
+}
+
+@keyframes pageSlide {
+    from { opacity: 0; transform: translateX(-10px); }
+    to { opacity: 1; transform: translateX(0); }
 }

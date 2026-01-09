@@ -627,17 +627,368 @@ function showRaceResults() {
     addEvent(`First Shootout: ${finalSpeed} MPH - ${placement}!`, 'racing');
 }
 
-// Close race overlay
+// Close race overlay and show trailer scene
 function closeRaceOverlay() {
+    const overlay = document.getElementById('race-overlay');
+    if (overlay) {
+        // Transition to trailer scene instead of immediately closing
+        showTrailerScene();
+    }
+}
+window.closeRaceOverlay = closeRaceOverlay;
+
+// Show the post-race trailer scene
+function showTrailerScene() {
+    const overlay = document.getElementById('race-overlay');
+    if (!overlay) return;
+
+    const boat = STARTER_BOATS[selectedStarterBoat];
+    const activeBoat = gameState.garage.boats[0];
+    const finalSpeed = activeBoat.bestSpeed || 0;
+
+    overlay.innerHTML = `
+        <div id="trailer-scene">
+            <canvas id="trailer-canvas"></canvas>
+            <div class="trailer-narrative">
+                <div class="narrative-text" id="narrative-1">
+                    The crowd cheers as you idle back to the staging area...
+                </div>
+                <div class="narrative-text hidden" id="narrative-2">
+                    ${finalSpeed} MPH in the ${boat.nickname}. Not bad for a first run.
+                </div>
+                <div class="narrative-text hidden" id="narrative-3">
+                    Back at the trailer, you crack open a cold one and think about the future...
+                </div>
+                <div class="narrative-text hidden" id="narrative-4">
+                    This lake has potential. Time to build something special.
+                </div>
+            </div>
+            <button class="skip-btn" onclick="skipToGame()">Skip</button>
+        </div>
+    `;
+
+    // Setup trailer canvas
+    const trailerCanvas = document.getElementById('trailer-canvas');
+    if (trailerCanvas) {
+        trailerCanvas.width = window.innerWidth;
+        trailerCanvas.height = window.innerHeight;
+        animateTrailerScene(trailerCanvas);
+    }
+
+    // Narrative sequence
+    let narrativeIndex = 1;
+    const narrativeInterval = setInterval(() => {
+        narrativeIndex++;
+        if (narrativeIndex <= 4) {
+            // Hide previous
+            const prev = document.getElementById(`narrative-${narrativeIndex - 1}`);
+            if (prev) prev.classList.add('fade-out');
+
+            // Show next
+            setTimeout(() => {
+                const next = document.getElementById(`narrative-${narrativeIndex}`);
+                if (next) {
+                    next.classList.remove('hidden');
+                    next.classList.add('fade-in');
+                }
+            }, 500);
+        } else {
+            clearInterval(narrativeInterval);
+            // Auto-transition to game after narrative
+            setTimeout(skipToGame, 2000);
+        }
+    }, 3000);
+}
+
+// Animate the trailer scene
+function animateTrailerScene(canvas) {
+    const ctx = canvas.getContext('2d');
+    const w = canvas.width;
+    const h = canvas.height;
+    let frame = 0;
+
+    function drawFrame() {
+        frame++;
+
+        // Evening sky gradient
+        const skyGrad = ctx.createLinearGradient(0, 0, 0, h * 0.5);
+        skyGrad.addColorStop(0, '#1a1a2e');
+        skyGrad.addColorStop(0.3, '#16213e');
+        skyGrad.addColorStop(0.6, '#e94560');
+        skyGrad.addColorStop(1, '#ff9a3c');
+        ctx.fillStyle = skyGrad;
+        ctx.fillRect(0, 0, w, h * 0.5);
+
+        // Stars
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+        for (let i = 0; i < 50; i++) {
+            const sx = (i * 73 + frame * 0.01) % w;
+            const sy = (i * 31) % (h * 0.3);
+            const twinkle = Math.sin(frame * 0.05 + i) * 0.5 + 0.5;
+            ctx.globalAlpha = twinkle * 0.8;
+            ctx.beginPath();
+            ctx.arc(sx, sy, 1 + (i % 2), 0, Math.PI * 2);
+            ctx.fill();
+        }
+        ctx.globalAlpha = 1;
+
+        // Distant treeline
+        ctx.fillStyle = '#0a0a15';
+        ctx.beginPath();
+        ctx.moveTo(0, h * 0.48);
+        for (let x = 0; x < w; x += 15) {
+            const treeHeight = 20 + Math.sin(x * 0.05) * 15 + Math.cos(x * 0.03) * 10;
+            ctx.lineTo(x, h * 0.48 - treeHeight);
+        }
+        ctx.lineTo(w, h * 0.5);
+        ctx.lineTo(0, h * 0.5);
+        ctx.fill();
+
+        // Lake water with evening reflection
+        const waterGrad = ctx.createLinearGradient(0, h * 0.5, 0, h * 0.75);
+        waterGrad.addColorStop(0, '#1a3a4a');
+        waterGrad.addColorStop(0.5, '#0d2836');
+        waterGrad.addColorStop(1, '#061621');
+        ctx.fillStyle = waterGrad;
+        ctx.fillRect(0, h * 0.5, w, h * 0.25);
+
+        // Water reflections
+        ctx.strokeStyle = 'rgba(255, 150, 80, 0.2)';
+        ctx.lineWidth = 2;
+        for (let i = 0; i < 8; i++) {
+            const ry = h * 0.52 + i * 15;
+            ctx.beginPath();
+            ctx.moveTo(w * 0.3, ry);
+            for (let x = w * 0.3; x < w * 0.7; x += 20) {
+                ctx.lineTo(x, ry + Math.sin((x + frame) * 0.02) * 3);
+            }
+            ctx.stroke();
+        }
+
+        // Boat ramp / parking area
+        ctx.fillStyle = '#3a3530';
+        ctx.fillRect(0, h * 0.72, w, h * 0.08);
+
+        // Concrete ramp
+        ctx.fillStyle = '#6a6560';
+        ctx.beginPath();
+        ctx.moveTo(w * 0.35, h * 0.72);
+        ctx.lineTo(w * 0.65, h * 0.72);
+        ctx.lineTo(w * 0.6, h * 0.5);
+        ctx.lineTo(w * 0.4, h * 0.5);
+        ctx.fill();
+
+        // Ground/grass
+        ctx.fillStyle = '#1a2a1a';
+        ctx.fillRect(0, h * 0.8, w, h * 0.2);
+
+        // Draw the truck and trailer
+        drawTruckAndTrailer(ctx, w * 0.25, h * 0.65, frame);
+
+        // Draw the player's boat on trailer
+        drawBoatOnTrailer(ctx, w * 0.32, h * 0.58, frame);
+
+        // Parking lot lights
+        drawParkingLights(ctx, w, h, frame);
+
+        // Other trucks/trailers in background
+        ctx.globalAlpha = 0.6;
+        drawTruckAndTrailer(ctx, w * 0.7, h * 0.68, frame, 0.7);
+        drawTruckAndTrailer(ctx, w * 0.85, h * 0.66, frame, 0.5);
+        ctx.globalAlpha = 1;
+
+        // Continue animation
+        if (document.getElementById('trailer-canvas')) {
+            requestAnimationFrame(drawFrame);
+        }
+    }
+
+    drawFrame();
+}
+
+// Draw truck and trailer
+function drawTruckAndTrailer(ctx, x, y, frame, scale = 1) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.scale(scale, scale);
+
+    // Trailer
+    ctx.fillStyle = '#2a2a2a';
+    ctx.fillRect(50, 30, 200, 10); // Frame
+    ctx.fillRect(60, 35, 8, 15); // Front wheel
+    ctx.fillRect(220, 35, 8, 15); // Back wheel
+
+    // Trailer bunks
+    ctx.fillStyle = '#4a4a4a';
+    ctx.fillRect(80, 20, 15, 15);
+    ctx.fillRect(180, 20, 15, 15);
+
+    // Truck body
+    ctx.fillStyle = '#8B0000'; // Dark red truck
+    // Bed
+    ctx.fillRect(-60, 15, 100, 35);
+    // Cab
+    ctx.fillRect(-120, 5, 65, 45);
+
+    // Truck windows
+    ctx.fillStyle = '#1a3a4a';
+    ctx.fillRect(-115, 10, 30, 20);
+    ctx.fillRect(-80, 10, 20, 20);
+
+    // Truck wheels
+    ctx.fillStyle = '#1a1a1a';
+    ctx.beginPath();
+    ctx.arc(-100, 50, 12, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(-30, 50, 12, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(10, 50, 12, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Hubcaps
+    ctx.fillStyle = '#4a4a4a';
+    ctx.beginPath();
+    ctx.arc(-100, 50, 5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(-30, 50, 5, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Headlights glow
+    ctx.fillStyle = 'rgba(255, 200, 100, 0.3)';
+    ctx.beginPath();
+    ctx.arc(-125, 35, 20, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.restore();
+}
+
+// Draw boat on trailer
+function drawBoatOnTrailer(ctx, x, y, frame) {
+    ctx.save();
+    ctx.translate(x, y);
+
+    const boatData = STARTER_BOATS[selectedStarterBoat];
+    const colors = boatData.colors;
+
+    if (selectedStarterBoat === 'sundancer') {
+        // Pontoon on trailer - side view
+        // Pontoons
+        ctx.fillStyle = '#606060';
+        ctx.fillRect(0, 40, 180, 15);
+        ctx.fillRect(0, 60, 180, 15);
+
+        // Deck
+        ctx.fillStyle = colors.deck;
+        ctx.fillRect(10, 15, 160, 30);
+
+        // Maroon stripe
+        ctx.fillStyle = colors.accent;
+        ctx.fillRect(10, 30, 160, 10);
+
+        // Bimini frame (folded)
+        ctx.strokeStyle = '#888';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(40, 15);
+        ctx.lineTo(50, 0);
+        ctx.lineTo(130, 0);
+        ctx.lineTo(140, 15);
+        ctx.stroke();
+
+        // Motor
+        ctx.fillStyle = '#1a1a1a';
+        ctx.fillRect(165, 25, 25, 40);
+        ctx.fillStyle = '#1E90FF';
+        ctx.fillRect(168, 35, 19, 8);
+
+    } else {
+        // Ski boat on trailer - side view
+        // Hull
+        ctx.fillStyle = colors.hull;
+        ctx.beginPath();
+        ctx.moveTo(0, 50);
+        ctx.quadraticCurveTo(10, 20, 40, 15);
+        ctx.lineTo(150, 15);
+        ctx.lineTo(170, 30);
+        ctx.lineTo(170, 55);
+        ctx.lineTo(0, 55);
+        ctx.closePath();
+        ctx.fill();
+
+        // White stripe
+        ctx.fillStyle = colors.stripe;
+        ctx.fillRect(30, 30, 130, 8);
+
+        // Windshield
+        ctx.fillStyle = 'rgba(135, 206, 235, 0.6)';
+        ctx.beginPath();
+        ctx.moveTo(50, 15);
+        ctx.lineTo(60, 0);
+        ctx.lineTo(90, 0);
+        ctx.lineTo(90, 15);
+        ctx.fill();
+
+        // Cover (boat covered for transport)
+        ctx.fillStyle = 'rgba(50, 50, 60, 0.7)';
+        ctx.beginPath();
+        ctx.moveTo(40, 15);
+        ctx.quadraticCurveTo(90, -10, 160, 15);
+        ctx.lineTo(160, 20);
+        ctx.lineTo(40, 20);
+        ctx.closePath();
+        ctx.fill();
+    }
+
+    ctx.restore();
+}
+
+// Draw parking lot lights
+function drawParkingLights(ctx, w, h, frame) {
+    const lightPositions = [w * 0.15, w * 0.5, w * 0.85];
+
+    lightPositions.forEach((lx, i) => {
+        // Pole
+        ctx.fillStyle = '#3a3a3a';
+        ctx.fillRect(lx - 3, h * 0.6, 6, h * 0.2);
+
+        // Light fixture
+        ctx.fillStyle = '#2a2a2a';
+        ctx.fillRect(lx - 15, h * 0.58, 30, 8);
+
+        // Light glow
+        const glowIntensity = 0.15 + Math.sin(frame * 0.02 + i) * 0.05;
+        const glow = ctx.createRadialGradient(lx, h * 0.65, 0, lx, h * 0.65, 100);
+        glow.addColorStop(0, `rgba(255, 220, 150, ${glowIntensity})`);
+        glow.addColorStop(1, 'rgba(255, 220, 150, 0)');
+        ctx.fillStyle = glow;
+        ctx.fillRect(lx - 100, h * 0.55, 200, 150);
+
+        // Light bulb
+        ctx.fillStyle = '#fff8e0';
+        ctx.beginPath();
+        ctx.arc(lx, h * 0.6, 4, 0, Math.PI * 2);
+        ctx.fill();
+    });
+}
+
+// Skip trailer scene and go to game
+function skipToGame() {
     const overlay = document.getElementById('race-overlay');
     if (overlay) {
         overlay.remove();
     }
 
-    addEvent('Time to build your lakefront empire!', 'neutral');
+    // Re-render the map
+    resizeCanvas();
+    render();
+
+    addEvent('Time to build your lakefront paradise!', 'neutral');
     addEvent('Tip: Start with a dock to earn boat rental income', 'positive');
 }
-window.closeRaceOverlay = closeRaceOverlay;
+window.skipToGame = skipToGame;
 
 // Close race modal (legacy)
 function closeRaceModal() {
@@ -1333,6 +1684,55 @@ const TERRAIN = {
     DAM: { id: 'dam', name: 'Bagnell Dam', color: '#8a8a80', buildable: false },
     STRIP: { id: 'strip', name: 'The Strip', color: '#a89070', buildable: true, isStrip: true },
     PARKING: { id: 'parking', name: 'Parking Lot', color: '#605850', buildable: true },
+    // Towns
+    TOWN: { id: 'town', name: 'Town', color: '#c4a882', buildable: true, isTown: true },
+    TOWN_CENTER: { id: 'town_center', name: 'Town Center', color: '#b89872', buildable: false, isTown: true },
+    // State Parks
+    STATE_PARK: { id: 'state_park', name: 'State Park', color: '#2d5a27', buildable: false, isPark: true },
+    PARK_BEACH: { id: 'park_beach', name: 'Public Beach', color: '#d4c4a0', buildable: false, isPark: true },
+    PARK_TRAIL: { id: 'park_trail', name: 'Hiking Trail', color: '#8b7355', buildable: false, isPark: true },
+    // Job Locations
+    PAINT_SHOP: { id: 'paint_shop', name: 'Paint Shop', color: '#c0a080', buildable: false, isJob: true, jobType: 'paint' },
+    PROP_SHOP: { id: 'prop_shop', name: 'Prop Shop', color: '#808090', buildable: false, isJob: true, jobType: 'prop' },
+};
+
+// Lake of the Ozarks towns and landmarks
+const LAKE_LOCATIONS = {
+    towns: [
+        { name: 'Lake Ozark', x: 0.92, y: 0.45, size: 3 },
+        { name: 'Osage Beach', x: 0.78, y: 0.42, size: 4 },
+        { name: 'Camdenton', x: 0.35, y: 0.25, size: 3 },
+        { name: 'Sunrise Beach', x: 0.55, y: 0.65, size: 2 },
+        { name: 'Gravois Mills', x: 0.25, y: 0.70, size: 2 },
+        { name: 'Laurie', x: 0.40, y: 0.75, size: 2 },
+        { name: 'Versailles', x: 0.15, y: 0.30, size: 2 },
+    ],
+    stateParks: [
+        { name: 'Lake of the Ozarks State Park', x: 0.50, y: 0.55, width: 8, height: 6 },
+        { name: 'Ha Ha Tonka State Park', x: 0.30, y: 0.20, width: 4, height: 4 },
+    ],
+    landmarks: [
+        { name: 'Bagnell Dam', x: 0.96, y: 0.50, type: 'dam' },
+        { name: 'The Strip', x: 0.90, y: 0.40, type: 'strip' },
+        { name: "Captain Ron's", x: 0.60, y: 0.50, type: 'marina' },
+        { name: 'Party Cove', x: 0.45, y: 0.60, type: 'cove' },
+        { name: 'Dog Days', x: 0.52, y: 0.48, type: 'marina' },
+    ],
+    // Job locations - where player can work for money and discounts
+    jobs: [
+        { name: "Larry's Paint Shop", x: 0.88, y: 0.38, type: 'paint_shop',
+          description: 'Custom boat paint and graphics',
+          wage: 15, discount: 'paint', discountPercent: 40 },
+        { name: "Ozark Prop Shop", x: 0.86, y: 0.36, type: 'prop_shop',
+          description: 'Propellers, lower units, and performance parts',
+          wage: 18, discount: 'performance', discountPercent: 35 },
+    ],
+    majorArms: [
+        { name: 'Gravois Arm', startX: 0.35, startY: 0.50, endX: 0.20, endY: 0.75, curve: 0.3 },
+        { name: 'Grand Glaize Arm', startX: 0.70, startY: 0.50, endX: 0.65, endY: 0.25, curve: -0.2 },
+        { name: 'Niangua Arm', startX: 0.25, startY: 0.50, endX: 0.10, endY: 0.35, curve: -0.1 },
+        { name: 'Lick Branch', startX: 0.55, startY: 0.50, endX: 0.50, endY: 0.70, curve: 0.15 },
+    ]
 };
 
 // ==================== CUSTOM ICON DRAWING SYSTEM ====================
@@ -2814,6 +3214,38 @@ let gameState = {
     showingBoatShop: false,
     showingGarage: false,
     showingRaceEvent: false,
+
+    // ===== STORYLINE & JOBS =====
+    story: {
+        chapter: 1,  // Current story chapter
+        currentGoal: 'find_work', // Current objective
+        completedGoals: [],
+        milestones: [],
+        intro: {
+            watched: false,
+            boatInherited: true, // Inherited grandpa's boat
+        },
+    },
+    jobs: {
+        currentJob: null,      // { name, type, wage, shift, hoursWorked }
+        experience: {
+            paint: 0,          // Hours worked at paint shop
+            prop: 0,           // Hours worked at prop shop
+        },
+        discounts: {
+            paint: 0,          // Percentage discount on paint jobs (max 40%)
+            performance: 0,    // Percentage discount on performance parts (max 35%)
+        },
+        totalEarnings: 0,      // Career job earnings
+        shiftsCompleted: 0,    // Total work shifts completed
+    },
+    // Track when player unlocks things
+    unlocks: {
+        canRace: true,         // Can enter local races
+        canShootout: false,    // Can enter Shootout (need reputation)
+        canBuild: true,        // Can build on land
+        hasBusiness: false,    // Owns a business
+    },
 };
 
 // Famous Lake of the Ozarks cove names
@@ -2897,6 +3329,9 @@ function render() {
         );
     }
 
+    // Draw location labels (towns, parks, landmarks)
+    drawLocationLabels();
+
     ctx.restore();
 
     // Draw minimap
@@ -2941,6 +3376,18 @@ function drawTile(x, y, tile) {
         drawStripDetail(px, py);
     } else if (tile.terrain === 'parking') {
         drawParkingDetail(px, py);
+    } else if (tile.terrain === 'town' || tile.terrain === 'town_center') {
+        drawTownDetail(px, py, x, y, tile.terrain === 'town_center');
+    } else if (tile.terrain === 'state_park') {
+        drawStateParkDetail(px, py, x, y);
+    } else if (tile.terrain === 'park_beach') {
+        drawParkBeachDetail(px, py, x, y);
+    } else if (tile.terrain === 'park_trail') {
+        drawTrailDetail(px, py, x, y);
+    } else if (tile.terrain === 'paint_shop') {
+        drawPaintShopDetail(px, py, x, y);
+    } else if (tile.terrain === 'prop_shop') {
+        drawPropShopDetail(px, py, x, y);
     }
 }
 
@@ -3210,6 +3657,412 @@ function drawParkingDetail(px, py) {
     }
 }
 
+function drawTownDetail(px, py, tileX, tileY, isCenter) {
+    const size = CONFIG.TILE_SIZE;
+    const seed = (tileX * 13 + tileY * 19) % 100;
+
+    if (isCenter) {
+        // Town center - more developed with buildings
+        // Main building
+        ctx.fillStyle = '#8b7355';
+        ctx.fillRect(px + 8, py + 8, 24, 20);
+
+        // Roof
+        ctx.fillStyle = '#5a4535';
+        ctx.beginPath();
+        ctx.moveTo(px + 6, py + 8);
+        ctx.lineTo(px + 20, py - 2);
+        ctx.lineTo(px + 34, py + 8);
+        ctx.closePath();
+        ctx.fill();
+
+        // Windows
+        ctx.fillStyle = '#d4c4a0';
+        ctx.fillRect(px + 12, py + 12, 5, 5);
+        ctx.fillRect(px + 23, py + 12, 5, 5);
+
+        // Door
+        ctx.fillStyle = '#4a3525';
+        ctx.fillRect(px + 17, py + 18, 6, 10);
+
+        // Sign or awning
+        ctx.fillStyle = '#c4553a';
+        ctx.fillRect(px + 8, py + 6, 24, 3);
+    } else {
+        // Regular town area - mix of residential/commercial
+        const buildingType = seed % 3;
+
+        if (buildingType === 0) {
+            // Small house
+            ctx.fillStyle = '#a09080';
+            ctx.fillRect(px + 10, py + 14, 20, 16);
+
+            // Roof
+            ctx.fillStyle = '#6a5545';
+            ctx.beginPath();
+            ctx.moveTo(px + 8, py + 14);
+            ctx.lineTo(px + 20, py + 4);
+            ctx.lineTo(px + 32, py + 14);
+            ctx.closePath();
+            ctx.fill();
+
+            // Window
+            ctx.fillStyle = '#b0d4e8';
+            ctx.fillRect(px + 14, py + 18, 5, 5);
+
+            // Door
+            ctx.fillStyle = '#5a4535';
+            ctx.fillRect(px + 22, py + 20, 5, 10);
+        } else if (buildingType === 1) {
+            // Shop/store
+            ctx.fillStyle = '#c4b8a0';
+            ctx.fillRect(px + 6, py + 10, 28, 22);
+
+            // Storefront window
+            ctx.fillStyle = '#8abcd0';
+            ctx.fillRect(px + 8, py + 14, 24, 10);
+
+            // Awning
+            ctx.fillStyle = '#c44a30';
+            ctx.fillRect(px + 6, py + 10, 28, 4);
+        } else {
+            // Parking/lot area
+            ctx.fillStyle = '#606058';
+            ctx.fillRect(px + 4, py + 4, size - 8, size - 8);
+
+            // Parking lines
+            ctx.strokeStyle = '#888880';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(px + 12, py + 8);
+            ctx.lineTo(px + 12, py + size - 8);
+            ctx.moveTo(px + 28, py + 8);
+            ctx.lineTo(px + 28, py + size - 8);
+            ctx.stroke();
+        }
+    }
+}
+
+function drawStateParkDetail(px, py, tileX, tileY) {
+    const size = CONFIG.TILE_SIZE;
+    const seed = (tileX * 17 + tileY * 11) % 100;
+
+    // Dense forest background - darker green for park areas
+    ctx.fillStyle = '#2d5a27';
+    ctx.fillRect(px, py, size, size);
+
+    // Draw 3-4 dense trees
+    const treeCount = 3 + (seed % 2);
+    const positions = [
+        [10, 12], [28, 8], [18, 26], [8, 22]
+    ];
+
+    for (let i = 0; i < treeCount; i++) {
+        const [ox, oy] = positions[i];
+        const treeSeed = (seed + i * 7) % 3;
+
+        // Tree shadow
+        ctx.fillStyle = 'rgba(0, 30, 0, 0.3)';
+        ctx.beginPath();
+        ctx.ellipse(px + ox + 2, py + oy + 8, 7, 3, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Tree trunk
+        ctx.fillStyle = '#4a3a28';
+        ctx.fillRect(px + ox - 2, py + oy, 4, 8);
+
+        if (treeSeed === 0) {
+            // Oak - large round canopy
+            ctx.fillStyle = '#1e4420';
+            ctx.beginPath();
+            ctx.arc(px + ox, py + oy - 5, 10, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = '#2a5528';
+            ctx.beginPath();
+            ctx.arc(px + ox - 3, py + oy - 7, 5, 0, Math.PI * 2);
+            ctx.fill();
+        } else if (treeSeed === 1) {
+            // Cedar/Pine - tall triangle
+            ctx.fillStyle = '#143822';
+            ctx.beginPath();
+            ctx.moveTo(px + ox, py + oy - 16);
+            ctx.lineTo(px + ox + 10, py + oy + 2);
+            ctx.lineTo(px + ox - 10, py + oy + 2);
+            ctx.closePath();
+            ctx.fill();
+        } else {
+            // Dogwood - smaller flowering tree
+            ctx.fillStyle = '#2a6030';
+            ctx.beginPath();
+            ctx.arc(px + ox, py + oy - 4, 7, 0, Math.PI * 2);
+            ctx.fill();
+            // Flowers/berries
+            ctx.fillStyle = '#e8d0d0';
+            ctx.beginPath();
+            ctx.arc(px + ox - 3, py + oy - 6, 2, 0, Math.PI * 2);
+            ctx.arc(px + ox + 4, py + oy - 3, 2, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    }
+
+    // Occasional trail marker or sign
+    if (seed % 10 === 0) {
+        // Park sign post
+        ctx.fillStyle = '#5a4a3a';
+        ctx.fillRect(px + 32, py + 20, 3, 12);
+        ctx.fillStyle = '#3a6a40';
+        ctx.fillRect(px + 28, py + 16, 11, 6);
+    }
+}
+
+function drawParkBeachDetail(px, py, tileX, tileY) {
+    const size = CONFIG.TILE_SIZE;
+    const seed = (tileX * 23 + tileY * 7) % 100;
+
+    // Sandy beach base
+    ctx.fillStyle = '#d4c4a0';
+    ctx.fillRect(px, py, size, size);
+
+    // Sand texture - varying shades
+    ctx.fillStyle = 'rgba(180, 160, 120, 0.4)';
+    for (let i = 0; i < 6; i++) {
+        const sx = px + ((seed + i * 11) % (size - 4)) + 2;
+        const sy = py + ((seed + i * 17) % (size - 4)) + 2;
+        ctx.beginPath();
+        ctx.arc(sx, sy, 3 + (i % 2), 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    // Wave line at water edge (bottom of tile typically)
+    ctx.fillStyle = 'rgba(120, 180, 160, 0.3)';
+    ctx.beginPath();
+    ctx.moveTo(px, py + size - 4);
+    ctx.quadraticCurveTo(px + size/2, py + size - 8, px + size, py + size - 4);
+    ctx.lineTo(px + size, py + size);
+    ctx.lineTo(px, py + size);
+    ctx.closePath();
+    ctx.fill();
+
+    // Beach items
+    if (seed % 4 === 0) {
+        // Beach umbrella
+        ctx.fillStyle = '#c44a40';
+        ctx.beginPath();
+        ctx.arc(px + 16, py + 12, 8, Math.PI, 2 * Math.PI);
+        ctx.fill();
+        ctx.fillStyle = '#e8e0d0';
+        ctx.beginPath();
+        ctx.arc(px + 16, py + 12, 8, Math.PI, Math.PI + 0.5);
+        ctx.arc(px + 16, py + 12, 8, Math.PI + 1, Math.PI + 1.5);
+        ctx.fill();
+        // Umbrella pole
+        ctx.fillStyle = '#5a5048';
+        ctx.fillRect(px + 15, py + 12, 2, 10);
+    } else if (seed % 4 === 1) {
+        // Driftwood
+        ctx.fillStyle = '#8a7a6a';
+        ctx.beginPath();
+        ctx.moveTo(px + 8, py + 20);
+        ctx.quadraticCurveTo(px + 20, py + 16, px + 32, py + 22);
+        ctx.lineTo(px + 32, py + 25);
+        ctx.quadraticCurveTo(px + 20, py + 20, px + 8, py + 23);
+        ctx.closePath();
+        ctx.fill();
+    }
+
+    // Shells or pebbles
+    ctx.fillStyle = 'rgba(255, 250, 240, 0.7)';
+    for (let i = 0; i < 3; i++) {
+        const shellX = px + ((seed * 3 + i * 13) % 28) + 4;
+        const shellY = py + ((seed * 5 + i * 11) % 24) + 4;
+        ctx.beginPath();
+        ctx.ellipse(shellX, shellY, 2, 1.5, (seed + i) % 3, 0, Math.PI * 2);
+        ctx.fill();
+    }
+}
+
+function drawTrailDetail(px, py, tileX, tileY) {
+    const size = CONFIG.TILE_SIZE;
+    const seed = (tileX * 19 + tileY * 13) % 100;
+
+    // Forest floor background
+    ctx.fillStyle = '#5a6a48';
+    ctx.fillRect(px, py, size, size);
+
+    // Dirt trail path through middle
+    const trailDir = seed % 2; // 0 = horizontal-ish, 1 = vertical-ish
+
+    ctx.fillStyle = '#8b7355';
+    ctx.beginPath();
+    if (trailDir === 0) {
+        // Horizontal meandering path
+        ctx.moveTo(px, py + 14);
+        ctx.quadraticCurveTo(px + 10, py + 12 + (seed % 6), px + 20, py + 16);
+        ctx.quadraticCurveTo(px + 30, py + 18 - (seed % 4), px + size, py + 15);
+        ctx.lineTo(px + size, py + 22);
+        ctx.quadraticCurveTo(px + 30, py + 25 - (seed % 4), px + 20, py + 23);
+        ctx.quadraticCurveTo(px + 10, py + 19 + (seed % 6), px, py + 21);
+        ctx.closePath();
+    } else {
+        // Vertical meandering path
+        ctx.moveTo(px + 14, py);
+        ctx.quadraticCurveTo(px + 12 + (seed % 6), py + 10, px + 16, py + 20);
+        ctx.quadraticCurveTo(px + 18 - (seed % 4), py + 30, px + 15, py + size);
+        ctx.lineTo(px + 22, py + size);
+        ctx.quadraticCurveTo(px + 25 - (seed % 4), py + 30, px + 23, py + 20);
+        ctx.quadraticCurveTo(px + 19 + (seed % 6), py + 10, px + 21, py);
+        ctx.closePath();
+    }
+    ctx.fill();
+
+    // Trail texture - small rocks and roots
+    ctx.fillStyle = 'rgba(100, 80, 60, 0.5)';
+    for (let i = 0; i < 4; i++) {
+        const rx = px + ((seed + i * 9) % 24) + 6;
+        const ry = py + ((seed + i * 7) % 24) + 6;
+        ctx.beginPath();
+        ctx.arc(rx, ry, 1 + (i % 2), 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    // Occasional trail marker
+    if (seed % 8 === 0) {
+        // Trail blaze on tree
+        ctx.fillStyle = '#4a3a28';
+        ctx.fillRect(px + 30, py + 8, 4, 12);
+        ctx.fillStyle = '#e8e0d0';
+        ctx.fillRect(px + 29, py + 10, 6, 4);
+    }
+
+    // Small plants along trail
+    ctx.fillStyle = '#3a5a35';
+    for (let i = 0; i < 2; i++) {
+        const plantX = px + ((seed * 2 + i * 15) % 10) + 2;
+        const plantY = py + ((seed * 3 + i * 11) % 28) + 4;
+        ctx.beginPath();
+        ctx.moveTo(plantX, plantY + 6);
+        ctx.lineTo(plantX - 2, plantY);
+        ctx.lineTo(plantX, plantY + 2);
+        ctx.lineTo(plantX + 2, plantY);
+        ctx.closePath();
+        ctx.fill();
+    }
+}
+
+function drawPaintShopDetail(px, py, tileX, tileY) {
+    const size = CONFIG.TILE_SIZE;
+
+    // Building base - warm tan color
+    ctx.fillStyle = '#c0a080';
+    ctx.fillRect(px + 2, py + 6, size - 4, size - 8);
+
+    // Colorful paint splatter decoration on building
+    const colors = ['#e74c3c', '#3498db', '#f1c40f', '#2ecc71', '#9b59b6'];
+    for (let i = 0; i < 5; i++) {
+        ctx.fillStyle = colors[i];
+        ctx.beginPath();
+        const splashX = px + 6 + (i * 6);
+        const splashY = py + 10 + ((i * 3) % 8);
+        ctx.arc(splashX, splashY, 3 + (i % 2), 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    // Roof with colorful stripes
+    ctx.fillStyle = '#8a6a50';
+    ctx.beginPath();
+    ctx.moveTo(px, py + 6);
+    ctx.lineTo(px + size/2, py - 2);
+    ctx.lineTo(px + size, py + 6);
+    ctx.closePath();
+    ctx.fill();
+
+    // Rainbow stripe on roof
+    const roofColors = ['#e74c3c', '#f39c12', '#f1c40f', '#2ecc71', '#3498db', '#9b59b6'];
+    for (let i = 0; i < 6; i++) {
+        ctx.fillStyle = roofColors[i];
+        ctx.fillRect(px + 4 + i * 5, py + 2, 5, 3);
+    }
+
+    // Door
+    ctx.fillStyle = '#5a4a3a';
+    ctx.fillRect(px + 14, py + 18, 12, 14);
+
+    // Paint bucket sign
+    ctx.fillStyle = '#404040';
+    ctx.fillRect(px + 28, py + 8, 8, 12);
+    ctx.fillStyle = '#3498db';
+    ctx.fillRect(px + 29, py + 11, 6, 8);
+
+    // "HIRING" banner
+    ctx.fillStyle = '#27ae60';
+    ctx.fillRect(px + 4, py + size - 6, 20, 5);
+    ctx.fillStyle = '#fff';
+    ctx.font = '4px Arial';
+    ctx.fillText('HIRING', px + 6, py + size - 2);
+}
+
+function drawPropShopDetail(px, py, tileX, tileY) {
+    const size = CONFIG.TILE_SIZE;
+
+    // Building base - industrial gray/blue
+    ctx.fillStyle = '#707888';
+    ctx.fillRect(px + 2, py + 6, size - 4, size - 8);
+
+    // Metal siding texture - horizontal lines
+    ctx.strokeStyle = '#606878';
+    ctx.lineWidth = 1;
+    for (let i = 0; i < 5; i++) {
+        ctx.beginPath();
+        ctx.moveTo(px + 4, py + 10 + i * 5);
+        ctx.lineTo(px + size - 4, py + 10 + i * 5);
+        ctx.stroke();
+    }
+
+    // Roof - industrial style
+    ctx.fillStyle = '#505860';
+    ctx.fillRect(px + 1, py + 2, size - 2, 6);
+
+    // Large propeller logo on front
+    ctx.fillStyle = '#c0c0c0';
+    ctx.save();
+    ctx.translate(px + size/2, py + 16);
+    // Draw 3-blade propeller
+    for (let i = 0; i < 3; i++) {
+        ctx.save();
+        ctx.rotate((i * 2 * Math.PI / 3) + Date.now() / 2000);
+        ctx.beginPath();
+        ctx.ellipse(0, -6, 2, 6, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+    }
+    // Hub
+    ctx.fillStyle = '#808080';
+    ctx.beginPath();
+    ctx.arc(0, 0, 3, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
+    // Roll-up garage door
+    ctx.fillStyle = '#4a4a50';
+    ctx.fillRect(px + 10, py + 20, 20, 12);
+    // Door lines
+    ctx.strokeStyle = '#3a3a40';
+    ctx.lineWidth = 1;
+    for (let i = 0; i < 4; i++) {
+        ctx.beginPath();
+        ctx.moveTo(px + 11, py + 22 + i * 3);
+        ctx.lineTo(px + 29, py + 22 + i * 3);
+        ctx.stroke();
+    }
+
+    // "HIRING" banner
+    ctx.fillStyle = '#e67e22';
+    ctx.fillRect(px + 4, py + size - 6, 20, 5);
+    ctx.fillStyle = '#fff';
+    ctx.font = '4px Arial';
+    ctx.fillText('HIRING', px + 6, py + size - 2);
+}
+
 function drawMileMarkers() {
     gameState.mileMarkers.forEach(marker => {
         const px = marker.x * CONFIG.TILE_SIZE + CONFIG.TILE_SIZE / 2;
@@ -3259,6 +4112,86 @@ function drawMileMarkers() {
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillText(marker.mile, px, py + 3);
+    });
+}
+
+function drawLocationLabels() {
+    if (!gameState.locationLabels) return;
+
+    gameState.locationLabels.forEach(label => {
+        const px = label.x * CONFIG.TILE_SIZE + CONFIG.TILE_SIZE / 2;
+        const py = label.y * CONFIG.TILE_SIZE + CONFIG.TILE_SIZE / 2;
+
+        // Set style based on label type
+        let bgColor, textColor, fontSize;
+        switch (label.type) {
+            case 'town':
+                bgColor = 'rgba(196, 168, 130, 0.9)';
+                textColor = '#3a2a1a';
+                fontSize = 10;
+                break;
+            case 'park':
+                bgColor = 'rgba(45, 90, 39, 0.9)';
+                textColor = '#fff';
+                fontSize = 9;
+                break;
+            case 'landmark':
+                bgColor = 'rgba(212, 168, 85, 0.95)';
+                textColor = '#2a2a1a';
+                fontSize = 10;
+                break;
+            case 'race':
+                bgColor = 'rgba(200, 60, 60, 0.95)';
+                textColor = '#fff';
+                fontSize = 11;
+                break;
+            case 'job':
+                bgColor = 'rgba(39, 174, 96, 0.95)';
+                textColor = '#fff';
+                fontSize = 10;
+                break;
+            default:
+                bgColor = 'rgba(100, 100, 100, 0.8)';
+                textColor = '#fff';
+                fontSize = 9;
+        }
+
+        ctx.font = `bold ${fontSize}px Cabin, sans-serif`;
+        const textWidth = ctx.measureText(label.name).width;
+        const padding = 4;
+
+        // Draw background
+        ctx.fillStyle = bgColor;
+        ctx.beginPath();
+        ctx.roundRect(
+            px - textWidth / 2 - padding,
+            py - fontSize / 2 - padding,
+            textWidth + padding * 2,
+            fontSize + padding * 2,
+            3
+        );
+        ctx.fill();
+
+        // Draw border
+        ctx.strokeStyle = 'rgba(0, 0, 0, 0.3)';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+
+        // Draw text
+        ctx.fillStyle = textColor;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(label.name, px, py);
+
+        // Draw pointer for landmarks
+        if (label.type === 'landmark' || label.type === 'race') {
+            ctx.fillStyle = bgColor;
+            ctx.beginPath();
+            ctx.moveTo(px - 5, py + fontSize / 2 + padding);
+            ctx.lineTo(px, py + fontSize / 2 + padding + 6);
+            ctx.lineTo(px + 5, py + fontSize / 2 + padding);
+            ctx.fill();
+        }
     });
 }
 
@@ -3376,136 +4309,323 @@ function updateMileMarkerDisplay() {
 function generateMap() {
     gameState.grid = [];
     gameState.mileMarkers = [];
+    gameState.locationLabels = [];
 
     // Initialize with forest
     for (let y = 0; y < CONFIG.GRID_HEIGHT; y++) {
         gameState.grid[y] = [];
         for (let x = 0; x < CONFIG.GRID_WIDTH; x++) {
             gameState.grid[y][x] = {
-                terrain: Math.random() < 0.6 ? 'land' : 'forest',
+                terrain: Math.random() < 0.65 ? 'land' : 'forest',
                 building: null,
             };
         }
     }
 
-    // Generate the serpentine Lake of the Ozarks shape
-    generateLakeOfTheOzarks();
+    // Generate accurate Lake of the Ozarks
+    generateAccurateLakeShape();
 
-    // Add The Strip (entertainment district)
-    generateTheStrip();
+    // Add major arms (coves)
+    generateMajorArms();
 
-    // Add Bagnell Dam at mile 0
-    generateBagnellDam();
+    // Add towns
+    generateTowns();
+
+    // Add state parks
+    generateStateParks();
+
+    // Add The Strip and Bagnell Dam
+    generateLandmarks();
+
+    // Add job locations (Paint Shop, Prop Shop)
+    generateJobLocations();
+
+    // Add dock zones along shoreline
+    addDockZones();
+
+    // Generate the Shootout race course
+    generateRaceCourse();
 }
 
-function generateLakeOfTheOzarks() {
-    // The lake is famous for its serpentine shape - let's create that!
-    // Main channel runs roughly from dam (east) going west with lots of arms
+function generateAccurateLakeShape() {
+    // Lake of the Ozarks main channel - serpentine shape from dam heading southwest
+    // The lake is approximately 92 miles long with 1,150 miles of shoreline
 
-    const mainChannel = [];
+    const W = CONFIG.GRID_WIDTH;
+    const H = CONFIG.GRID_HEIGHT;
 
-    // Start at Bagnell Dam (right side)
-    let x = CONFIG.GRID_WIDTH - 5;
-    let y = Math.floor(CONFIG.GRID_HEIGHT / 2);
+    // Main channel path points (dam on east, snaking west/southwest)
+    const channelPath = [
+        { x: W - 3, y: H * 0.5 },      // Bagnell Dam (Mile 0)
+        { x: W * 0.85, y: H * 0.48 },   // Mile ~10
+        { x: W * 0.75, y: H * 0.45 },   // Mile ~20 (Osage Beach area)
+        { x: W * 0.65, y: H * 0.50 },   // Mile ~30 (Grand Glaize)
+        { x: W * 0.55, y: H * 0.48 },   // Mile ~40 (Dog Days area)
+        { x: W * 0.45, y: H * 0.52 },   // Mile ~50 (Party Cove area)
+        { x: W * 0.35, y: H * 0.48 },   // Mile ~60 (Gravois Arm junction)
+        { x: W * 0.25, y: H * 0.45 },   // Mile ~70 (Niangua area)
+        { x: W * 0.15, y: H * 0.42 },   // Mile ~80
+        { x: W * 0.08, y: H * 0.40 },   // Mile ~92 (Truman Dam end)
+    ];
 
-    // Create main winding channel
+    // Draw main channel by interpolating between points
     let mile = 0;
-    while (x > 3) {
-        mainChannel.push({ x, y, mile });
+    for (let i = 0; i < channelPath.length - 1; i++) {
+        const p1 = channelPath[i];
+        const p2 = channelPath[i + 1];
+        const steps = Math.ceil(Math.abs(p2.x - p1.x) + Math.abs(p2.y - p1.y));
 
-        // Add mile marker every few tiles
-        if (mile % 8 === 0) {
-            gameState.mileMarkers.push({ x, y, mile: Math.floor(mile / 8) * 10 });
+        for (let t = 0; t <= 1; t += 1 / steps) {
+            const x = Math.round(p1.x + (p2.x - p1.x) * t);
+            const y = Math.round(p1.y + (p2.y - p1.y) * t);
+
+            // Carve channel (variable width)
+            const channelWidth = 2 + Math.floor(Math.sin(mile * 0.2) + 1);
+            carveWaterArea(x, y, channelWidth, 'deep_water', 'water');
+
+            // Add mile markers
+            if (mile % 10 === 0) {
+                gameState.mileMarkers.push({ x, y, mile });
+            }
+            mile++;
         }
+    }
+}
 
-        // Carve out the channel (3 tiles wide)
-        for (let dy = -1; dy <= 1; dy++) {
-            for (let dx = -1; dx <= 1; dx++) {
-                const nx = x + dx;
-                const ny = y + dy;
-                if (ny >= 0 && ny < CONFIG.GRID_HEIGHT && nx >= 0 && nx < CONFIG.GRID_WIDTH) {
-                    gameState.grid[ny][nx].terrain = dy === 0 ? 'deep_water' : 'water';
+function carveWaterArea(cx, cy, radius, centerTerrain, edgeTerrain) {
+    for (let dy = -radius - 1; dy <= radius + 1; dy++) {
+        for (let dx = -radius - 1; dx <= radius + 1; dx++) {
+            const x = Math.round(cx + dx);
+            const y = Math.round(cy + dy);
+            const dist = Math.sqrt(dx * dx + dy * dy);
+
+            if (y >= 0 && y < CONFIG.GRID_HEIGHT && x >= 0 && x < CONFIG.GRID_WIDTH) {
+                if (dist <= radius * 0.6) {
+                    gameState.grid[y][x].terrain = centerTerrain;
+                } else if (dist <= radius) {
+                    if (gameState.grid[y][x].terrain !== 'deep_water') {
+                        gameState.grid[y][x].terrain = edgeTerrain;
+                    }
+                } else if (dist <= radius + 1) {
+                    if (gameState.grid[y][x].terrain === 'land' || gameState.grid[y][x].terrain === 'forest') {
+                        if (Math.random() < 0.6) {
+                            gameState.grid[y][x].terrain = 'shallow';
+                        }
+                    }
                 }
             }
         }
+    }
+}
 
-        // Add shallow water edges
-        for (let dy = -2; dy <= 2; dy++) {
-            const ny = y + dy;
-            if (ny >= 0 && ny < CONFIG.GRID_HEIGHT) {
-                if (Math.abs(dy) === 2 && gameState.grid[ny][x].terrain !== 'deep_water') {
-                    if (Math.random() < 0.7) {
-                        gameState.grid[ny][x].terrain = 'shallow';
+function generateMajorArms() {
+    const W = CONFIG.GRID_WIDTH;
+    const H = CONFIG.GRID_HEIGHT;
+
+    // Gravois Arm - major arm going south
+    generateArm(W * 0.38, H * 0.50, W * 0.25, H * 0.78, 'Gravois Arm', 15);
+
+    // Grand Glaize Arm - going north
+    generateArm(W * 0.72, H * 0.48, W * 0.68, H * 0.22, 'Grand Glaize', 12);
+
+    // Niangua Arm - western arm
+    generateArm(W * 0.28, H * 0.46, W * 0.12, H * 0.32, 'Niangua Arm', 10);
+
+    // Lick Branch Cove
+    generateArm(W * 0.52, H * 0.50, W * 0.48, H * 0.68, 'Lick Branch', 8);
+
+    // Big Niangua
+    generateArm(W * 0.22, H * 0.44, W * 0.08, H * 0.55, 'Big Niangua', 10);
+
+    // Soap Creek
+    generateArm(W * 0.60, H * 0.52, W * 0.58, H * 0.35, 'Soap Creek', 6);
+}
+
+function generateArm(startX, startY, endX, endY, name, length) {
+    const steps = length * 3;
+    let lastX = startX, lastY = startY;
+
+    for (let i = 0; i <= steps; i++) {
+        const t = i / steps;
+        // Add some curve
+        const curve = Math.sin(t * Math.PI) * ((endX - startX) * 0.2);
+        const x = Math.round(startX + (endX - startX) * t + curve);
+        const y = Math.round(startY + (endY - startY) * t);
+
+        // Width decreases towards the end
+        const width = Math.max(1, Math.floor(2 * (1 - t * 0.7)));
+
+        carveWaterArea(x, y, width, 'cove', 'shallow');
+        lastX = x;
+        lastY = y;
+    }
+
+    // Add dock zone at arm end
+    if (lastY >= 0 && lastY < CONFIG.GRID_HEIGHT && lastX >= 0 && lastX < CONFIG.GRID_WIDTH) {
+        gameState.grid[Math.round(lastY)][Math.round(lastX)].terrain = 'dock_zone';
+    }
+}
+
+function generateTowns() {
+    LAKE_LOCATIONS.towns.forEach(town => {
+        const cx = Math.floor(town.x * CONFIG.GRID_WIDTH);
+        const cy = Math.floor(town.y * CONFIG.GRID_HEIGHT);
+        const size = town.size;
+
+        // Create town area
+        for (let dy = -size; dy <= size; dy++) {
+            for (let dx = -size; dx <= size; dx++) {
+                const x = cx + dx;
+                const y = cy + dy;
+                if (y >= 0 && y < CONFIG.GRID_HEIGHT && x >= 0 && x < CONFIG.GRID_WIDTH) {
+                    const tile = gameState.grid[y][x];
+                    // Don't overwrite water
+                    if (!tile.terrain.includes('water') && tile.terrain !== 'deep_water' &&
+                        tile.terrain !== 'cove' && tile.terrain !== 'shallow') {
+                        if (dx === 0 && dy === 0) {
+                            tile.terrain = 'town_center';
+                        } else if (Math.abs(dx) <= 1 && Math.abs(dy) <= 1) {
+                            tile.terrain = 'town';
+                        } else if (Math.random() < 0.5) {
+                            tile.terrain = 'town';
+                        }
                     }
                 }
             }
         }
 
-        // Serpentine movement
-        x -= 1;
-        if (Math.random() < 0.4) {
-            y += Math.random() < 0.5 ? 1 : -1;
-            y = Math.max(4, Math.min(CONFIG.GRID_HEIGHT - 5, y));
-        }
-
-        mile++;
-
-        // Create cove arms branching off
-        if (mile % 12 === 6 && Math.random() < 0.8) {
-            createCove(x, y, Math.random() < 0.5 ? -1 : 1);
-        }
-    }
-
-    // Add dock zones along shoreline
-    addDockZones();
+        // Add label
+        gameState.locationLabels.push({ x: cx, y: cy - size - 1, name: town.name, type: 'town' });
+    });
 }
 
-function createCove(startX, startY, direction) {
-    let cx = startX;
-    let cy = startY;
-    const armLength = Math.floor(Math.random() * 8) + 5;
+function generateStateParks() {
+    LAKE_LOCATIONS.stateParks.forEach(park => {
+        const cx = Math.floor(park.x * CONFIG.GRID_WIDTH);
+        const cy = Math.floor(park.y * CONFIG.GRID_HEIGHT);
+        const hw = Math.floor(park.width / 2);
+        const hh = Math.floor(park.height / 2);
 
-    for (let i = 0; i < armLength; i++) {
-        cy += direction;
-        if (Math.random() < 0.3) cx += Math.random() < 0.5 ? 1 : -1;
+        // Create park area
+        for (let dy = -hh; dy <= hh; dy++) {
+            for (let dx = -hw; dx <= hw; dx++) {
+                const x = cx + dx;
+                const y = cy + dy;
+                if (y >= 0 && y < CONFIG.GRID_HEIGHT && x >= 0 && x < CONFIG.GRID_WIDTH) {
+                    const tile = gameState.grid[y][x];
+                    // Don't overwrite water or towns
+                    if (!tile.terrain.includes('water') && tile.terrain !== 'deep_water' &&
+                        tile.terrain !== 'cove' && !tile.terrain.includes('town')) {
+                        // Park interior is dense forest
+                        tile.terrain = 'state_park';
 
-        if (cy < 2 || cy >= CONFIG.GRID_HEIGHT - 2 || cx < 2 || cx >= CONFIG.GRID_WIDTH - 2) break;
-
-        // Cove water
-        for (let dx = -1; dx <= 1; dx++) {
-            const nx = cx + dx;
-            if (nx >= 0 && nx < CONFIG.GRID_WIDTH) {
-                gameState.grid[cy][nx].terrain = 'cove';
+                        // Add trails randomly
+                        if (Math.random() < 0.1) {
+                            tile.terrain = 'park_trail';
+                        }
+                    }
+                    // Add beach areas where park meets water
+                    if (tile.terrain === 'shallow' && Math.random() < 0.4) {
+                        tile.terrain = 'park_beach';
+                    }
+                }
             }
         }
 
-        // Shallow edges
-        if (cy + direction >= 0 && cy + direction < CONFIG.GRID_HEIGHT) {
-            if (gameState.grid[cy + direction][cx].terrain.includes('land') ||
-                gameState.grid[cy + direction][cx].terrain === 'forest') {
-                gameState.grid[cy + direction][cx].terrain = 'shallow';
+        // Add label
+        gameState.locationLabels.push({ x: cx, y: cy - hh - 1, name: park.name, type: 'park' });
+    });
+}
+
+function generateLandmarks() {
+    const W = CONFIG.GRID_WIDTH;
+    const H = CONFIG.GRID_HEIGHT;
+
+    // Bagnell Dam
+    const damX = W - 3;
+    const damY = Math.floor(H * 0.5);
+    for (let dy = -3; dy <= 3; dy++) {
+        const y = damY + dy;
+        if (y >= 0 && y < CONFIG.GRID_HEIGHT) {
+            gameState.grid[y][damX].terrain = 'dam';
+            gameState.grid[y][damX + 1].terrain = 'dam';
+        }
+    }
+    gameState.locationLabels.push({ x: damX, y: damY - 4, name: 'Bagnell Dam', type: 'landmark' });
+    gameState.mileMarkers.push({ x: damX - 2, y: damY, mile: 0 });
+
+    // The Strip
+    const stripX = Math.floor(W * 0.90);
+    const stripY = Math.floor(H * 0.40);
+    for (let dy = 0; dy < 4; dy++) {
+        for (let dx = 0; dx < 6; dx++) {
+            const x = stripX + dx;
+            const y = stripY + dy;
+            if (y >= 0 && y < CONFIG.GRID_HEIGHT && x >= 0 && x < CONFIG.GRID_WIDTH) {
+                const tile = gameState.grid[y][x];
+                if (!tile.terrain.includes('water') && tile.terrain !== 'dam') {
+                    tile.terrain = 'strip';
+                }
             }
         }
     }
+    gameState.locationLabels.push({ x: stripX + 3, y: stripY - 1, name: 'The Strip', type: 'landmark' });
 
-    // Add a dock zone at cove end
-    if (cy >= 0 && cy < CONFIG.GRID_HEIGHT && cx >= 0 && cx < CONFIG.GRID_WIDTH) {
-        gameState.grid[cy][cx].terrain = 'dock_zone';
-    }
+    // Party Cove marker
+    const pcX = Math.floor(W * 0.45);
+    const pcY = Math.floor(H * 0.60);
+    gameState.locationLabels.push({ x: pcX, y: pcY - 2, name: 'Party Cove', type: 'landmark' });
+}
+
+function generateJobLocations() {
+    const W = CONFIG.GRID_WIDTH;
+    const H = CONFIG.GRID_HEIGHT;
+
+    // Generate each job location from LAKE_LOCATIONS.jobs
+    LAKE_LOCATIONS.jobs.forEach(job => {
+        const cx = Math.floor(job.x * W);
+        const cy = Math.floor(job.y * H);
+
+        // Create a 2x2 building for the job location
+        for (let dy = 0; dy < 2; dy++) {
+            for (let dx = 0; dx < 2; dx++) {
+                const x = cx + dx;
+                const y = cy + dy;
+                if (y >= 0 && y < CONFIG.GRID_HEIGHT && x >= 0 && x < CONFIG.GRID_WIDTH) {
+                    const tile = gameState.grid[y][x];
+                    // Don't overwrite water
+                    if (!tile.terrain.includes('water') && tile.terrain !== 'deep_water' &&
+                        tile.terrain !== 'dam') {
+                        tile.terrain = job.type; // paint_shop or prop_shop
+                        tile.jobData = job;
+                    }
+                }
+            }
+        }
+
+        // Add label with "HIRING!" indicator
+        gameState.locationLabels.push({
+            x: cx,
+            y: cy - 1,
+            name: job.name,
+            type: 'job',
+            jobData: job
+        });
+    });
 }
 
 function addDockZones() {
-    // Add dock zones where water meets land
+    // Add dock zones where water meets buildable land
     for (let y = 1; y < CONFIG.GRID_HEIGHT - 1; y++) {
         for (let x = 1; x < CONFIG.GRID_WIDTH - 1; x++) {
             const tile = gameState.grid[y][x];
             if (tile.terrain === 'shallow' || tile.terrain === 'cove') {
-                // Check if adjacent to land
                 const adjacent = getAdjacentTiles(x, y);
-                const nearLand = adjacent.some(a =>
-                    a.terrain === 'land' || a.terrain === 'forest' || a.terrain === 'strip'
+                const nearBuildable = adjacent.some(a =>
+                    a.terrain === 'land' || a.terrain === 'forest' ||
+                    a.terrain === 'strip' || a.terrain === 'town'
                 );
-                if (nearLand && Math.random() < 0.3) {
+                if (nearBuildable && Math.random() < 0.25) {
                     tile.terrain = 'dock_zone';
                 }
             }
@@ -3513,51 +4633,15 @@ function addDockZones() {
     }
 }
 
-function generateTheStrip() {
-    // The Strip - the famous entertainment district near Bagnell Dam
-    const stripY = Math.floor(CONFIG.GRID_HEIGHT / 2) - 5;
-    const stripStartX = CONFIG.GRID_WIDTH - 12;
-
-    for (let y = stripY; y < stripY + 4; y++) {
-        for (let x = stripStartX; x < CONFIG.GRID_WIDTH - 3; x++) {
-            if (y >= 0 && y < CONFIG.GRID_HEIGHT && x >= 0 && x < CONFIG.GRID_WIDTH) {
-                if (gameState.grid[y][x].terrain !== 'water' &&
-                    gameState.grid[y][x].terrain !== 'deep_water') {
-                    gameState.grid[y][x].terrain = 'strip';
-                }
-            }
-        }
-    }
-}
-
-function generateBagnellDam() {
-    // Bagnell Dam at the east end (mile 0)
-    const damX = CONFIG.GRID_WIDTH - 3;
-    const damY = Math.floor(CONFIG.GRID_HEIGHT / 2);
-
-    for (let dy = -2; dy <= 2; dy++) {
-        const y = damY + dy;
-        if (y >= 0 && y < CONFIG.GRID_HEIGHT) {
-            gameState.grid[y][damX].terrain = 'dam';
-            gameState.grid[y][damX + 1].terrain = 'dam';
-        }
-    }
-
-    // Mile marker 0 at dam
-    gameState.mileMarkers.push({ x: damX - 2, y: damY, mile: 0 });
-
-    // Generate the Shootout race course (1-mile stretch near mile 30-35)
-    generateRaceCourse();
-}
-
 function generateRaceCourse() {
-    // The Shootout race course - a straight 1-mile stretch
-    // Located in a wider section of the lake (around mile 30 area)
-    const raceStartX = Math.floor(CONFIG.GRID_WIDTH * 0.4);
-    const raceEndX = raceStartX - 12; // ~12 tiles = 1 mile course
-    const raceY = Math.floor(CONFIG.GRID_HEIGHT / 2);
+    // The Shootout race course - near Captain Ron's at mile marker 21
+    const W = CONFIG.GRID_WIDTH;
+    const H = CONFIG.GRID_HEIGHT;
+    const raceStartX = Math.floor(W * 0.58);
+    const raceEndX = raceStartX - 10;
+    const raceY = Math.floor(H * 0.50);
 
-    // Create the race lane (wider, straighter section)
+    // Create straight race lane
     for (let x = raceEndX; x <= raceStartX; x++) {
         for (let dy = -2; dy <= 2; dy++) {
             const y = raceY + dy;
@@ -3565,32 +4649,27 @@ function generateRaceCourse() {
                 if (Math.abs(dy) <= 1) {
                     gameState.grid[y][x].terrain = 'race_lane';
                 } else {
-                    // Race staging areas on the sides
-                    if (gameState.grid[y][x].terrain !== 'land' && gameState.grid[y][x].terrain !== 'forest') {
-                        gameState.grid[y][x].terrain = 'race_staging';
-                    }
+                    gameState.grid[y][x].terrain = 'race_staging';
                 }
             }
         }
     }
 
-    // Add staging areas at start and finish
+    // Add staging areas
     for (let dy = -3; dy <= 3; dy++) {
         const y = raceY + dy;
         if (y >= 0 && y < CONFIG.GRID_HEIGHT) {
-            // Start staging
             if (gameState.grid[y][raceStartX + 1]) {
                 gameState.grid[y][raceStartX + 1].terrain = 'race_staging';
             }
-            // Finish staging
             if (gameState.grid[y][raceEndX - 1]) {
                 gameState.grid[y][raceEndX - 1].terrain = 'race_staging';
             }
         }
     }
 
-    // Add a mile marker for the race area
-    gameState.mileMarkers.push({ x: raceStartX, y: raceY, mile: 32 });
+    gameState.mileMarkers.push({ x: raceStartX, y: raceY, mile: 21 });
+    gameState.locationLabels.push({ x: raceStartX - 5, y: raceY - 4, name: 'THE SHOOTOUT', type: 'race' });
 }
 
 // ==================== BUILDING SYSTEM ====================
