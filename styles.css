@@ -1,4 +1,4 @@
-/* Lake of the Ozarks Tycoon - Styles */
+/* Lake of the Ozarks Tycoon - Organic Biophilic Design */
 
 * {
     margin: 0;
@@ -8,194 +8,304 @@
 
 :root {
     /* Natural Ozark Lake Colors */
-    --lake-blue: #3d6b5e;           /* Blue-green lake water */
-    --lake-deep: #2a4a42;           /* Deep channel water */
-    --lake-light: #5a8a7a;          /* Shallow cove water */
-    --lake-water: #4a7a6a;          /* Main lake color */
+    --lake-blue: #3d6b5e;
+    --lake-deep: #2a4a42;
+    --lake-light: #5a8a7a;
+    --lake-water: #4a7a6a;
 
     /* Forest & Earth Tones */
-    --forest-green: #3a5a40;        /* Oak and hickory forest */
-    --cedar-green: #4a6350;         /* Cedar trees */
-    --limestone: #a89880;           /* Ozark bluffs */
-    --clay-red: #8b5a3c;            /* Missouri red clay */
-    --dock-brown: #6b4423;          /* Weathered dock wood */
+    --forest-green: #3a5a40;
+    --cedar-green: #4a6350;
+    --limestone: #a89880;
+    --clay-red: #8b5a3c;
+    --dock-brown: #6b4423;
+    --bark-brown: #5a4a3a;
 
     /* Natural Accents */
-    --sunset-orange: #c4723a;       /* Muted sunset */
-    --sunset-gold: #d4a855;         /* Evening light */
-    --morning-mist: #b8c4bc;        /* Fog on the lake */
-    --sand: #d4c8b0;                /* Sandy shore */
-    --cream: #f5f2eb;               /* Natural off-white */
-    --stone-gray: #7a7a72;          /* Limestone gray */
+    --sunset-orange: #c4723a;
+    --sunset-gold: #d4a855;
+    --morning-mist: #c8d4cc;
+    --sand: #d4c8b0;
+    --cream: #f5f2eb;
+    --driftwood: #9a8a7a;
 
-    --panel-bg: rgba(245, 242, 235, 0.95);
-    --shadow: 0 4px 6px rgba(0, 0, 0, 0.25);
+    /* Soft organic shadows */
+    --soft-shadow: 0 8px 32px rgba(42, 74, 66, 0.2);
+    --inner-glow: inset 0 2px 8px rgba(255, 255, 255, 0.3);
 }
 
+/* Fonts */
 body {
-    font-family: 'Segoe UI', 'Arial', sans-serif;
-    background: linear-gradient(180deg, var(--morning-mist) 0%, var(--lake-light) 30%, var(--lake-deep) 100%);
+    font-family: 'Cabin', 'Trebuchet MS', sans-serif;
+    background:
+        radial-gradient(ellipse at 20% 80%, rgba(90, 138, 122, 0.3) 0%, transparent 50%),
+        radial-gradient(ellipse at 80% 20%, rgba(74, 99, 80, 0.2) 0%, transparent 40%),
+        linear-gradient(175deg, var(--morning-mist) 0%, var(--lake-light) 40%, var(--lake-deep) 100%);
     min-height: 100vh;
-    color: #2c2c2c;
+    color: #3a3a35;
 }
 
+h1, h2, h3 {
+    font-family: 'Rye', 'Georgia', serif;
+    font-weight: 400;
+}
+
+/* Game Container */
 #game-container {
     display: flex;
     flex-direction: column;
     height: 100vh;
     max-width: 1600px;
     margin: 0 auto;
+    padding: 10px;
+    gap: 10px;
 }
 
-/* Header */
+/* Header - Organic shape */
 #game-header {
-    background: linear-gradient(180deg, var(--lake-deep) 0%, var(--lake-blue) 100%);
-    padding: 10px 20px;
+    background:
+        linear-gradient(135deg, rgba(255,255,255,0.1) 0%, transparent 50%),
+        linear-gradient(180deg, var(--lake-deep) 0%, var(--forest-green) 100%);
+    padding: 12px 25px;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    border-bottom: 4px solid var(--sunset-gold);
-    box-shadow: var(--shadow);
+    border-radius: 20px 60px 20px 60px;
+    box-shadow: var(--soft-shadow);
+    position: relative;
+    overflow: hidden;
+}
+
+#game-header::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -10%;
+    width: 200px;
+    height: 200px;
+    background: radial-gradient(circle, rgba(212, 168, 85, 0.15) 0%, transparent 70%);
+    border-radius: 50%;
 }
 
 #game-header h1 {
-    color: white;
-    font-size: 1.6rem;
-    text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
-    font-weight: bold;
-    letter-spacing: 1px;
+    color: var(--cream);
+    font-size: 1.5rem;
+    text-shadow: 2px 2px 8px rgba(0,0,0,0.4);
+    letter-spacing: 2px;
 }
 
 #resources {
     display: flex;
-    gap: 15px;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
 }
 
 .resource {
-    background: linear-gradient(180deg, #fff 0%, var(--sand) 100%);
-    padding: 8px 12px;
-    border-radius: 8px;
+    background:
+        linear-gradient(145deg, rgba(255,255,255,0.9) 0%, var(--sand) 100%);
+    padding: 6px 12px;
+    border-radius: 15px 25px 15px 25px;
     display: flex;
     align-items: center;
-    gap: 6px;
-    box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
-    border: 2px solid var(--lake-blue);
+    gap: 5px;
+    box-shadow:
+        0 4px 12px rgba(42, 74, 66, 0.15),
+        var(--inner-glow);
+    border: none;
+    position: relative;
+}
+
+.resource::after {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 10%;
+    width: 80%;
+    height: 3px;
+    background: linear-gradient(90deg, transparent, var(--lake-light), transparent);
+    border-radius: 50%;
 }
 
 .resource-icon {
-    font-size: 1.1rem;
+    font-size: 1rem;
 }
 
 .resource span:nth-child(2) {
-    font-weight: bold;
-    font-size: 1rem;
+    font-weight: 700;
+    font-size: 0.95rem;
     color: var(--lake-deep);
-    min-width: 35px;
+    min-width: 30px;
 }
 
 .resource-label {
-    font-size: 0.7rem;
-    color: #666;
+    font-size: 0.65rem;
+    color: var(--driftwood);
     text-transform: uppercase;
-    letter-spacing: 0.5px;
+    letter-spacing: 1px;
+    font-weight: 600;
 }
 
 /* Main Area */
 #main-area {
     display: flex;
     flex: 1;
+    gap: 10px;
     overflow: hidden;
 }
 
-/* Side Panels */
+/* Side Panels - Organic shapes */
 aside {
     width: 220px;
-    background: var(--panel-bg);
-    padding: 15px;
+    background:
+        linear-gradient(160deg, rgba(255,255,255,0.95) 0%, rgba(245, 242, 235, 0.9) 100%);
+    padding: 18px;
     overflow-y: auto;
-    border: 3px solid var(--lake-blue);
+    border-radius: 30px 15px 40px 20px;
+    box-shadow: var(--soft-shadow);
+    position: relative;
+}
+
+aside::before {
+    content: '';
+    position: absolute;
+    top: 15px;
+    left: 15px;
+    right: 15px;
+    height: 3px;
+    background: linear-gradient(90deg, var(--lake-light), var(--sunset-gold), var(--lake-light));
+    border-radius: 50%;
+    opacity: 0.6;
 }
 
 aside h2 {
     color: var(--lake-deep);
-    font-size: 1.2rem;
-    margin-bottom: 10px;
-    padding-bottom: 8px;
-    border-bottom: 2px solid var(--lake-light);
+    font-size: 1.3rem;
+    margin-bottom: 15px;
+    margin-top: 10px;
+    padding-bottom: 10px;
+    border-bottom: none;
+    position: relative;
+}
+
+aside h2::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 60%;
+    height: 2px;
+    background: linear-gradient(90deg, var(--sunset-gold), transparent);
+    border-radius: 2px;
 }
 
 aside h3 {
     color: var(--dock-brown);
     font-size: 1rem;
-    margin: 15px 0 8px 0;
+    margin: 18px 0 10px 0;
+    font-family: 'Cabin', sans-serif;
+    font-weight: 700;
 }
 
 #building-panel {
-    border-right: none;
+    border-radius: 15px 40px 20px 30px;
 }
 
 #info-panel {
-    border-left: none;
+    border-radius: 40px 15px 30px 20px;
 }
 
 /* Building Categories */
 #building-categories {
     display: flex;
     flex-wrap: wrap;
-    gap: 5px;
-    margin-bottom: 10px;
+    gap: 6px;
+    margin-bottom: 12px;
 }
 
 .category-btn {
     flex: 1 1 45%;
-    padding: 8px 5px;
+    padding: 8px 6px;
+    border: none;
+    border-radius: 12px 20px 12px 20px;
     font-size: 0.75rem;
-    background: var(--cream);
-    border: 2px solid var(--lake-light);
-    border-radius: 5px;
+    font-family: 'Cabin', sans-serif;
+    font-weight: 600;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: all 0.3s ease;
+    background:
+        linear-gradient(145deg, var(--cream) 0%, var(--sand) 100%);
+    color: var(--bark-brown);
+    box-shadow: 0 3px 8px rgba(42, 74, 66, 0.1);
 }
 
 .category-btn:hover {
-    background: var(--sand);
-    border-color: var(--lake-blue);
+    transform: translateY(-2px) rotate(-1deg);
+    box-shadow: 0 6px 16px rgba(42, 74, 66, 0.2);
+    background: linear-gradient(145deg, #fff 0%, var(--cream) 100%);
 }
 
 .category-btn.active {
-    background: var(--lake-blue);
+    background: linear-gradient(145deg, var(--lake-light) 0%, var(--lake-deep) 100%);
     color: white;
-    border-color: var(--lake-deep);
+    box-shadow:
+        0 4px 12px rgba(42, 74, 66, 0.3),
+        inset 0 1px 2px rgba(255,255,255,0.2);
 }
 
 /* Building List */
 #building-list {
     display: flex;
     flex-direction: column;
-    gap: 8px;
-    max-height: 300px;
-    overflow-y: auto;
+    gap: 6px;
 }
 
 .building-item {
-    background: white;
-    padding: 10px;
-    border-radius: 8px;
-    border: 2px solid var(--sand);
+    padding: 10px 12px;
+    background:
+        linear-gradient(135deg, rgba(255,255,255,0.8) 0%, rgba(212, 200, 176, 0.4) 100%);
+    border-radius: 10px 18px 10px 18px;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    box-shadow: 0 2px 6px rgba(42, 74, 66, 0.08);
 }
 
 .building-item:hover {
-    border-color: var(--lake-blue);
-    transform: translateX(3px);
-    box-shadow: 0 2px 8px rgba(30, 95, 138, 0.2);
+    background:
+        linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(212, 200, 176, 0.6) 100%);
+    transform: translateX(4px);
+    box-shadow: 0 4px 12px rgba(42, 74, 66, 0.15);
 }
 
 .building-item.selected {
-    border-color: var(--neon-green);
-    background: #e8fff2;
-    box-shadow: 0 0 0 2px var(--neon-green);
+    background:
+        linear-gradient(135deg, var(--lake-light) 0%, var(--lake-blue) 100%);
+    color: white;
+}
+
+.building-item .icon {
+    font-size: 1.3rem;
+    width: 28px;
+    text-align: center;
+}
+
+.building-item .name {
+    flex: 1;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.building-item .cost {
+    font-size: 0.75rem;
+    color: var(--sunset-gold);
+    font-weight: 700;
+}
+
+.building-item.selected .cost {
+    color: var(--cream);
 }
 
 .building-item.disabled {
@@ -203,265 +313,246 @@ aside h3 {
     cursor: not-allowed;
 }
 
-.building-item .building-header {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.building-item .building-icon {
-    font-size: 1.5rem;
-}
-
-.building-item .building-name {
-    font-weight: bold;
-    font-size: 0.9rem;
-    color: var(--lake-deep);
-}
-
-.building-item .building-cost {
-    font-size: 0.75rem;
-    color: #666;
-    margin-top: 4px;
-}
-
 /* Building Info */
 #building-info {
     margin-top: 15px;
-    padding: 10px;
-    background: white;
-    border-radius: 8px;
-    border: 2px solid var(--sand);
-    font-size: 0.85rem;
+    padding: 12px;
+    background:
+        radial-gradient(ellipse at top left, rgba(90, 138, 122, 0.1) 0%, transparent 50%),
+        linear-gradient(145deg, rgba(255,255,255,0.6) 0%, rgba(212, 200, 176, 0.3) 100%);
+    border-radius: 15px 8px 20px 8px;
+    font-size: 0.8rem;
+    line-height: 1.5;
 }
 
 #building-info p {
-    margin-bottom: 5px;
+    margin-bottom: 6px;
 }
 
-/* Game Area */
-#game-area {
-    flex: 1;
-    position: relative;
-    background: #1a4d3a;
-    overflow: hidden;
-}
-
-#game-canvas {
-    display: block;
-    cursor: pointer;
-}
-
-/* Mile Marker Display */
-#mile-marker-display {
-    position: absolute;
-    top: 15px;
-    left: 50%;
-    transform: translateX(-50%);
-    background: rgba(0,0,0,0.8);
-    color: var(--sunset-gold);
-    padding: 8px 20px;
-    border-radius: 20px;
-    font-size: 0.9rem;
-    font-weight: bold;
-    border: 2px solid var(--sunset-gold);
-    z-index: 100;
-}
-
-/* Game Controls */
-#game-controls {
-    position: absolute;
-    bottom: 20px;
-    right: 20px;
-    display: flex;
-    gap: 10px;
-}
-
-#game-controls button {
-    width: 45px;
-    height: 45px;
-    font-size: 1.2rem;
-    background: var(--panel-bg);
-    border: 3px solid var(--lake-blue);
-    border-radius: 8px;
-    cursor: pointer;
-    transition: all 0.2s;
-    box-shadow: var(--shadow);
-}
-
-#game-controls button:hover {
-    background: var(--sand);
-    transform: scale(1.1);
-}
-
-#game-controls button.active {
-    background: var(--sunset-orange);
-    border-color: #c44;
-    color: white;
-}
-
-#btn-speed {
-    width: auto;
-    padding: 0 15px;
-    font-size: 0.9rem;
-}
-
-/* Town Stats */
+/* Stats Panel */
 #town-stats {
-    background: white;
-    padding: 10px;
-    border-radius: 8px;
-    border: 2px solid var(--sand);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
 }
 
 .stat {
     display: flex;
     justify-content: space-between;
-    padding: 5px 0;
-    border-bottom: 1px solid #eee;
-}
-
-.stat:last-child {
-    border-bottom: none;
+    padding: 8px 10px;
+    background:
+        linear-gradient(135deg, rgba(255,255,255,0.5) 0%, rgba(212, 200, 176, 0.2) 100%);
+    border-radius: 8px 15px 8px 15px;
 }
 
 .stat-label {
-    color: #666;
-    font-size: 0.85rem;
+    color: var(--driftwood);
+    font-size: 0.8rem;
 }
 
-#income {
-    color: var(--neon-green);
-    font-weight: bold;
-}
-
-#lake-level {
-    color: var(--lake-blue);
-    font-weight: bold;
+.stat span:last-child {
+    font-weight: 700;
+    color: var(--lake-deep);
 }
 
 /* Event Log */
 #event-log {
-    background: white;
-    padding: 10px;
-    border-radius: 8px;
-    border: 2px solid var(--sand);
     max-height: 200px;
     overflow-y: auto;
-    font-size: 0.8rem;
+    padding: 8px;
+    background:
+        linear-gradient(180deg, rgba(255,255,255,0.3) 0%, rgba(212, 200, 176, 0.2) 100%);
+    border-radius: 12px 6px 15px 6px;
 }
 
 .event-item {
-    padding: 5px 0;
-    border-bottom: 1px solid #eee;
-}
-
-.event-item:last-child {
-    border-bottom: none;
+    padding: 6px 8px;
+    margin-bottom: 5px;
+    font-size: 0.75rem;
+    background: rgba(255,255,255,0.5);
+    border-radius: 6px 12px 6px 12px;
+    border-left: 3px solid var(--lake-light);
 }
 
 .event-item.positive {
-    color: var(--neon-green);
+    border-left-color: var(--forest-green);
+    color: var(--forest-green);
 }
 
 .event-item.negative {
-    color: #c44;
-}
-
-.event-item.neutral {
-    color: #666;
-}
-
-.event-item.party {
-    color: var(--party-pink);
-    font-weight: bold;
+    border-left-color: var(--clay-red);
+    color: var(--clay-red);
 }
 
 .event-item.racing {
-    color: #8b5a3c;
-    font-weight: bold;
-    background: rgba(139, 90, 60, 0.15);
-    padding: 3px 5px;
-    border-radius: 3px;
+    border-left-color: var(--sunset-orange);
+    color: var(--dock-brown);
+    background: rgba(196, 114, 58, 0.1);
 }
 
 /* Racing Resources */
 .racing-resource {
-    border-color: #8b5a3c !important;
-    background: linear-gradient(180deg, #fff 0%, #e8dcd0 100%) !important;
+    background:
+        linear-gradient(145deg, rgba(255,240,224,0.95) 0%, rgba(212, 168, 85, 0.3) 100%) !important;
 }
 
 .racing-resource span:nth-child(2) {
-    color: #8b5a3c !important;
+    color: var(--dock-brown) !important;
 }
 
 /* Racing Category Button */
 .racing-btn {
-    background: linear-gradient(180deg, #a06040 0%, #8b5a3c 100%) !important;
+    background:
+        linear-gradient(145deg, var(--sunset-gold) 0%, var(--clay-red) 100%) !important;
     color: white !important;
-    border-color: #6b4423 !important;
 }
 
 .racing-btn:hover {
-    background: linear-gradient(180deg, #b07050 0%, #a06040 100%) !important;
+    background:
+        linear-gradient(145deg, #e8b860 0%, var(--sunset-orange) 100%) !important;
 }
 
 .racing-btn.active {
-    background: linear-gradient(180deg, #8b5a3c 0%, #6b4423 100%) !important;
-    box-shadow: 0 0 10px rgba(139, 90, 60, 0.5);
+    background:
+        linear-gradient(145deg, var(--clay-red) 0%, var(--dock-brown) 100%) !important;
 }
 
 /* Shootout Info Box */
 .shootout-info {
-    background: linear-gradient(180deg, #6b4423 0%, #5a3a1a 100%);
-    color: #f5f2eb;
-    padding: 12px;
-    border-radius: 8px;
+    background:
+        linear-gradient(145deg, var(--dock-brown) 0%, var(--bark-brown) 100%);
+    color: var(--cream);
+    padding: 14px;
+    border-radius: 15px 30px 15px 30px;
     margin: 15px 0;
     text-align: center;
+    box-shadow: 0 4px 16px rgba(90, 74, 58, 0.3);
 }
 
 .shootout-info p {
     margin: 0;
 }
 
+/* Game Area */
+#game-area {
+    flex: 1;
+    position: relative;
+    border-radius: 25px;
+    overflow: hidden;
+    box-shadow:
+        var(--soft-shadow),
+        inset 0 0 60px rgba(42, 74, 66, 0.1);
+}
+
+#game-canvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+    cursor: crosshair;
+}
+
+#mile-marker-display {
+    position: absolute;
+    top: 15px;
+    left: 15px;
+    background:
+        linear-gradient(145deg, rgba(255,255,255,0.9) 0%, rgba(212, 200, 176, 0.8) 100%);
+    padding: 8px 16px;
+    border-radius: 20px 8px 20px 8px;
+    font-family: 'Cabin', sans-serif;
+    font-weight: 700;
+    font-size: 0.9rem;
+    color: var(--lake-deep);
+    box-shadow: 0 4px 12px rgba(42, 74, 66, 0.2);
+}
+
+#game-controls {
+    position: absolute;
+    bottom: 15px;
+    right: 15px;
+    display: flex;
+    gap: 8px;
+}
+
+#game-controls button {
+    width: 44px;
+    height: 44px;
+    border: none;
+    border-radius: 50%;
+    background:
+        linear-gradient(145deg, rgba(255,255,255,0.95) 0%, var(--sand) 100%);
+    font-size: 1.2rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(42, 74, 66, 0.2);
+}
+
+#game-controls button:hover {
+    transform: scale(1.1) rotate(5deg);
+    box-shadow: 0 6px 20px rgba(42, 74, 66, 0.3);
+}
+
+#game-controls button:active {
+    transform: scale(0.95);
+}
+
+#btn-demolish.active {
+    background:
+        linear-gradient(145deg, #e74c3c 0%, #c0392b 100%);
+    color: white;
+}
+
+#btn-speed {
+    width: auto;
+    padding: 0 16px;
+    border-radius: 22px;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
 /* Footer */
 #game-footer {
-    background: linear-gradient(180deg, var(--lake-blue) 0%, var(--lake-deep) 100%);
-    color: white;
-    padding: 10px;
+    background:
+        linear-gradient(180deg, var(--lake-blue) 0%, var(--lake-deep) 100%);
+    color: var(--cream);
+    padding: 10px 20px;
     text-align: center;
-    font-size: 0.9rem;
-    border-top: 3px solid var(--sunset-gold);
+    font-size: 0.85rem;
+    border-radius: 60px 20px 60px 20px;
+    box-shadow: 0 -4px 16px rgba(42, 74, 66, 0.2);
 }
 
 /* Tooltip */
 #tooltip {
-    position: absolute;
-    background: rgba(13, 61, 92, 0.95);
-    color: white;
-    padding: 10px 15px;
-    border-radius: 8px;
+    position: fixed;
+    background:
+        linear-gradient(145deg, rgba(255,255,255,0.98) 0%, var(--sand) 100%);
+    padding: 12px 16px;
+    border-radius: 12px 20px 12px 20px;
     font-size: 0.85rem;
-    pointer-events: none;
-    z-index: 1000;
     max-width: 250px;
-    box-shadow: var(--shadow);
-    border: 2px solid var(--lake-light);
+    box-shadow: 0 8px 32px rgba(42, 74, 66, 0.25);
+    z-index: 1000;
+    pointer-events: none;
 }
 
 #tooltip.hidden {
     display: none;
 }
 
-/* Modal */
+#tooltip strong {
+    color: var(--lake-deep);
+}
+
+/* Modal - Organic design */
 .modal {
     position: fixed;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
-    background: rgba(0,0,0,0.7);
+    background:
+        radial-gradient(ellipse at center, rgba(42, 74, 66, 0.8) 0%, rgba(26, 42, 38, 0.95) 100%);
     display: flex;
     justify-content: center;
     align-items: center;
@@ -473,126 +564,158 @@ aside h3 {
 }
 
 .modal-content {
-    background: linear-gradient(180deg, #fff 0%, var(--sand) 100%);
-    padding: 30px;
-    border-radius: 15px;
+    background:
+        radial-gradient(ellipse at top right, rgba(255,255,255,0.2) 0%, transparent 50%),
+        linear-gradient(160deg, var(--cream) 0%, var(--sand) 100%);
+    padding: 35px;
+    border-radius: 40px 20px 50px 25px;
     max-width: 520px;
     max-height: 90vh;
     overflow-y: auto;
-    border: 5px solid var(--lake-blue);
-    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    box-shadow:
+        0 25px 80px rgba(0,0,0,0.4),
+        inset 0 1px 0 rgba(255,255,255,0.5);
+    position: relative;
+}
+
+.modal-content::before {
+    content: '';
+    position: absolute;
+    top: -20px;
+    right: 30px;
+    width: 100px;
+    height: 100px;
+    background: radial-gradient(circle, rgba(212, 168, 85, 0.3) 0%, transparent 70%);
+    border-radius: 50%;
 }
 
 .modal-content h2 {
     color: var(--lake-deep);
     margin-bottom: 15px;
-    font-size: 1.6rem;
+    font-size: 1.8rem;
+    position: relative;
 }
 
 .modal-content h3 {
     color: var(--dock-brown);
-    margin: 15px 0 10px;
+    margin: 20px 0 12px;
+    font-family: 'Cabin', sans-serif;
+    font-weight: 700;
 }
 
 .modal-content p {
-    margin-bottom: 10px;
-    line-height: 1.5;
+    margin-bottom: 12px;
+    line-height: 1.6;
+    color: var(--bark-brown);
 }
 
 .modal-content ul {
-    margin: 10px 0 15px 20px;
+    margin: 12px 0 18px 25px;
 }
 
 .modal-content li {
-    margin-bottom: 8px;
-    line-height: 1.4;
+    margin-bottom: 10px;
+    line-height: 1.5;
+    color: var(--bark-brown);
 }
 
 .lake-facts {
-    background: var(--lake-light);
+    background:
+        linear-gradient(145deg, var(--lake-light) 0%, var(--lake-blue) 100%);
     color: white;
-    padding: 12px;
-    border-radius: 8px;
-    margin: 15px 0;
+    padding: 15px 18px;
+    border-radius: 15px 30px 15px 30px;
+    margin: 18px 0;
 }
 
 .lake-facts p {
     margin: 0;
+    color: white;
 }
 
 .modal-content input {
     width: 100%;
-    padding: 12px;
-    margin: 15px 0;
-    border: 2px solid var(--lake-light);
-    border-radius: 8px;
+    padding: 14px 18px;
+    margin: 18px 0;
+    border: none;
+    border-radius: 15px 25px 15px 25px;
     font-size: 1rem;
-    font-family: inherit;
+    font-family: 'Cabin', sans-serif;
+    background:
+        linear-gradient(145deg, #fff 0%, rgba(255,255,255,0.8) 100%);
+    box-shadow:
+        inset 0 2px 8px rgba(42, 74, 66, 0.1),
+        0 2px 8px rgba(42, 74, 66, 0.1);
+    color: var(--bark-brown);
+}
+
+.modal-content input:focus {
+    outline: none;
+    box-shadow:
+        inset 0 2px 8px rgba(42, 74, 66, 0.1),
+        0 0 0 3px rgba(90, 138, 122, 0.3);
 }
 
 .modal-content button {
     width: 100%;
     padding: 18px;
-    background: linear-gradient(180deg, #5a8a7a 0%, #3d6b5e 100%);
+    background:
+        linear-gradient(145deg, var(--lake-light) 0%, var(--forest-green) 100%);
     color: white;
-    border: 3px solid #2a4a42;
-    border-radius: 10px;
+    border: none;
+    border-radius: 20px 35px 20px 35px;
     font-size: 1.2rem;
-    font-family: inherit;
+    font-family: 'Rye', serif;
     cursor: pointer;
-    transition: all 0.2s;
-    font-weight: bold;
-    text-shadow: 1px 1px 2px rgba(0,0,0,0.4);
+    transition: all 0.3s ease;
+    text-shadow: 1px 1px 3px rgba(0,0,0,0.3);
+    box-shadow:
+        0 6px 20px rgba(42, 74, 66, 0.3),
+        inset 0 1px 0 rgba(255,255,255,0.2);
     -webkit-tap-highlight-color: transparent;
     touch-action: manipulation;
 }
 
 .modal-content button:hover,
 .modal-content button:focus {
-    background: linear-gradient(180deg, #6b9a8a 0%, #4a7a6a 100%);
-    transform: scale(1.02);
+    background:
+        linear-gradient(145deg, #6a9a8a 0%, var(--lake-light) 100%);
+    transform: translateY(-2px);
+    box-shadow:
+        0 10px 30px rgba(42, 74, 66, 0.4),
+        inset 0 1px 0 rgba(255,255,255,0.2);
     outline: none;
 }
 
 .modal-content button:active {
-    transform: scale(0.98);
-    background: linear-gradient(180deg, #4a7a6a 0%, #2a4a42 100%);
+    transform: translateY(0);
 }
 
-/* Scrollbar Styling */
+/* Scrollbar Styling - Organic */
 ::-webkit-scrollbar {
-    width: 8px;
+    width: 10px;
 }
 
 ::-webkit-scrollbar-track {
-    background: var(--cream);
+    background: rgba(212, 200, 176, 0.3);
+    border-radius: 10px;
 }
 
 ::-webkit-scrollbar-thumb {
-    background: var(--lake-light);
-    border-radius: 4px;
+    background:
+        linear-gradient(180deg, var(--lake-light) 0%, var(--lake-blue) 100%);
+    border-radius: 10px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-    background: var(--lake-blue);
+    background:
+        linear-gradient(180deg, var(--lake-blue) 0%, var(--lake-deep) 100%);
 }
 
-/* Responsive */
+/* Responsive adjustments */
 @media (max-width: 1200px) {
     aside {
         width: 180px;
-    }
-
-    #resources {
-        gap: 8px;
-    }
-
-    .resource {
-        padding: 5px 8px;
-    }
-
-    #game-header h1 {
-        font-size: 1.3rem;
     }
 }
 
@@ -603,15 +726,14 @@ aside h3 {
 
     aside {
         width: 100%;
-        max-height: 200px;
+        border-radius: 20px;
     }
 
-    #building-list {
-        flex-direction: row;
-        flex-wrap: wrap;
+    #resources {
+        gap: 5px;
     }
 
-    .building-item {
-        flex: 1 1 120px;
+    .resource {
+        padding: 5px 8px;
     }
 }
