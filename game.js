@@ -1139,6 +1139,19 @@ const NarrativeEventManager = {
 };
 
 // ==================== MAIN ANIMATION LOOP ====================
+// ARCHITECTURE: Decoupled Simulation & Render Loops
+// ─────────────────────────────────────────────────
+// SIMULATION LOOP (setInterval @ CONFIG.TICK_RATE):
+//   - Game logic: income, production, seasons, events
+//   - Fixed timestep for consistent simulation
+//   - Called from startGameLoop() → gameTick()
+//
+// RENDER LOOP (requestAnimationFrame @ 60fps):
+//   - Visual updates: TimeManager, VFX, particles
+//   - Smooth animations tied to display refresh
+//   - Called from startAnimationLoop() → animate()
+// ─────────────────────────────────────────────────
+
 let animationFrameId = null;
 let lastFrameTime = 0;
 let gameSpeedMultiplier = 1;
@@ -1157,12 +1170,12 @@ function startAnimationLoop() {
         // Cap deltaTime to prevent huge jumps after tab switch
         const cappedDelta = Math.min(deltaTime, 100);
 
-        // Update systems
+        // Update visual systems (independent of game tick)
         TimeManager.update(cappedDelta);
         VisualEffectsManager.update(cappedDelta);
         NarrativeEventManager.check(gameState);
 
-        // Render with effects
+        // Render at display refresh rate (vsync)
         if (typeof render === 'function' && typeof gameState !== 'undefined' && gameState.grid.length > 0) {
             render();
         }
@@ -1172,7 +1185,7 @@ function startAnimationLoop() {
     }
 
     animationFrameId = requestAnimationFrame(animate);
-    console.log('[Engine] Animation loop started');
+    console.log('[Engine] Animation loop started (decoupled from simulation)');
 }
 
 function stopAnimationLoop() {
@@ -2071,8 +2084,8 @@ function showFirstShootoutRace() {
     raceState.particles = [];
     raceState.phase = 'dialogue';  // Start with pre-race dialogue!
     raceState.coursePosition = 0;
-    raceState.startLinePos = 400;
-    raceState.finishLinePos = 2400;
+    raceState.startLinePos = CONFIG.RACE.START_LINE_POS;
+    raceState.finishLinePos = CONFIG.RACE.FINISH_LINE_POS;
     raceState.finishAnimFrame = 0;
     raceState.peakSpeed = 0;
     raceState.crossedStart = false;
@@ -2477,8 +2490,8 @@ function updateRacePhysics() {
 
     // SLOW acceleration - pontoon reaches ~13 MPH at start, takes time to build speed
     // Boost increases acceleration rate too
-    const acceleration = raceState.maxSpeed * 0.004 * (isBoosting ? 1.5 : 1);
-    const deceleration = raceState.maxSpeed * 0.003;
+    const acceleration = raceState.maxSpeed * CONFIG.RACE.ACCELERATION_FACTOR * (isBoosting ? 1.5 : 1);
+    const deceleration = raceState.maxSpeed * CONFIG.RACE.DECELERATION_FACTOR;
 
     if (raceState.throttle > 0) {
         // Accelerate towards max speed (boosted if active)
@@ -2498,10 +2511,10 @@ function updateRacePhysics() {
     }
 
     // Update course position based on speed (tuned for ~15 second race)
-    raceState.coursePosition += raceState.currentSpeed * 0.07;
+    raceState.coursePosition += raceState.currentSpeed * CONFIG.RACE.COURSE_SPEED_FACTOR;
 
     // Update water scroll based on speed
-    raceState.waterOffset += raceState.currentSpeed * 0.5;
+    raceState.waterOffset += raceState.currentSpeed * CONFIG.RACE.WATER_SCROLL_FACTOR;
     raceState.wavePhase += 0.1;
 
     // Update boat X position based on lane
@@ -5000,15 +5013,94 @@ window.drawStoryteller = drawStoryteller;
 window.initStoryteller = initStoryteller;
 
 // ==================== GAME CONFIGURATION ====================
+// Centralized configuration for all magic numbers and game settings
+// This makes the game easily tunable without hunting through code
 const CONFIG = {
+    // === GRID & MAP ===
     GRID_WIDTH: 50,
     GRID_HEIGHT: 35,
     TILE_SIZE: 40,
-    TICK_RATE: 1000,
+
+    // === GAME TIMING ===
+    TICK_RATE: 1000,                  // Simulation tick rate in ms
+    FPS_TARGET: 60,                   // Target render frame rate
     SEASONS: ['Spring', 'Summer', 'Summer', 'Fall'], // Double summer for lake life!
-    TICKS_PER_SEASON: 90, // Longer seasons = more time to build up your boat empire
-    LAKE_MILE_MARKERS: 92, // The real lake has mile markers 0-92
-    SHOOTOUT_WEEK: 75, // Shootout happens late summer (tick 75 of summer)
+    TICKS_PER_SEASON: 90,             // Ticks per season
+    LAKE_MILE_MARKERS: 92,            // Real lake has mile markers 0-92
+    SHOOTOUT_WEEK: 75,                // Shootout happens late summer (tick 75 of summer)
+
+    // === CAMERA ===
+    CAMERA: {
+        MIN_ZOOM: 0.4,
+        MAX_ZOOM: 2.0,
+        ZOOM_STEP: 0.2,
+        PAN_SPEED: 0.1,
+        INITIAL_ZOOM: 1.0
+    },
+
+    // === RACE SETTINGS ===
+    RACE: {
+        START_LINE_POS: 400,          // Course position of start line
+        FINISH_LINE_POS: 2400,        // Course position of finish line
+        APPROACH_SPEED_LIMIT: 40,     // Max speed before start line
+        ACCELERATION_FACTOR: 0.004,   // Base acceleration multiplier
+        DECELERATION_FACTOR: 0.003,   // Base deceleration multiplier
+        COURSE_SPEED_FACTOR: 0.07,    // How fast course position updates
+        WATER_SCROLL_FACTOR: 0.5      // Water scroll speed relative to boat
+    },
+
+    // === BOOST/NITRO ===
+    BOOST: {
+        MAX_FUEL: 100,
+        DRAIN_RATE: 35,               // Fuel per second while boosting
+        RECHARGE_RATE: 8,             // Fuel per second when not boosting
+        SPEED_MULTIPLIER: 1.4,        // Speed bonus while boosting
+        COOLDOWN_DURATION: 2,         // Seconds after empty before can boost
+        SHAKE_INTENSITY: 4            // Screen shake intensity during boost
+    },
+
+    // === VISUAL EFFECTS ===
+    VFX: {
+        MAX_PARTICLES: 100,
+        MAX_FLOATING_TEXTS: 20,
+        WATER_BREATHING_SPEED: 0.5,   // Cycles per second
+        WATER_BREATHING_INTENSITY: 0.03,
+        AMBIENT_PULSE_SPEED: 0.3,
+        SCREEN_SHAKE_DECAY: 0.9
+    },
+
+    // === PARALLAX LAYERS ===
+    PARALLAX: {
+        FAR_SPEED: 0.15,              // Distant mountains/clouds
+        MID_SPEED: 0.5,               // Trees/structures
+        NEAR_SPEED: 1.0               // Water/main action
+    },
+
+    // === DIALOGUE ===
+    DIALOGUE: {
+        TYPEWRITER_SPEED: 40,         // ms per character
+        AUTO_ADVANCE_DELAY: 2000      // ms before auto-advance (if enabled)
+    },
+
+    // === ECONOMY ===
+    ECONOMY: {
+        STARTING_MONEY: 5000,
+        WEEKEND_MULTIPLIER: 1.5,
+        SUMMER_MULTIPLIER: 2.0,
+        SPRING_MULTIPLIER: 1.2,
+        WINTER_MULTIPLIER: 0.6,
+        SHOOTOUT_MULTIPLIER: 3.0,
+        TOURISM_DECAY: 0.95,
+        REP_CHANGE_FACTOR: 0.1
+    },
+
+    // === MINIMAP ===
+    MINIMAP: {
+        WIDTH: 150,
+        HEIGHT: 100,
+        MARGIN: 15,
+        OPACITY: 0.85
+    }
 };
 
 // ==================== STARTER BOATS ====================
@@ -7185,12 +7277,8 @@ function render() {
         return;
     }
 
-    // Throttle renders to max ~60fps to prevent excessive repaints during drag
-    const now = performance.now();
-    if (now - gameState.lastRenderTime < 16) { // ~60fps max
-        return;
-    }
-    gameState.lastRenderTime = now;
+    // Note: No throttle needed - requestAnimationFrame in startAnimationLoop()
+    // already syncs to display refresh rate (typically 60fps)
 
     // Apply screen shake offset
     const shake = VisualEffectsManager.getShakeOffset();
@@ -7227,24 +7315,89 @@ function render() {
         }
     });
 
-    // Draw hover highlight
-    if (hoverTile && gameState.selectedBuilding) {
-        const canPlace = canPlaceBuilding(gameState.selectedBuilding, hoverTile.x, hoverTile.y);
-        ctx.fillStyle = canPlace ? 'rgba(0, 210, 106, 0.4)' : 'rgba(200, 50, 50, 0.4)';
-        ctx.fillRect(
-            hoverTile.x * CONFIG.TILE_SIZE,
-            hoverTile.y * CONFIG.TILE_SIZE,
-            CONFIG.TILE_SIZE,
-            CONFIG.TILE_SIZE
-        );
-    } else if (hoverTile && gameState.demolishMode) {
-        ctx.fillStyle = 'rgba(200, 50, 50, 0.4)';
-        ctx.fillRect(
-            hoverTile.x * CONFIG.TILE_SIZE,
-            hoverTile.y * CONFIG.TILE_SIZE,
-            CONFIG.TILE_SIZE,
-            CONFIG.TILE_SIZE
-        );
+    // Draw hover highlight with enhanced visual feedback
+    if (hoverTile) {
+        const tx = hoverTile.x * CONFIG.TILE_SIZE;
+        const ty = hoverTile.y * CONFIG.TILE_SIZE;
+        const tileData = gameState.grid[hoverTile.y]?.[hoverTile.x];
+
+        if (gameState.selectedBuilding) {
+            // Building placement mode - green/red based on validity
+            const canPlace = canPlaceBuilding(gameState.selectedBuilding, hoverTile.x, hoverTile.y);
+            const buildDef = BUILDINGS[gameState.selectedBuilding];
+            const buildWidth = (buildDef?.size?.width || 1) * CONFIG.TILE_SIZE;
+            const buildHeight = (buildDef?.size?.height || 1) * CONFIG.TILE_SIZE;
+
+            // Fill with placement indicator
+            ctx.fillStyle = canPlace ? 'rgba(0, 210, 106, 0.35)' : 'rgba(200, 50, 50, 0.35)';
+            ctx.fillRect(tx, ty, buildWidth, buildHeight);
+
+            // Draw border
+            ctx.strokeStyle = canPlace ? 'rgba(0, 255, 128, 0.9)' : 'rgba(255, 80, 80, 0.9)';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(tx + 1, ty + 1, buildWidth - 2, buildHeight - 2);
+
+            // Pulsing corner brackets for emphasis
+            const pulse = Math.sin(Date.now() * 0.008) * 0.3 + 0.7;
+            ctx.strokeStyle = canPlace ? `rgba(0, 255, 128, ${pulse})` : `rgba(255, 80, 80, ${pulse})`;
+            ctx.lineWidth = 3;
+            const bracketSize = 10;
+            // Top-left
+            ctx.beginPath();
+            ctx.moveTo(tx, ty + bracketSize);
+            ctx.lineTo(tx, ty);
+            ctx.lineTo(tx + bracketSize, ty);
+            ctx.stroke();
+            // Top-right
+            ctx.beginPath();
+            ctx.moveTo(tx + buildWidth - bracketSize, ty);
+            ctx.lineTo(tx + buildWidth, ty);
+            ctx.lineTo(tx + buildWidth, ty + bracketSize);
+            ctx.stroke();
+            // Bottom-left
+            ctx.beginPath();
+            ctx.moveTo(tx, ty + buildHeight - bracketSize);
+            ctx.lineTo(tx, ty + buildHeight);
+            ctx.lineTo(tx + bracketSize, ty + buildHeight);
+            ctx.stroke();
+            // Bottom-right
+            ctx.beginPath();
+            ctx.moveTo(tx + buildWidth - bracketSize, ty + buildHeight);
+            ctx.lineTo(tx + buildWidth, ty + buildHeight);
+            ctx.lineTo(tx + buildWidth, ty + buildHeight - bracketSize);
+            ctx.stroke();
+
+        } else if (gameState.demolishMode) {
+            // Demolish mode - red warning
+            ctx.fillStyle = 'rgba(200, 50, 50, 0.35)';
+            ctx.fillRect(tx, ty, CONFIG.TILE_SIZE, CONFIG.TILE_SIZE);
+
+            // X pattern for demolish
+            ctx.strokeStyle = 'rgba(255, 80, 80, 0.8)';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(tx + 5, ty + 5);
+            ctx.lineTo(tx + CONFIG.TILE_SIZE - 5, ty + CONFIG.TILE_SIZE - 5);
+            ctx.moveTo(tx + CONFIG.TILE_SIZE - 5, ty + 5);
+            ctx.lineTo(tx + 5, ty + CONFIG.TILE_SIZE - 5);
+            ctx.stroke();
+
+        } else {
+            // Default hover - subtle highlight for exploration
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.12)';
+            ctx.fillRect(tx, ty, CONFIG.TILE_SIZE, CONFIG.TILE_SIZE);
+
+            // Subtle border
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(tx + 0.5, ty + 0.5, CONFIG.TILE_SIZE - 1, CONFIG.TILE_SIZE - 1);
+
+            // Show terrain type indicator if on water
+            if (tileData?.terrain === 'water' || tileData?.terrain === 'deep_water') {
+                ctx.fillStyle = 'rgba(100, 180, 220, 0.15)';
+                ctx.fillRect(tx, ty, CONFIG.TILE_SIZE, CONFIG.TILE_SIZE);
+            }
+        }
     }
 
     // Draw location labels (towns, parks, landmarks)
@@ -9032,8 +9185,10 @@ function gameTick() {
     document.getElementById('lake-level').textContent = gameState.shootout.active ?
         `SHOOTOUT DAY ${gameState.shootout.day + 1}!` : `${gameState.lakeLevel} ft`;
 
+    // Update UI elements (DOM updates)
+    // Note: render() is handled by the separate animation loop (requestAnimationFrame)
+    // This decouples simulation tick rate from render frame rate
     updateUI();
-    render();
 }
 
 // ==================== SHOOTOUT EVENT SYSTEM ====================
@@ -9346,7 +9501,28 @@ function initInput() {
     canvas.addEventListener('mouseup', () => { isDragging = false; });
     canvas.addEventListener('wheel', onWheel);
     canvas.addEventListener('mouseleave', () => { hoverTile = null; render(); });
-    canvas.addEventListener('contextmenu', e => e.preventDefault());
+
+    // Right-click to cancel building placement or demolish mode
+    canvas.addEventListener('contextmenu', (e) => {
+        e.preventDefault();
+
+        // Cancel any active placement/demolish mode
+        if (gameState.selectedBuilding || gameState.demolishMode) {
+            gameState.selectedBuilding = null;
+            gameState.demolishMode = false;
+            document.getElementById('btn-demolish').classList.remove('active');
+
+            // Visual feedback
+            VisualEffectsManager.spawnFloatingText(
+                e.clientX, e.clientY,
+                'Cancelled', '#AAAAAA', 14
+            );
+
+            updateBuildingList();
+            updateBuildingInfo();
+            console.log('[Input] Right-click: Cancelled building placement');
+        }
+    });
 
     document.querySelectorAll('.category-btn').forEach(btn => {
         btn.addEventListener('click', () => {
@@ -9366,12 +9542,12 @@ function initInput() {
     });
 
     document.getElementById('btn-zoom-in').addEventListener('click', () => {
-        gameState.camera.zoom = Math.min(2, gameState.camera.zoom + 0.2);
+        gameState.camera.zoom = Math.min(CONFIG.CAMERA.MAX_ZOOM, gameState.camera.zoom + CONFIG.CAMERA.ZOOM_STEP);
         render();
     });
 
     document.getElementById('btn-zoom-out').addEventListener('click', () => {
-        gameState.camera.zoom = Math.max(0.4, gameState.camera.zoom - 0.2);
+        gameState.camera.zoom = Math.max(CONFIG.CAMERA.MIN_ZOOM, gameState.camera.zoom - CONFIG.CAMERA.ZOOM_STEP);
         render();
     });
 
