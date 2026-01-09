@@ -1,31 +1,143 @@
 // Lake of the Ozarks Tycoon - Main Game Engine
 // Build your lakefront empire at Missouri's premier party lake!
 
-// ==================== GLOBAL MODAL FUNCTIONS ====================
-// These must be global for onclick handlers in HTML
-function hideWelcomeModal() {
+// ==================== GLOBAL MODAL & BOAT SELECTION ====================
+// Track selected starter boat
+let selectedStarterBoat = 'sundancer';
+
+// Select a starter boat
+function selectStarterBoat(boatId) {
+    selectedStarterBoat = boatId;
+
+    // Update UI to show selection
+    document.querySelectorAll('.boat-option').forEach(opt => {
+        opt.classList.remove('selected');
+    });
+
+    const selectedOption = document.querySelector(`.boat-option[data-boat="${boatId}"]`);
+    if (selectedOption) {
+        selectedOption.classList.add('selected');
+    }
+}
+window.selectStarterBoat = selectStarterBoat;
+
+// Start the game with selected boat
+function startGameWithBoat() {
     const modal = document.getElementById('welcome-modal');
     if (modal) {
         modal.style.display = 'none';
         modal.style.visibility = 'hidden';
         modal.style.pointerEvents = 'none';
         modal.classList.add('hidden');
-
-        // Set player name
-        const nameInput = document.getElementById('town-name-input');
-        if (nameInput && nameInput.value) {
-            gameState.playerName = nameInput.value;
-        } else {
-            gameState.playerName = 'Lake Boss';
-        }
-
-        // Update UI
-        if (typeof updateUI === 'function') {
-            updateUI();
-        }
     }
+
+    // Set player name
+    const nameInput = document.getElementById('town-name-input');
+    if (nameInput && nameInput.value) {
+        gameState.playerName = nameInput.value;
+    } else {
+        gameState.playerName = 'Lake Boss';
+    }
+
+    // Create starter boat from selection
+    createStarterBoatFromSelection(selectedStarterBoat);
+
+    // Update UI
+    if (typeof updateUI === 'function') {
+        updateUI();
+    }
+
+    // Add welcome events
+    const boat = STARTER_BOATS[selectedStarterBoat];
+    addEvent(`Welcome to the Shootout, ${gameState.playerName}!`, 'racing');
+    addEvent(`Your boat: ${boat.name}`, 'positive');
+    addEvent('Build docks and marinas to earn money', 'neutral');
+    addEvent('Upgrade your boat and win THE SHOOTOUT!', 'racing');
+}
+window.startGameWithBoat = startGameWithBoat;
+
+// Create the starter boat based on player selection
+function createStarterBoatFromSelection(boatId) {
+    const boatData = STARTER_BOATS[boatId];
+    if (!boatData) return;
+
+    const starterBoat = {
+        id: 1,
+        name: boatData.name,
+        nickname: boatData.nickname,
+        hull: boatId,
+        engine: 'stock',
+        propeller: 'stock',
+        hullMod: 'none',
+        weightMod: 'none',
+        paint: 'stock',
+        stats: {
+            topSpeed: boatData.topSpeed,
+            handling: boatData.handling,
+            reliability: boatData.reliability,
+            acceleration: boatData.engineType === 'inboard' ? 0.8 : 0.6,
+            weight: boatData.length * 100
+        },
+        races: 0,
+        wins: 0,
+        bestSpeed: 0,
+        totalEarnings: 0,
+        isStarter: true,
+        starterType: boatId,
+        year: boatData.year,
+        make: boatData.make,
+        model: boatData.model,
+        engine_name: boatData.engine
+    };
+
+    gameState.garage.boats = [starterBoat];
+    gameState.garage.activeBoat = starterBoat.id;
+    gameState.resources.speedBoats = 1;
+}
+
+// Legacy function for compatibility
+function hideWelcomeModal() {
+    startGameWithBoat();
 }
 window.hideWelcomeModal = hideWelcomeModal;
+
+// Initialize boat preview canvases on welcome screen
+function initBoatPreviews() {
+    // Draw Sundancer preview
+    const sundancerCanvas = document.getElementById('sundancer-preview');
+    if (sundancerCanvas) {
+        const ctx = sundancerCanvas.getContext('2d');
+
+        // Draw water background
+        const waterGrad = ctx.createLinearGradient(0, 0, 0, sundancerCanvas.height);
+        waterGrad.addColorStop(0, '#87CEEB');
+        waterGrad.addColorStop(0.4, '#5A9A8A');
+        waterGrad.addColorStop(1, '#2A4A42');
+        ctx.fillStyle = waterGrad;
+        ctx.fillRect(0, 0, sundancerCanvas.width, sundancerCanvas.height);
+
+        // Draw the boat
+        drawSundancerPontoon(ctx, 10, 10, sundancerCanvas.width - 20, sundancerCanvas.height - 20);
+    }
+
+    // Draw Ski Supreme preview
+    const skiSupremeCanvas = document.getElementById('skisupreme-preview');
+    if (skiSupremeCanvas) {
+        const ctx = skiSupremeCanvas.getContext('2d');
+
+        // Draw water background
+        const waterGrad = ctx.createLinearGradient(0, 0, 0, skiSupremeCanvas.height);
+        waterGrad.addColorStop(0, '#87CEEB');
+        waterGrad.addColorStop(0.4, '#5A9A8A');
+        waterGrad.addColorStop(1, '#2A4A42');
+        ctx.fillStyle = waterGrad;
+        ctx.fillRect(0, 0, skiSupremeCanvas.width, skiSupremeCanvas.height);
+
+        // Draw the boat
+        drawSkiSupreme(ctx, 10, 10, skiSupremeCanvas.width - 20, skiSupremeCanvas.height - 20);
+    }
+}
+window.initBoatPreviews = initBoatPreviews;
 
 // ==================== GAME CONFIGURATION ====================
 const CONFIG = {
@@ -38,6 +150,554 @@ const CONFIG = {
     LAKE_MILE_MARKERS: 92, // The real lake has mile markers 0-92
     SHOOTOUT_WEEK: 20, // Shootout happens late summer (tick 20 of summer)
 };
+
+// ==================== STARTER BOATS ====================
+// These are the sentimental boats players can choose from
+const STARTER_BOATS = {
+    sundancer: {
+        id: 'sundancer',
+        name: "1992 Sundancer 24' Pontoon",
+        nickname: 'The Party Barge',
+        year: 1992,
+        make: 'Sundancer Pontoons',
+        model: '240D',
+        length: 24,
+        engine: 'Evinrude 88hp',
+        engineType: 'outboard',
+        topSpeed: 28,
+        handling: 0.6,
+        reliability: 0.75,
+        description: 'A classic Lake of the Ozarks pontoon made right here in Lebanon, Missouri. Those maroon stripes have seen countless summer days, cold beers, and sunset cruises. She may not be fast, but she carries memories.',
+        specs: {
+            hull: 'Dual Aluminum Pontoons',
+            capacity: '12 passengers',
+            fuelTank: '24 gallons',
+            features: 'Bimini top, wraparound seating, swim ladder'
+        },
+        // Color scheme
+        colors: {
+            pontoons: '#8A8A8A',      // Aluminum gray
+            deck: '#E8DCC8',          // Tan/cream deck
+            furniture: '#F5EDE0',      // Light tan seats
+            accent: '#722F37',         // Maroon/burgundy stripes
+            accentLight: '#8B3A42',    // Lighter maroon
+            biminiTop: '#F0E8D8',      // Tan canvas
+            railings: '#C0C0C0',       // Chrome/aluminum
+            motor: '#1A1A1A'           // Black Evinrude
+        }
+    },
+    skiSupreme: {
+        id: 'skiSupreme',
+        name: "1982 Ski Supreme",
+        nickname: 'Red Rocket',
+        year: 1982,
+        make: 'Ski Supreme',
+        model: 'Competition',
+        length: 19,
+        engine: 'Ford 351 V8',
+        engineType: 'inboard',
+        topSpeed: 45,
+        handling: 0.85,
+        reliability: 0.65,
+        description: 'A California-born competition ski boat that found its way to the Ozarks. That flat hull throws a perfect slalom wake. The red fiberglass has faded a bit, but the V8 still roars like the day it left the factory.',
+        specs: {
+            hull: 'Modified Vee Fiberglass',
+            capacity: '6 passengers',
+            fuelTank: '32 gallons',
+            features: 'Direct drive, swim platform, competition tower'
+        },
+        // Color scheme
+        colors: {
+            hull: '#B22222',           // Classic red
+            hullDark: '#8B0000',       // Dark red for depth
+            hullHighlight: '#CD5C5C',  // Lighter red highlight
+            deck: '#F5F5F5',           // White/off-white deck
+            interior: '#E8E0D0',       // Tan interior
+            windshield: '#87CEEB',     // Light blue tint
+            chrome: '#C0C0C0',         // Chrome accents
+            stripe: '#FFFFFF'          // White racing stripe
+        }
+    }
+};
+
+// Draw the 1992 Sundancer 24' Pontoon - detailed rendering
+function drawSundancerPontoon(ctx, x, y, width, height) {
+    const w = width;
+    const h = height;
+    const colors = STARTER_BOATS.sundancer.colors;
+
+    ctx.save();
+    ctx.translate(x, y);
+
+    // Water reflection/shadow
+    ctx.fillStyle = 'rgba(0, 80, 80, 0.3)';
+    ctx.beginPath();
+    ctx.ellipse(w * 0.5, h * 0.92, w * 0.45, h * 0.06, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // === LEFT PONTOON (ALUMINUM LOG) ===
+    const pontoonY = h * 0.72;
+    const pontoonHeight = h * 0.12;
+    const pontoonWidth = w * 0.85;
+    const pontoonStartX = w * 0.08;
+
+    // Left pontoon - gradient for 3D effect
+    const leftPontoonGrad = ctx.createLinearGradient(0, pontoonY - pontoonHeight/2, 0, pontoonY + pontoonHeight/2);
+    leftPontoonGrad.addColorStop(0, '#A0A0A0');
+    leftPontoonGrad.addColorStop(0.3, colors.pontoons);
+    leftPontoonGrad.addColorStop(0.7, '#707070');
+    leftPontoonGrad.addColorStop(1, '#505050');
+
+    ctx.fillStyle = leftPontoonGrad;
+    ctx.beginPath();
+    ctx.moveTo(pontoonStartX + pontoonWidth * 0.05, pontoonY - h * 0.12);  // Bow point
+    ctx.lineTo(pontoonStartX + pontoonWidth, pontoonY - pontoonHeight/2);
+    ctx.lineTo(pontoonStartX + pontoonWidth, pontoonY + pontoonHeight/2);
+    ctx.lineTo(pontoonStartX, pontoonY + pontoonHeight/2);
+    ctx.lineTo(pontoonStartX, pontoonY - pontoonHeight/2);
+    ctx.closePath();
+    ctx.fill();
+
+    // Pontoon end cap (bow)
+    ctx.fillStyle = '#909090';
+    ctx.beginPath();
+    ctx.ellipse(pontoonStartX + pontoonWidth * 0.02, pontoonY, pontoonHeight * 0.3, pontoonHeight/2, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Right pontoon (slightly lower to show perspective)
+    const rightPontoonY = pontoonY + h * 0.08;
+    const rightPontoonGrad = ctx.createLinearGradient(0, rightPontoonY - pontoonHeight/2, 0, rightPontoonY + pontoonHeight/2);
+    rightPontoonGrad.addColorStop(0, '#909090');
+    rightPontoonGrad.addColorStop(0.3, '#787878');
+    rightPontoonGrad.addColorStop(1, '#484848');
+
+    ctx.fillStyle = rightPontoonGrad;
+    ctx.beginPath();
+    ctx.moveTo(pontoonStartX + pontoonWidth * 0.08, rightPontoonY - h * 0.10);
+    ctx.lineTo(pontoonStartX + pontoonWidth, rightPontoonY - pontoonHeight/2);
+    ctx.lineTo(pontoonStartX + pontoonWidth, rightPontoonY + pontoonHeight/2);
+    ctx.lineTo(pontoonStartX, rightPontoonY + pontoonHeight/2);
+    ctx.lineTo(pontoonStartX, rightPontoonY - pontoonHeight/2);
+    ctx.closePath();
+    ctx.fill();
+
+    // === DECK ===
+    const deckY = h * 0.35;
+    const deckHeight = h * 0.42;
+
+    // Main deck - tan/cream color
+    const deckGrad = ctx.createLinearGradient(0, deckY, 0, deckY + deckHeight);
+    deckGrad.addColorStop(0, colors.deck);
+    deckGrad.addColorStop(1, '#D8CDB8');
+
+    ctx.fillStyle = deckGrad;
+    ctx.beginPath();
+    ctx.moveTo(w * 0.05, deckY + deckHeight);
+    ctx.lineTo(w * 0.02, deckY + deckHeight * 0.3);  // Bow
+    ctx.quadraticCurveTo(w * 0.08, deckY, w * 0.20, deckY);
+    ctx.lineTo(w * 0.92, deckY);
+    ctx.lineTo(w * 0.95, deckY + deckHeight);
+    ctx.closePath();
+    ctx.fill();
+
+    // Deck edge/trim
+    ctx.strokeStyle = '#B0A090';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // === MAROON STRIPE GRAPHICS ===
+    ctx.fillStyle = colors.accent;
+
+    // Main side stripe
+    ctx.beginPath();
+    ctx.moveTo(w * 0.05, deckY + deckHeight * 0.75);
+    ctx.lineTo(w * 0.03, deckY + deckHeight * 0.45);
+    ctx.lineTo(w * 0.15, deckY + deckHeight * 0.40);
+    ctx.lineTo(w * 0.88, deckY + deckHeight * 0.40);
+    ctx.lineTo(w * 0.92, deckY + deckHeight * 0.50);
+    ctx.lineTo(w * 0.92, deckY + deckHeight * 0.65);
+    ctx.lineTo(w * 0.88, deckY + deckHeight * 0.70);
+    ctx.lineTo(w * 0.15, deckY + deckHeight * 0.70);
+    ctx.closePath();
+    ctx.fill();
+
+    // Accent stripe (lighter maroon)
+    ctx.fillStyle = colors.accentLight;
+    ctx.fillRect(w * 0.15, deckY + deckHeight * 0.52, w * 0.73, h * 0.025);
+
+    // === FURNITURE (WRAPAROUND SEATING) ===
+    // Back bench
+    ctx.fillStyle = colors.furniture;
+    ctx.beginPath();
+    ctx.roundRect(w * 0.55, deckY + h * 0.08, w * 0.35, h * 0.18, 5);
+    ctx.fill();
+    ctx.strokeStyle = colors.accent;
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // Side seats (L-shape wraparound)
+    ctx.fillStyle = colors.furniture;
+    ctx.beginPath();
+    ctx.roundRect(w * 0.12, deckY + h * 0.06, w * 0.15, h * 0.22, 5);
+    ctx.fill();
+    ctx.strokeStyle = colors.accent;
+    ctx.stroke();
+
+    // Front bow seats
+    ctx.fillStyle = colors.furniture;
+    ctx.beginPath();
+    ctx.moveTo(w * 0.08, deckY + h * 0.28);
+    ctx.lineTo(w * 0.04, deckY + h * 0.15);
+    ctx.quadraticCurveTo(w * 0.10, deckY + h * 0.05, w * 0.22, deckY + h * 0.06);
+    ctx.lineTo(w * 0.22, deckY + h * 0.20);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = colors.accent;
+    ctx.stroke();
+
+    // Captain's console
+    ctx.fillStyle = '#D8D0C0';
+    ctx.beginPath();
+    ctx.roundRect(w * 0.32, deckY + h * 0.08, w * 0.18, h * 0.14, 3);
+    ctx.fill();
+    ctx.strokeStyle = '#888';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    // Steering wheel
+    ctx.strokeStyle = '#333';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(w * 0.41, deckY + h * 0.14, w * 0.035, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // === BIMINI TOP ===
+    ctx.fillStyle = colors.biminiTop;
+    ctx.globalAlpha = 0.85;
+    ctx.beginPath();
+    ctx.moveTo(w * 0.25, deckY - h * 0.02);
+    ctx.quadraticCurveTo(w * 0.50, deckY - h * 0.18, w * 0.85, deckY - h * 0.02);
+    ctx.lineTo(w * 0.82, deckY + h * 0.02);
+    ctx.quadraticCurveTo(w * 0.50, deckY - h * 0.10, w * 0.28, deckY + h * 0.02);
+    ctx.closePath();
+    ctx.fill();
+    ctx.globalAlpha = 1;
+
+    // Bimini support poles
+    ctx.strokeStyle = colors.railings;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(w * 0.30, deckY + h * 0.08);
+    ctx.lineTo(w * 0.28, deckY - h * 0.02);
+    ctx.moveTo(w * 0.80, deckY + h * 0.08);
+    ctx.lineTo(w * 0.82, deckY - h * 0.02);
+    ctx.stroke();
+
+    // === RAILINGS ===
+    ctx.strokeStyle = colors.railings;
+    ctx.lineWidth = 1.5;
+    // Front railing
+    ctx.beginPath();
+    ctx.moveTo(w * 0.04, deckY + h * 0.15);
+    ctx.lineTo(w * 0.02, deckY + h * 0.30);
+    ctx.stroke();
+
+    // === EVINRUDE 88HP OUTBOARD MOTOR ===
+    const motorX = w * 0.88;
+    const motorY = deckY + deckHeight * 0.5;
+
+    // Motor head (cowling)
+    const motorGrad = ctx.createLinearGradient(motorX, motorY - h * 0.15, motorX + w * 0.1, motorY - h * 0.15);
+    motorGrad.addColorStop(0, '#2A2A2A');
+    motorGrad.addColorStop(0.5, '#1A1A1A');
+    motorGrad.addColorStop(1, '#0A0A0A');
+
+    ctx.fillStyle = motorGrad;
+    ctx.beginPath();
+    ctx.moveTo(motorX, motorY - h * 0.08);
+    ctx.lineTo(motorX + w * 0.06, motorY - h * 0.12);
+    ctx.lineTo(motorX + w * 0.08, motorY - h * 0.05);
+    ctx.lineTo(motorX + w * 0.08, motorY + h * 0.12);
+    ctx.lineTo(motorX, motorY + h * 0.08);
+    ctx.closePath();
+    ctx.fill();
+
+    // Evinrude logo stripe (blue/white)
+    ctx.fillStyle = '#1E90FF';
+    ctx.fillRect(motorX + w * 0.01, motorY - h * 0.06, w * 0.05, h * 0.02);
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fillRect(motorX + w * 0.01, motorY - h * 0.04, w * 0.05, h * 0.015);
+
+    // Motor shaft
+    ctx.fillStyle = '#333';
+    ctx.fillRect(motorX + w * 0.03, motorY + h * 0.08, w * 0.02, h * 0.18);
+
+    // Propeller
+    ctx.fillStyle = '#505050';
+    ctx.beginPath();
+    ctx.ellipse(motorX + w * 0.04, motorY + h * 0.28, w * 0.025, h * 0.04, Math.PI * 0.2, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.restore();
+}
+
+// Draw the 1982 Ski Supreme - detailed rendering
+function drawSkiSupreme(ctx, x, y, width, height) {
+    const w = width;
+    const h = height;
+    const colors = STARTER_BOATS.skiSupreme.colors;
+
+    ctx.save();
+    ctx.translate(x, y);
+
+    // Water reflection/shadow
+    ctx.fillStyle = 'rgba(0, 80, 80, 0.3)';
+    ctx.beginPath();
+    ctx.ellipse(w * 0.5, h * 0.88, w * 0.42, h * 0.06, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // === HULL ===
+    // Main hull body - red fiberglass with gradient for depth
+    const hullGrad = ctx.createLinearGradient(0, h * 0.3, 0, h * 0.85);
+    hullGrad.addColorStop(0, colors.hullHighlight);
+    hullGrad.addColorStop(0.3, colors.hull);
+    hullGrad.addColorStop(0.7, colors.hullDark);
+    hullGrad.addColorStop(1, '#5A0000');
+
+    ctx.fillStyle = hullGrad;
+    ctx.beginPath();
+    // Classic ski boat profile - pointed bow, flat bottom, squared stern
+    ctx.moveTo(w * 0.02, h * 0.55);  // Bow point
+    ctx.quadraticCurveTo(w * 0.01, h * 0.45, w * 0.05, h * 0.38);  // Bow curve up
+    ctx.lineTo(w * 0.15, h * 0.32);  // Forward deck line
+    ctx.lineTo(w * 0.92, h * 0.32);  // Top deck line
+    ctx.lineTo(w * 0.96, h * 0.38);  // Stern top
+    ctx.lineTo(w * 0.96, h * 0.78);  // Stern back
+    ctx.lineTo(w * 0.92, h * 0.82);  // Stern bottom corner
+    ctx.lineTo(w * 0.08, h * 0.82);  // Bottom of hull (flat)
+    ctx.quadraticCurveTo(w * 0.03, h * 0.78, w * 0.02, h * 0.55);  // Back to bow
+    ctx.closePath();
+    ctx.fill();
+
+    // Hull outline
+    ctx.strokeStyle = colors.hullDark;
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // === WHITE RACING STRIPE ===
+    ctx.fillStyle = colors.stripe;
+    ctx.beginPath();
+    ctx.moveTo(w * 0.04, h * 0.52);
+    ctx.lineTo(w * 0.10, h * 0.42);
+    ctx.lineTo(w * 0.94, h * 0.42);
+    ctx.lineTo(w * 0.94, h * 0.48);
+    ctx.lineTo(w * 0.10, h * 0.48);
+    ctx.lineTo(w * 0.05, h * 0.56);
+    ctx.closePath();
+    ctx.fill();
+
+    // Secondary pinstripe
+    ctx.strokeStyle = '#FFD700';  // Gold pinstripe
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(w * 0.05, h * 0.50);
+    ctx.lineTo(w * 0.10, h * 0.44);
+    ctx.lineTo(w * 0.94, h * 0.44);
+    ctx.stroke();
+
+    // === DECK (WHITE/OFF-WHITE) ===
+    ctx.fillStyle = colors.deck;
+    ctx.beginPath();
+    ctx.moveTo(w * 0.06, h * 0.38);
+    ctx.quadraticCurveTo(w * 0.03, h * 0.42, w * 0.05, h * 0.50);
+    ctx.lineTo(w * 0.08, h * 0.45);
+    ctx.lineTo(w * 0.15, h * 0.36);
+    ctx.lineTo(w * 0.90, h * 0.36);
+    ctx.lineTo(w * 0.93, h * 0.40);
+    ctx.lineTo(w * 0.93, h * 0.36);
+    ctx.lineTo(w * 0.15, h * 0.33);
+    ctx.quadraticCurveTo(w * 0.08, h * 0.34, w * 0.06, h * 0.38);
+    ctx.closePath();
+    ctx.fill();
+
+    // === INTERIOR (TAN) ===
+    ctx.fillStyle = colors.interior;
+    ctx.beginPath();
+    ctx.moveTo(w * 0.12, h * 0.36);
+    ctx.lineTo(w * 0.88, h * 0.36);
+    ctx.lineTo(w * 0.88, h * 0.52);
+    ctx.lineTo(w * 0.12, h * 0.52);
+    ctx.quadraticCurveTo(w * 0.08, h * 0.48, w * 0.12, h * 0.36);
+    ctx.closePath();
+    ctx.fill();
+
+    // === BOW SEATING ===
+    ctx.fillStyle = '#DDD5C5';
+    // Left bow seat
+    ctx.beginPath();
+    ctx.moveTo(w * 0.10, h * 0.42);
+    ctx.quadraticCurveTo(w * 0.08, h * 0.38, w * 0.14, h * 0.36);
+    ctx.lineTo(w * 0.22, h * 0.36);
+    ctx.lineTo(w * 0.22, h * 0.46);
+    ctx.lineTo(w * 0.12, h * 0.46);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = '#AA9988';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    // Right bow seat
+    ctx.beginPath();
+    ctx.moveTo(w * 0.10, h * 0.48);
+    ctx.quadraticCurveTo(w * 0.09, h * 0.52, w * 0.14, h * 0.52);
+    ctx.lineTo(w * 0.22, h * 0.52);
+    ctx.lineTo(w * 0.22, h * 0.46);
+    ctx.lineTo(w * 0.12, h * 0.46);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    // === WINDSHIELD ===
+    ctx.fillStyle = colors.windshield;
+    ctx.globalAlpha = 0.6;
+    ctx.beginPath();
+    ctx.moveTo(w * 0.26, h * 0.36);
+    ctx.quadraticCurveTo(w * 0.30, h * 0.22, w * 0.42, h * 0.22);
+    ctx.lineTo(w * 0.48, h * 0.22);
+    ctx.quadraticCurveTo(w * 0.52, h * 0.22, w * 0.54, h * 0.36);
+    ctx.closePath();
+    ctx.fill();
+    ctx.globalAlpha = 1;
+
+    // Windshield frame
+    ctx.strokeStyle = colors.chrome;
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // === DRIVER'S AREA ===
+    // Driver seat
+    ctx.fillStyle = '#DDD5C5';
+    ctx.beginPath();
+    ctx.roundRect(w * 0.30, h * 0.38, w * 0.12, h * 0.12, 3);
+    ctx.fill();
+    ctx.strokeStyle = '#AA9988';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    // Seat back
+    ctx.fillStyle = '#C8C0B0';
+    ctx.fillRect(w * 0.30, h * 0.36, w * 0.12, h * 0.04);
+
+    // Steering wheel
+    ctx.strokeStyle = '#222';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(w * 0.36, h * 0.34, w * 0.03, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // Dashboard
+    ctx.fillStyle = '#333';
+    ctx.fillRect(w * 0.28, h * 0.32, w * 0.20, h * 0.04);
+
+    // Gauges
+    ctx.fillStyle = '#111';
+    ctx.beginPath();
+    ctx.arc(w * 0.32, h * 0.34, w * 0.015, 0, Math.PI * 2);
+    ctx.arc(w * 0.38, h * 0.34, w * 0.015, 0, Math.PI * 2);
+    ctx.arc(w * 0.44, h * 0.34, w * 0.015, 0, Math.PI * 2);
+    ctx.fill();
+
+    // === PASSENGER SEAT ===
+    ctx.fillStyle = '#DDD5C5';
+    ctx.beginPath();
+    ctx.roundRect(w * 0.48, h * 0.38, w * 0.12, h * 0.12, 3);
+    ctx.fill();
+    ctx.strokeStyle = '#AA9988';
+    ctx.stroke();
+
+    // === ENGINE COVER (INBOARD) ===
+    const engineGrad = ctx.createLinearGradient(w * 0.62, h * 0.36, w * 0.62, h * 0.50);
+    engineGrad.addColorStop(0, '#E8E0D0');
+    engineGrad.addColorStop(1, '#C8C0B0');
+
+    ctx.fillStyle = engineGrad;
+    ctx.beginPath();
+    ctx.roundRect(w * 0.62, h * 0.38, w * 0.18, h * 0.12, 4);
+    ctx.fill();
+    ctx.strokeStyle = colors.chrome;
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    // Engine vents
+    ctx.strokeStyle = '#999';
+    ctx.lineWidth = 1;
+    for (let i = 0; i < 4; i++) {
+        ctx.beginPath();
+        ctx.moveTo(w * 0.65 + i * w * 0.035, h * 0.40);
+        ctx.lineTo(w * 0.65 + i * w * 0.035, h * 0.48);
+        ctx.stroke();
+    }
+
+    // === REAR BENCH SEAT ===
+    ctx.fillStyle = '#DDD5C5';
+    ctx.beginPath();
+    ctx.roundRect(w * 0.82, h * 0.38, w * 0.08, h * 0.12, 3);
+    ctx.fill();
+    ctx.strokeStyle = '#AA9988';
+    ctx.stroke();
+
+    // === SWIM PLATFORM ===
+    ctx.fillStyle = '#A08060';  // Teak wood color
+    ctx.fillRect(w * 0.92, h * 0.52, w * 0.06, h * 0.28);
+
+    // Teak slats
+    ctx.strokeStyle = '#806040';
+    ctx.lineWidth = 1;
+    for (let i = 0; i < 5; i++) {
+        ctx.beginPath();
+        ctx.moveTo(w * 0.92, h * 0.54 + i * h * 0.05);
+        ctx.lineTo(w * 0.98, h * 0.54 + i * h * 0.05);
+        ctx.stroke();
+    }
+
+    // === PROP SHAFT AND RUDDER ===
+    ctx.fillStyle = '#444';
+    ctx.fillRect(w * 0.90, h * 0.75, w * 0.08, h * 0.02);
+
+    // Propeller
+    ctx.fillStyle = '#606060';
+    ctx.beginPath();
+    ctx.ellipse(w * 0.99, h * 0.76, w * 0.015, h * 0.05, Math.PI * 0.3, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Rudder
+    ctx.fillStyle = '#505050';
+    ctx.beginPath();
+    ctx.moveTo(w * 0.97, h * 0.78);
+    ctx.lineTo(w * 0.99, h * 0.78);
+    ctx.lineTo(w * 0.99, h * 0.86);
+    ctx.lineTo(w * 0.96, h * 0.86);
+    ctx.closePath();
+    ctx.fill();
+
+    // === CHROME ACCENTS ===
+    // Bow cleat
+    ctx.fillStyle = colors.chrome;
+    ctx.beginPath();
+    ctx.ellipse(w * 0.06, h * 0.42, w * 0.015, h * 0.01, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Stern cleats
+    ctx.beginPath();
+    ctx.ellipse(w * 0.90, h * 0.50, w * 0.012, h * 0.008, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.restore();
+}
+
+// Make drawing functions globally available
+window.drawSundancerPontoon = drawSundancerPontoon;
+window.drawSkiSupreme = drawSkiSupreme;
 
 // ==================== TERRAIN TYPES ====================
 // Natural Ozark color palette
@@ -3490,19 +4150,13 @@ function initializeStarterBoat() {
 function init() {
     initCanvas();
     generateMap();
-
-    // Initialize starter boat
-    initializeStarterBoat();
-
     initInput();
     updateUI();
     render();
     startGameLoop();
 
-    addEvent('Welcome to the Shootout! ', 'racing');
-    addEvent("Your boat 'Old Faithful' is ready!", 'positive');
-    addEvent('Build docks and marinas to earn money', 'neutral');
-    addEvent('Upgrade your boat and win THE SHOOTOUT!', 'racing');
+    // Initialize boat preview canvases on welcome screen
+    initBoatPreviews();
 }
 
 window.addEventListener('load', init);

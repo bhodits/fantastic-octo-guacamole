@@ -128,33 +128,46 @@
             <p class="shootout-tagline">Lake of the Ozarks' Biggest Day of the Year</p>
 
             <div class="lake-facts">
-                <p>It's <strong>Shootout Weekend</strong> - the Super Bowl of powerboat racing! Every August, the fastest boats in the world come to compete on the mile-long course.</p>
+                <p>It's <strong>Shootout Weekend</strong> - the Super Bowl of powerboat racing! Build your empire and race for glory!</p>
             </div>
 
-            <div class="starter-boat-info">
-                <h3>Your First Boat: "Old Faithful"</h3>
-                <p>You've got a trusty bass boat - not fast, but it's a start. Dream big! Work your way up from <strong>45 MPH</strong> to over <strong>200 MPH</strong>.</p>
-                <div class="boat-preview">
-                    <span class="boat-speed">45 MPH</span>
-                    <span class="boat-class">Stock Class</span>
+            <h3>Choose Your Starting Boat:</h3>
+            <div class="boat-selection">
+                <div class="boat-option selected" data-boat="sundancer" onclick="selectStarterBoat('sundancer')">
+                    <canvas id="sundancer-preview" width="280" height="160"></canvas>
+                    <div class="boat-option-info">
+                        <h4>1992 Sundancer 24' Pontoon</h4>
+                        <p class="boat-nickname">"The Party Barge"</p>
+                        <div class="boat-specs">
+                            <span>Evinrude 88hp Outboard</span>
+                            <span>28 MPH Top Speed</span>
+                            <span>12 Passengers</span>
+                        </div>
+                        <p class="boat-description">Made in Lebanon, Missouri. Those maroon stripes have seen countless summer days and sunset cruises.</p>
+                    </div>
+                </div>
+
+                <div class="boat-option" data-boat="skiSupreme" onclick="selectStarterBoat('skiSupreme')">
+                    <canvas id="skisupreme-preview" width="280" height="160"></canvas>
+                    <div class="boat-option-info">
+                        <h4>1982 Ski Supreme</h4>
+                        <p class="boat-nickname">"Red Rocket"</p>
+                        <div class="boat-specs">
+                            <span>Ford 351 V8 Inboard</span>
+                            <span>45 MPH Top Speed</span>
+                            <span>6 Passengers</span>
+                        </div>
+                        <p class="boat-description">A California competition ski boat. That flat hull throws a perfect slalom wake.</p>
+                    </div>
                 </div>
             </div>
 
-            <h3>The Journey:</h3>
-            <ul>
-                <li>Race the <strong>Shootout</strong> every August</li>
-                <li><strong>Customize</strong> your boats - engines, props, hulls</li>
-                <li>Win races to earn <strong>prize money</strong></li>
-                <li>Buy faster boats and build your <strong>fleet</strong></li>
-                <li>Become the <strong>Shootout Champion</strong>!</li>
-            </ul>
-
-            <div class="shootout-info">
-                <p><strong>GOAL:</strong> Build the fastest boat on the lake and win the Shootout Finals!</p>
+            <div class="name-input-section">
+                <label for="town-name-input">Your Name:</label>
+                <input type="text" id="town-name-input" placeholder="Enter your name..." value="Lake Boss">
             </div>
 
-            <input type="text" id="town-name-input" placeholder="Your racer name..." value="Lake Boss">
-            <button id="start-game" onclick="hideWelcomeModal()">Enter the Shootout!</button>
+            <button id="start-game" onclick="startGameWithBoat()">Hit the Water!</button>
         </div>
     </div>
 
