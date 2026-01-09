@@ -507,6 +507,577 @@ function stopAnimationLoop() {
     }
 }
 
+// ╔════════════════════════════════════════════════════════════════════════════╗
+// ║                    SIMULATION ENGINE ARCHITECTURE                          ║
+// ║  Professional game architecture with centralized config, state management, ║
+// ║  action dispatching, and persistence layer.                                ║
+// ╚════════════════════════════════════════════════════════════════════════════╝
+
+// ==================== GAME CONFIG (Balance Data) ====================
+// All tunable game values in ONE place. Edit here to balance the entire game.
+const GameConfig = {
+    // === VERSION (for save compatibility) ===
+    VERSION: '1.0.0',
+    SAVE_KEY: 'lakeOzarksTycoon_save',
+    AUTO_SAVE_INTERVAL: 30000, // 30 seconds
+
+    // === ECONOMY BALANCE ===
+    economy: {
+        startingMoney: 5000,
+        startingReputation: 50,
+        incomeMultiplier: 1.0,        // Global income scaling
+        expenseMultiplier: 1.0,       // Global expense scaling
+
+        // Seasonal multipliers
+        seasonMultipliers: {
+            spring: 1.2,
+            summer: 2.0,
+            fall: 0.6,
+            winter: 0.3
+        },
+
+        // Weekend bonus
+        weekendBonus: 1.5,
+
+        // Shootout event bonus
+        shootoutMultiplier: 3.0,
+
+        // Building sell-back rate
+        demolishRefundRate: 0.3,
+    },
+
+    // === PROGRESSION THRESHOLDS ===
+    progression: {
+        // Unlock requirements for advanced buildings
+        unlocks: {
+            yacht_club: { money: 10000, reputation: 30 },
+            resort: { money: 15000, population: 50 },
+            race_tower: { racingRep: 20, money: 5000 },
+        },
+
+        // Milestone rewards
+        milestones: {
+            first_1000: { threshold: 1000, reward: 0, message: 'First $1,000!' },
+            first_10000: { threshold: 10000, reward: 500, message: 'Big Money!' },
+            first_100000: { threshold: 100000, reward: 5000, message: 'Lake Legend!' },
+        }
+    },
+
+    // === SIMULATION TIMING ===
+    timing: {
+        tickRate: 1000,              // Simulation tick every 1 second
+        ticksPerSeason: 90,          // Game ticks per season
+        shootoutWeek: 75,            // When shootout triggers in summer
+        dayNightCycleSpeed: 1,       // Multiplier for day/night cycle
+    },
+
+    // === RACING BALANCE ===
+    racing: {
+        // Speed classes
+        classes: {
+            pontoon: { maxSpeed: 35, prize: 500 },
+            runabout: { maxSpeed: 55, prize: 1000 },
+            performance: { maxSpeed: 85, prize: 2500 },
+            superStock: { maxSpeed: 120, prize: 5000 },
+            unlimited: { maxSpeed: 200, prize: 15000 },
+        },
+
+        // Acceleration curve
+        baseAcceleration: 0.004,     // % of max speed per frame
+
+        // Course layout
+        course: {
+            approachZone: 400,       // Distance before start line
+            raceLength: 2400,        // Total race distance
+            finishLineVisibleAt: 0.75, // Show finish at 75% complete
+        },
+
+        // Penalty for going over 40 before start
+        falseStartPenalty: 0.1,      // 10% speed reduction
+    },
+
+    // === BOAT UPGRADES ===
+    upgrades: {
+        enginePriceMultiplier: 1.0,
+        propellerPriceMultiplier: 1.0,
+        maxBoatsInGarage: 5,
+    },
+
+    // === MAP SETTINGS ===
+    map: {
+        gridWidth: 50,
+        gridHeight: 35,
+        tileSize: 40,
+        mileMarkers: 92,
+    }
+};
+
+// Freeze config to prevent accidental modification
+Object.freeze(GameConfig);
+Object.freeze(GameConfig.economy);
+Object.freeze(GameConfig.progression);
+Object.freeze(GameConfig.timing);
+Object.freeze(GameConfig.racing);
+
+// ==================== ACTION TYPES ====================
+// All state modifications go through actions for traceability
+const ActionTypes = {
+    // Economy
+    ADD_MONEY: 'ADD_MONEY',
+    SPEND_MONEY: 'SPEND_MONEY',
+    SET_MONEY: 'SET_MONEY',
+
+    // Buildings
+    PLACE_BUILDING: 'PLACE_BUILDING',
+    DEMOLISH_BUILDING: 'DEMOLISH_BUILDING',
+    UPGRADE_BUILDING: 'UPGRADE_BUILDING',
+
+    // Resources
+    UPDATE_RESOURCE: 'UPDATE_RESOURCE',
+
+    // Boats
+    BUY_BOAT: 'BUY_BOAT',
+    SELL_BOAT: 'SELL_BOAT',
+    UPGRADE_BOAT: 'UPGRADE_BOAT',
+    SELECT_BOAT: 'SELECT_BOAT',
+
+    // Game State
+    SET_SEASON: 'SET_SEASON',
+    ADVANCE_TICK: 'ADVANCE_TICK',
+    START_SHOOTOUT: 'START_SHOOTOUT',
+    END_SHOOTOUT: 'END_SHOOTOUT',
+
+    // Save/Load
+    LOAD_GAME: 'LOAD_GAME',
+    NEW_GAME: 'NEW_GAME',
+};
+
+// ==================== STATE MANAGER ====================
+// Single source of truth for all game data
+const StateManager = {
+    // Listeners for state changes
+    listeners: [],
+
+    // Action history for debugging
+    actionHistory: [],
+    maxHistorySize: 100,
+
+    // Dispatch an action to modify state
+    dispatch(action) {
+        console.log('[State] Dispatch:', action.type, action.payload || '');
+
+        // Store in history
+        this.actionHistory.push({
+            action,
+            timestamp: Date.now(),
+            stateBefore: JSON.parse(JSON.stringify(gameState.resources))
+        });
+
+        // Trim history
+        if (this.actionHistory.length > this.maxHistorySize) {
+            this.actionHistory.shift();
+        }
+
+        // Process action
+        const result = this.processAction(action);
+
+        // Notify listeners
+        this.notifyListeners(action);
+
+        return result;
+    },
+
+    processAction(action) {
+        switch (action.type) {
+            case ActionTypes.ADD_MONEY:
+                const oldMoney = gameState.resources.money;
+                gameState.resources.money += action.payload.amount;
+
+                // Spawn floating text for significant amounts
+                if (action.payload.amount >= 100 && action.payload.showEffect !== false) {
+                    const x = action.payload.x || window.innerWidth / 2;
+                    const y = action.payload.y || 150;
+                    VisualEffectsManager.spawnMoneyText(x, y, action.payload.amount);
+                }
+                return { success: true, newBalance: gameState.resources.money };
+
+            case ActionTypes.SPEND_MONEY:
+                if (gameState.resources.money < action.payload.amount) {
+                    addEvent(`Not enough cash! Need $${action.payload.amount.toLocaleString()}`, 'negative');
+                    return { success: false, reason: 'INSUFFICIENT_FUNDS' };
+                }
+                gameState.resources.money -= action.payload.amount;
+                return { success: true, newBalance: gameState.resources.money };
+
+            case ActionTypes.UPDATE_RESOURCE:
+                const { resource, amount, operation } = action.payload;
+                if (operation === 'add') {
+                    gameState.resources[resource] = (gameState.resources[resource] || 0) + amount;
+                } else if (operation === 'set') {
+                    gameState.resources[resource] = amount;
+                } else if (operation === 'multiply') {
+                    gameState.resources[resource] = (gameState.resources[resource] || 0) * amount;
+                }
+                return { success: true };
+
+            case ActionTypes.ADVANCE_TICK:
+                gameState.tick++;
+                return { success: true, tick: gameState.tick };
+
+            case ActionTypes.LOAD_GAME:
+                // Handled by SaveSystem
+                return { success: true };
+
+            default:
+                console.warn('[State] Unknown action type:', action.type);
+                return { success: false, reason: 'UNKNOWN_ACTION' };
+        }
+    },
+
+    // Subscribe to state changes
+    subscribe(listener) {
+        this.listeners.push(listener);
+        return () => {
+            this.listeners = this.listeners.filter(l => l !== listener);
+        };
+    },
+
+    notifyListeners(action) {
+        this.listeners.forEach(listener => {
+            try {
+                listener(action, gameState);
+            } catch (e) {
+                console.error('[State] Listener error:', e);
+            }
+        });
+    },
+
+    // Helper to create actions
+    action(type, payload = {}) {
+        return { type, payload };
+    }
+};
+
+// ==================== SAVE SYSTEM (Persistence Layer) ====================
+const SaveSystem = {
+    autoSaveInterval: null,
+
+    init() {
+        // Start auto-save timer
+        this.autoSaveInterval = setInterval(() => {
+            this.autoSave();
+        }, GameConfig.AUTO_SAVE_INTERVAL);
+
+        console.log('[Save] Auto-save initialized (every 30s)');
+    },
+
+    // Generate save data from current state
+    generateSaveData() {
+        return {
+            version: GameConfig.VERSION,
+            timestamp: Date.now(),
+            playerName: gameState.playerName,
+            resources: { ...gameState.resources },
+            buildings: gameState.buildings.map(b => ({
+                type: b.type,
+                x: b.x,
+                y: b.y,
+                level: b.level,
+                working: b.working
+            })),
+            garage: {
+                boats: gameState.garage.boats,
+                activeBoat: gameState.garage.activeBoat,
+                maxSlots: gameState.garage.maxSlots
+            },
+            racing: { ...gameState.racing },
+            tick: gameState.tick,
+            season: gameState.season,
+            year: gameState.year,
+            lakeLevel: gameState.lakeLevel,
+            timeOfDay: {
+                hour: TimeManager.gameHour,
+                minute: TimeManager.gameMinute
+            }
+        };
+    },
+
+    // Save to localStorage
+    save() {
+        try {
+            const saveData = this.generateSaveData();
+            const saveString = JSON.stringify(saveData);
+            localStorage.setItem(GameConfig.SAVE_KEY, saveString);
+
+            console.log('[Save] Game saved successfully');
+            addEvent('Game saved!', 'neutral');
+            return true;
+        } catch (e) {
+            console.error('[Save] Failed to save:', e);
+            addEvent('Save failed!', 'negative');
+            return false;
+        }
+    },
+
+    // Auto-save (silent)
+    autoSave() {
+        try {
+            const saveData = this.generateSaveData();
+            const saveString = JSON.stringify(saveData);
+            localStorage.setItem(GameConfig.SAVE_KEY, saveString);
+            console.log('[Save] Auto-saved');
+            return true;
+        } catch (e) {
+            console.error('[Save] Auto-save failed:', e);
+            return false;
+        }
+    },
+
+    // Check if save exists
+    hasSave() {
+        return localStorage.getItem(GameConfig.SAVE_KEY) !== null;
+    },
+
+    // Load from localStorage
+    load() {
+        try {
+            const saveString = localStorage.getItem(GameConfig.SAVE_KEY);
+            if (!saveString) {
+                console.log('[Save] No save found');
+                return null;
+            }
+
+            const saveData = JSON.parse(saveString);
+
+            // Version check
+            if (saveData.version !== GameConfig.VERSION) {
+                console.warn('[Save] Save version mismatch, may have issues');
+            }
+
+            console.log('[Save] Loaded save from', new Date(saveData.timestamp).toLocaleString());
+            return saveData;
+        } catch (e) {
+            console.error('[Save] Failed to load:', e);
+            return null;
+        }
+    },
+
+    // Apply loaded data to game state
+    applyLoadedData(saveData) {
+        if (!saveData) return false;
+
+        try {
+            // Restore player info
+            gameState.playerName = saveData.playerName || 'Lake Boss';
+
+            // Restore resources
+            Object.assign(gameState.resources, saveData.resources);
+
+            // Restore timing
+            gameState.tick = saveData.tick || 0;
+            gameState.season = saveData.season || 0;
+            gameState.year = saveData.year || 1;
+            gameState.lakeLevel = saveData.lakeLevel || 660;
+
+            // Restore time of day
+            if (saveData.timeOfDay) {
+                TimeManager.gameHour = saveData.timeOfDay.hour;
+                TimeManager.gameMinute = saveData.timeOfDay.minute;
+            }
+
+            // Restore garage
+            if (saveData.garage) {
+                gameState.garage = saveData.garage;
+            }
+
+            // Restore racing stats
+            if (saveData.racing) {
+                Object.assign(gameState.racing, saveData.racing);
+            }
+
+            // Restore buildings (after map is generated)
+            if (saveData.buildings && saveData.buildings.length > 0) {
+                // Clear existing buildings
+                gameState.buildings = [];
+
+                // Place each saved building
+                saveData.buildings.forEach(bData => {
+                    const building = {
+                        type: bData.type,
+                        x: bData.x,
+                        y: bData.y,
+                        level: bData.level || 1,
+                        working: bData.working !== false
+                    };
+                    gameState.buildings.push(building);
+                    if (gameState.grid[bData.y] && gameState.grid[bData.y][bData.x]) {
+                        gameState.grid[bData.y][bData.x].building = building;
+                    }
+                });
+            }
+
+            console.log('[Save] Game state restored');
+            addEvent(`Welcome back, ${gameState.playerName}!`, 'positive');
+            return true;
+        } catch (e) {
+            console.error('[Save] Failed to apply save data:', e);
+            return false;
+        }
+    },
+
+    // Delete save
+    deleteSave() {
+        localStorage.removeItem(GameConfig.SAVE_KEY);
+        console.log('[Save] Save deleted');
+    },
+
+    // Export save as downloadable file
+    exportSave() {
+        const saveData = this.generateSaveData();
+        const blob = new Blob([JSON.stringify(saveData, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `lake_ozarks_save_${Date.now()}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+    },
+
+    // Import save from file
+    importSave(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const saveData = JSON.parse(e.target.result);
+                    this.applyLoadedData(saveData);
+                    this.save(); // Save to localStorage
+                    resolve(true);
+                } catch (err) {
+                    reject(err);
+                }
+            };
+            reader.onerror = reject;
+            reader.readAsText(file);
+        });
+    }
+};
+
+// ==================== SIMULATION TICK (Decoupled Heartbeat) ====================
+// Pure simulation logic, separate from rendering
+const SimulationEngine = {
+    tickInterval: null,
+    isPaused: false,
+    tickCount: 0,
+
+    start() {
+        if (this.tickInterval) return;
+
+        this.tickInterval = setInterval(() => {
+            if (!this.isPaused && !gameState.paused) {
+                this.tick();
+            }
+        }, GameConfig.timing.tickRate / gameSpeedMultiplier);
+
+        console.log('[Sim] Simulation engine started');
+    },
+
+    stop() {
+        if (this.tickInterval) {
+            clearInterval(this.tickInterval);
+            this.tickInterval = null;
+        }
+    },
+
+    restart() {
+        this.stop();
+        this.start();
+    },
+
+    pause() {
+        this.isPaused = true;
+    },
+
+    resume() {
+        this.isPaused = false;
+    },
+
+    // The core simulation tick - runs independently of rendering
+    tick() {
+        this.tickCount++;
+
+        // Advance game tick through action system
+        StateManager.dispatch(StateManager.action(ActionTypes.ADVANCE_TICK));
+
+        // Calculate season
+        const seasonIndex = Math.floor(gameState.tick / GameConfig.timing.ticksPerSeason) % 4;
+        const seasons = ['Spring', 'Summer', 'Summer', 'Fall'];
+        const currentSeason = seasons[seasonIndex];
+
+        // Season change check
+        if (gameState.tick % GameConfig.timing.ticksPerSeason === 0) {
+            gameState.season = (gameState.season + 1) % 4;
+            if (gameState.season === 0) {
+                gameState.year++;
+                addEvent(`Year ${gameState.year} begins!`, 'neutral');
+            }
+            addEvent(`${seasons[gameState.season]} has arrived!`, 'neutral');
+        }
+
+        // Calculate income/expenses using GameConfig multipliers
+        const seasonMultiplier = GameConfig.economy.seasonMultipliers[currentSeason.toLowerCase()] || 1;
+        const weekendMultiplier = (gameState.tick % 7 >= 5) ? GameConfig.economy.weekendBonus : 1;
+        const shootoutMultiplier = gameState.shootout?.active ? GameConfig.economy.shootoutMultiplier : 1;
+
+        let totalIncome = 0;
+        let totalExpenses = 0;
+
+        // Process buildings
+        gameState.buildings.forEach(building => {
+            const def = BUILDINGS[building.type];
+            if (!def || !building.working) return;
+
+            if (def.produces?.money) {
+                totalIncome += def.produces.money * seasonMultiplier * weekendMultiplier * shootoutMultiplier;
+            }
+            if (def.upkeep?.money) {
+                totalExpenses += def.upkeep.money;
+            }
+        });
+
+        // Apply multipliers from GameConfig
+        totalIncome *= GameConfig.economy.incomeMultiplier;
+        totalExpenses *= GameConfig.economy.expenseMultiplier;
+
+        // Net income
+        const netIncome = Math.floor(totalIncome - totalExpenses);
+        if (netIncome !== 0) {
+            StateManager.dispatch(StateManager.action(ActionTypes.ADD_MONEY, {
+                amount: netIncome,
+                showEffect: this.tickCount % 3 === 0 // Show every 3rd tick
+            }));
+        }
+
+        // Update income display
+        const incomeEl = document.getElementById('income');
+        if (incomeEl) {
+            incomeEl.textContent = `+$${netIncome}/s`;
+        }
+
+        // Random events (3% chance per tick)
+        if (Math.random() < 0.03) {
+            this.triggerRandomEvent();
+        }
+    },
+
+    triggerRandomEvent() {
+        // Placeholder - connect to existing random event system
+        if (typeof triggerRandomEvent === 'function') {
+            triggerRandomEvent();
+        }
+    }
+};
+
 // ==================== GLOBAL MODAL & BOAT SELECTION ====================
 // Track selected starter boat
 let selectedStarterBoat = 'sundancer';
@@ -963,57 +1534,59 @@ function updateRacePhysics() {
     });
 }
 
-// Draw State Park scenery on the left side
+// Draw State Park scenery on the left side - N64 STYLE (blocky flat shapes)
 function drawStateParkScenery(ctx, w, h) {
     const horizonY = h * 0.4;
 
-    // Distant hills (State Park)
-    ctx.fillStyle = '#2D5A3D';
+    // N64 style: Flat blocky hills (simple polygon, no sinusoidal curves)
+    ctx.fillStyle = '#2A5A3A';
     ctx.beginPath();
     ctx.moveTo(0, horizonY);
-    for (let x = 0; x < w * 0.35; x += 15) {
-        const hillY = horizonY - 20 - Math.sin(x * 0.015 + raceState.waterOffset * 0.001) * 25
-                     - Math.sin(x * 0.008) * 15;
-        ctx.lineTo(x, hillY);
-    }
+    ctx.lineTo(0, horizonY - 35);
+    ctx.lineTo(w * 0.08, horizonY - 50);
+    ctx.lineTo(w * 0.15, horizonY - 40);
+    ctx.lineTo(w * 0.22, horizonY - 55);
+    ctx.lineTo(w * 0.30, horizonY - 45);
+    ctx.lineTo(w * 0.35, horizonY - 30);
     ctx.lineTo(w * 0.35, horizonY);
-    ctx.lineTo(0, horizonY);
+    ctx.closePath();
     ctx.fill();
 
-    // Trees silhouette
-    ctx.fillStyle = '#1A4030';
-    for (let x = 10; x < w * 0.30; x += 25) {
-        const treeH = 30 + Math.sin(x * 0.1) * 15;
-        const baseY = horizonY - 10;
-        // Pine tree shape
+    // N64 blocky trees - simple triangles
+    ctx.fillStyle = '#1A4028';
+    for (let x = 15; x < w * 0.30; x += 35) {
+        const treeH = 35 + (x % 20);
+        const baseY = horizonY - 8;
+        // Simple flat triangle tree
         ctx.beginPath();
-        ctx.moveTo(x, baseY);
-        ctx.lineTo(x - 12, baseY);
+        ctx.moveTo(x - 15, baseY);
         ctx.lineTo(x, baseY - treeH);
-        ctx.lineTo(x + 12, baseY);
+        ctx.lineTo(x + 15, baseY);
         ctx.closePath();
         ctx.fill();
     }
 
-    // "STATE PARK" sign on shore
+    // "STATE PARK" sign - N64 flat rectangles
     if (raceState.coursePosition > 50 && raceState.coursePosition < 400) {
-        ctx.fillStyle = '#4a3020';
-        ctx.fillRect(50, horizonY - 40, 80, 8);
-        ctx.fillRect(60, horizonY - 40, 8, 35);
-        ctx.fillRect(110, horizonY - 40, 8, 35);
-        ctx.fillStyle = '#2d5a27';
-        ctx.fillRect(52, horizonY - 38, 76, 5);
-        ctx.fillStyle = '#fff';
-        ctx.font = 'bold 6px Arial';
-        ctx.fillText('STATE PARK', 58, horizonY - 34);
+        ctx.fillStyle = '#4A3020';
+        ctx.fillRect(50, horizonY - 42, 85, 10);
+        ctx.fillRect(58, horizonY - 42, 10, 38);
+        ctx.fillRect(115, horizonY - 42, 10, 38);
+        ctx.fillStyle = '#3A6A2A';
+        ctx.fillRect(52, horizonY - 40, 81, 6);
+        ctx.fillStyle = '#FFF';
+        ctx.font = 'bold 7px Arial';
+        ctx.fillText('STATE PARK', 58, horizonY - 35);
     }
 }
 
-// Draw spectator boats on the right side
+// Draw spectator boats rafted up along the RIGHT side of the race course
+// These boats scroll by as you race down the course
 function drawSpectatorBoats(ctx, w, h) {
     const horizonY = h * 0.4;
+    const coursePos = raceState.coursePosition;
 
-    // Right shore with docks
+    // Right shore with docks (static background)
     ctx.fillStyle = '#4A6A5A';
     ctx.beginPath();
     ctx.moveTo(w * 0.7, horizonY);
@@ -1025,74 +1598,166 @@ function drawSpectatorBoats(ctx, w, h) {
     ctx.lineTo(w * 0.7, horizonY + 10);
     ctx.fill();
 
-    // Draw spectator boats (anchored, watching the race)
-    const boatPositions = [
-        { x: w * 0.78, y: horizonY + 30, type: 'pontoon' },
-        { x: w * 0.85, y: horizonY + 50, type: 'cruiser' },
-        { x: w * 0.92, y: horizonY + 35, type: 'speedboat' },
-        { x: w * 0.75, y: horizonY + 60, type: 'pontoon' },
-        { x: w * 0.88, y: horizonY + 70, type: 'yacht' },
+    // Generate rafted boat clusters along the entire race course
+    // Each raft is a group of 3-6 boats tied together
+    const raftPositions = [];
+    const courseLength = raceState.finishLinePos + 200;
+
+    // Create rafts every 150 units along the course
+    for (let raftPos = 100; raftPos < courseLength; raftPos += 150) {
+        // Add some variation to raft position
+        const offset = Math.sin(raftPos * 0.1) * 30;
+        raftPositions.push({
+            coursePos: raftPos + offset,
+            boatCount: 3 + Math.floor(Math.abs(Math.sin(raftPos * 0.05)) * 4), // 3-6 boats per raft
+            seed: raftPos // For consistent randomization
+        });
+    }
+
+    // Draw rafts that are visible (relative to player position)
+    raftPositions.forEach(raft => {
+        const relPos = raft.coursePos - coursePos;
+
+        // Only draw if in visible range (ahead of player, scrolling towards them)
+        if (relPos > -100 && relPos < 600) {
+            // Calculate Y position based on distance (perspective)
+            const perspective = (600 - relPos) / 600;
+            const baseY = horizonY + 40 + perspective * 120;
+            const scale = 0.3 + perspective * 0.7;
+
+            // X position on the RIGHT side of the course
+            const baseX = w * 0.72 + Math.sin(raft.seed * 0.03) * 50;
+
+            // Draw the raft (cluster of boats)
+            drawRaftedBoats(ctx, baseX, baseY, scale, raft.boatCount, raft.seed);
+        }
+    });
+
+    // Add a few static near-shore spectator boats that don't move
+    const staticBoats = [
+        { x: w * 0.88, y: horizonY + 100, type: 'yacht' },
+        { x: w * 0.92, y: horizonY + 85, type: 'cruiser' },
     ];
 
-    boatPositions.forEach(boat => {
+    staticBoats.forEach(boat => {
         const bob = Math.sin(raceState.wavePhase + boat.x * 0.01) * 2;
+        ctx.globalAlpha = 0.9;
         drawSpectatorBoat(ctx, boat.x, boat.y + bob, boat.type);
+        ctx.globalAlpha = 1;
     });
 }
 
-// Draw a single spectator boat
+// Draw a raft of boats tied together - N64 STYLE (flat colors, blocky shapes)
+function drawRaftedBoats(ctx, x, y, scale, boatCount, seed) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.scale(scale, scale);
+
+    // N64 flat color palette for boats
+    const boatColors = ['#C0C0C0', '#E0D0C0', '#3A5A7A', '#A02020', '#2A6A4A', '#D0A030'];
+
+    for (let i = 0; i < boatCount; i++) {
+        const boatX = (i - boatCount / 2) * 38;
+        const boatY = (seed + i) % 2 === 0 ? 0 : 5;
+        const bob = Math.floor(Math.sin(raceState.wavePhase + seed + i * 0.5) * 2);
+
+        ctx.save();
+        ctx.translate(boatX, boatY + bob);
+
+        // N64 blocky boat - simple flat rectangles
+        const baseColor = boatColors[(seed + i) % boatColors.length];
+
+        // Hull - flat rectangle
+        ctx.fillStyle = baseColor;
+        ctx.fillRect(-16, -3, 32, 12);
+
+        // Deck stripe
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fillRect(-14, -1, 28, 4);
+
+        // Cabin/top (for some boats)
+        if ((seed + i) % 3 !== 0) {
+            ctx.fillStyle = '#2A4A6A';
+            ctx.fillRect(-8, -8, 16, 6);
+        }
+
+        // People - simple flat rectangles
+        ctx.fillStyle = '#8B5030';
+        for (let p = 0; p < 1 + (i % 2); p++) {
+            ctx.fillRect(-6 + p * 8, -6, 4, 4);
+        }
+
+        ctx.restore();
+    }
+
+    // Rope lines - thicker flat lines for N64
+    ctx.fillStyle = 'rgba(100, 50, 20, 0.6)';
+    for (let i = 0; i < boatCount - 1; i++) {
+        const x1 = (i - boatCount / 2) * 38 + 14;
+        const x2 = (i + 1 - boatCount / 2) * 38 - 14;
+        ctx.fillRect(x1, -1, x2 - x1, 3);
+    }
+
+    ctx.restore();
+}
+
+// Draw a single spectator boat - N64 STYLE (flat colors, blocky shapes)
 function drawSpectatorBoat(ctx, x, y, type) {
     ctx.save();
     ctx.translate(x, y);
 
     if (type === 'pontoon') {
-        // Small pontoon
-        ctx.fillStyle = '#A0A0A0';
-        ctx.fillRect(-20, 5, 40, 6);
-        ctx.fillStyle = '#E8DCC8';
-        ctx.fillRect(-18, -5, 36, 12);
-        ctx.fillStyle = '#722F37';
-        ctx.fillRect(-18, 0, 36, 4);
+        // N64 blocky pontoon
+        ctx.fillStyle = '#909090';
+        ctx.fillRect(-22, 6, 44, 8);
+        ctx.fillStyle = '#E0D0C0';
+        ctx.fillRect(-20, -6, 40, 14);
+        ctx.fillStyle = '#6A2A2A';
+        ctx.fillRect(-20, 0, 40, 5);
     } else if (type === 'cruiser') {
-        // Cabin cruiser
-        ctx.fillStyle = '#FFFFFF';
+        // N64 blocky cabin cruiser
+        ctx.fillStyle = '#F0F0F0';
         ctx.beginPath();
-        ctx.moveTo(-25, 8);
-        ctx.lineTo(-20, -5);
-        ctx.lineTo(20, -5);
-        ctx.lineTo(25, 8);
-        ctx.fill();
-        ctx.fillStyle = '#1E3A5F';
-        ctx.fillRect(-15, -12, 25, 8);
-    } else if (type === 'speedboat') {
-        // Small speedboat
-        ctx.fillStyle = '#CC3333';
-        ctx.beginPath();
-        ctx.moveTo(-20, 5);
-        ctx.lineTo(-15, -3);
-        ctx.lineTo(18, -3);
-        ctx.lineTo(20, 5);
-        ctx.fill();
-    } else if (type === 'yacht') {
-        // Larger yacht
-        ctx.fillStyle = '#FFFFFF';
-        ctx.beginPath();
-        ctx.moveTo(-35, 10);
-        ctx.lineTo(-25, -8);
-        ctx.lineTo(30, -8);
-        ctx.lineTo(35, 10);
+        ctx.moveTo(-26, 10);
+        ctx.lineTo(-22, -6);
+        ctx.lineTo(22, -6);
+        ctx.lineTo(26, 10);
+        ctx.closePath();
         ctx.fill();
         ctx.fillStyle = '#1A3A5A';
-        ctx.fillRect(-20, -18, 35, 12);
+        ctx.fillRect(-16, -14, 28, 10);
+    } else if (type === 'speedboat') {
+        // N64 blocky speedboat
+        ctx.fillStyle = '#C02020';
+        ctx.beginPath();
+        ctx.moveTo(-22, 6);
+        ctx.lineTo(-18, -4);
+        ctx.lineTo(20, -4);
+        ctx.lineTo(22, 6);
+        ctx.closePath();
+        ctx.fill();
+    } else if (type === 'yacht') {
+        // N64 blocky yacht
+        ctx.fillStyle = '#F0F0F0';
+        ctx.beginPath();
+        ctx.moveTo(-38, 12);
+        ctx.lineTo(-28, -10);
+        ctx.lineTo(32, -10);
+        ctx.lineTo(38, 12);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = '#1A3A5A';
+        ctx.fillRect(-22, -20, 38, 12);
         // Upper deck
         ctx.fillStyle = '#2A4A6A';
-        ctx.fillRect(-10, -25, 20, 8);
+        ctx.fillRect(-12, -28, 24, 10);
     }
 
     ctx.restore();
 }
 
 // Draw course buoys (yellow for start/finish)
+// Extended visibility - you can see finish buoys from 1/4 of the course away
 function drawCourseBuoys(ctx, w, h) {
     const waterTop = h * 0.4;
     const coursePos = raceState.coursePosition;
@@ -1101,7 +1766,12 @@ function drawCourseBuoys(ctx, w, h) {
     const startLineRel = raceState.startLinePos - coursePos;
     const finishLineRel = raceState.finishLinePos - coursePos;
 
-    // Draw start line buoys (yellow)
+    // Calculate race progress (0-1 from start line to finish)
+    const raceDistance = raceState.finishLinePos - raceState.startLinePos;
+    const distanceFromStart = coursePos - raceState.startLinePos;
+    const raceProgress = Math.max(0, distanceFromStart / raceDistance);
+
+    // Draw start line buoys (yellow) - normal visibility
     if (startLineRel > -100 && startLineRel < 500) {
         const startY = waterTop + 80 + (500 - startLineRel) * 0.3;
         const scale = Math.max(0.3, 1 - (500 - startLineRel) / 600);
@@ -1124,77 +1794,117 @@ function drawCourseBuoys(ctx, w, h) {
         }
     }
 
-    // Draw finish line buoys (yellow)
-    if (finishLineRel > -100 && finishLineRel < 500) {
-        const finishY = waterTop + 80 + (500 - finishLineRel) * 0.3;
-        const scale = Math.max(0.3, 1 - (500 - finishLineRel) / 600);
+    // EXTENDED VISIBILITY: Show finish line from 75% of the course (1/4 to go)
+    // This gives the player something to aim for during the long race
+    const finishVisibleDistance = 1200; // Much longer visibility range
+    const finishAppearAt = 0.25; // Appear when 25% of race distance remains
 
-        // Left buoy
-        drawBuoy(ctx, w * 0.25, finishY, scale, '#FFD700', 'FINISH');
-        // Right buoy
-        drawBuoy(ctx, w * 0.75, finishY, scale, '#FFD700', 'FINISH');
+    if (finishLineRel > -100 && (finishLineRel < finishVisibleDistance || raceProgress >= (1 - finishAppearAt))) {
+        // Scale finish line appearance based on distance
+        const normalizedDist = Math.min(finishLineRel, finishVisibleDistance);
+        const finishY = waterTop + 60 + (finishVisibleDistance - normalizedDist) * 0.12;
+        const scale = Math.max(0.15, 1 - normalizedDist / finishVisibleDistance);
 
-        // Finish line on water
-        if (scale > 0.5) {
-            ctx.strokeStyle = 'rgba(255, 215, 0, 0.5)';
-            ctx.lineWidth = 3 * scale;
-            ctx.setLineDash([10, 10]);
+        // Draw distant finish line first (tiny dots on horizon when far)
+        if (scale < 0.4) {
+            // Very distant - just small markers on horizon
+            ctx.fillStyle = 'rgba(255, 215, 0, ' + (scale * 2) + ')';
             ctx.beginPath();
-            ctx.moveTo(w * 0.25, finishY);
-            ctx.lineTo(w * 0.75, finishY);
-            ctx.stroke();
-            ctx.setLineDash([]);
+            ctx.arc(w * 0.25, finishY, 3 * scale * 3, 0, Math.PI * 2);
+            ctx.arc(w * 0.75, finishY, 3 * scale * 3, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Distant checkered pattern hint
+            if (scale > 0.2) {
+                ctx.strokeStyle = 'rgba(255, 215, 0, ' + (scale * 1.5) + ')';
+                ctx.lineWidth = 1;
+                ctx.setLineDash([5, 5]);
+                ctx.beginPath();
+                ctx.moveTo(w * 0.25, finishY);
+                ctx.lineTo(w * 0.75, finishY);
+                ctx.stroke();
+                ctx.setLineDash([]);
+            }
+        } else {
+            // Close enough - full buoys
+            // Left buoy
+            drawBuoy(ctx, w * 0.25, finishY, scale, '#FFD700', 'FINISH');
+            // Right buoy
+            drawBuoy(ctx, w * 0.75, finishY, scale, '#FFD700', 'FINISH');
+
+            // Finish line on water (checkered pattern)
+            if (scale > 0.5) {
+                ctx.strokeStyle = 'rgba(255, 215, 0, 0.6)';
+                ctx.lineWidth = 4 * scale;
+                ctx.setLineDash([15, 15]);
+                ctx.beginPath();
+                ctx.moveTo(w * 0.25, finishY);
+                ctx.lineTo(w * 0.75, finishY);
+                ctx.stroke();
+                ctx.setLineDash([]);
+
+                // "FINISH" banner when close
+                if (scale > 0.7) {
+                    ctx.font = `bold ${Math.round(16 * scale)}px "Cabin", sans-serif`;
+                    ctx.fillStyle = '#FFD700';
+                    ctx.textAlign = 'center';
+                    ctx.fillText('FINISH LINE', w * 0.5, finishY - 20 * scale);
+                }
+            }
         }
     }
 
-    // Course boundary buoys (red on left, green on right)
-    for (let i = 0; i < 8; i++) {
-        const buoyPos = i * 100 + 50;
+    // Course boundary buoys (red on left, green on right) - extended visibility
+    const boundaryVisibility = 600; // See more buoys ahead
+    for (let i = 0; i < 20; i++) { // More buoys along the course
+        const buoyPos = i * 120 + 50; // Spaced along course
         const relPos = buoyPos - coursePos;
 
-        if (relPos > -50 && relPos < 400) {
-            const buoyY = waterTop + 100 + (400 - relPos) * 0.25;
-            const scale = Math.max(0.2, 1 - (400 - relPos) / 500);
+        if (relPos > -50 && relPos < boundaryVisibility) {
+            const buoyY = waterTop + 100 + (boundaryVisibility - relPos) * 0.2;
+            const scale = Math.max(0.15, 1 - (boundaryVisibility - relPos) / (boundaryVisibility * 1.2));
 
-            // Left boundary (red)
-            drawBuoy(ctx, w * 0.18 + Math.sin(buoyPos * 0.02) * 10, buoyY, scale * 0.6, '#FF4444');
-            // Right boundary (green)
-            drawBuoy(ctx, w * 0.82 - Math.sin(buoyPos * 0.02) * 10, buoyY, scale * 0.6, '#44FF44');
+            // Left boundary (red) - port side
+            drawBuoy(ctx, w * 0.18 + Math.sin(buoyPos * 0.02) * 10, buoyY, scale * 0.5, '#FF4444');
+            // Right boundary (green) - starboard side
+            drawBuoy(ctx, w * 0.82 - Math.sin(buoyPos * 0.02) * 10, buoyY, scale * 0.5, '#44FF44');
         }
     }
 }
 
-// Draw a single buoy
+// Draw a single buoy - N64 STYLE (flat colors, blocky shapes)
 function drawBuoy(ctx, x, y, scale, color, label = null) {
     ctx.save();
     ctx.translate(x, y);
     ctx.scale(scale, scale);
 
-    // Buoy body
-    const grad = ctx.createRadialGradient(0, 0, 0, 0, 0, 15);
-    grad.addColorStop(0, color);
-    grad.addColorStop(1, '#AA8800');
-    ctx.fillStyle = grad;
-    ctx.beginPath();
-    ctx.ellipse(0, 0, 15, 20, 0, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Highlight
-    ctx.fillStyle = 'rgba(255,255,255,0.4)';
-    ctx.beginPath();
-    ctx.ellipse(-5, -8, 5, 8, -0.3, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Top marker
-    ctx.fillStyle = '#333';
-    ctx.fillRect(-3, -25, 6, 10);
-
-    // Flag
+    // N64 style buoy - flat hexagonal shape
     ctx.fillStyle = color;
     ctx.beginPath();
-    ctx.moveTo(3, -25);
-    ctx.lineTo(15, -20);
-    ctx.lineTo(3, -15);
+    ctx.moveTo(-12, -15);
+    ctx.lineTo(12, -15);
+    ctx.lineTo(18, 0);
+    ctx.lineTo(12, 18);
+    ctx.lineTo(-12, 18);
+    ctx.lineTo(-18, 0);
+    ctx.closePath();
+    ctx.fill();
+
+    // Highlight band - flat
+    ctx.fillStyle = 'rgba(255,255,255,0.5)';
+    ctx.fillRect(-10, -12, 20, 6);
+
+    // Top marker pole - flat rectangle
+    ctx.fillStyle = '#2A2A2A';
+    ctx.fillRect(-4, -30, 8, 18);
+
+    // Flag - simple flat triangle
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.moveTo(4, -28);
+    ctx.lineTo(18, -22);
+    ctx.lineTo(4, -16);
+    ctx.closePath();
     ctx.fill();
 
     ctx.restore();
@@ -1236,61 +1946,53 @@ function drawCourseSigns(ctx, w, h) {
     }
 }
 
-// Draw the racing water surface
+// Draw the racing water surface - N64 STYLE (flat shading, chunky waves)
 function drawRacingWater(ctx, w, h) {
     const waterTop = h * 0.4;
 
-    // Main water gradient
-    const waterGrad = ctx.createLinearGradient(0, waterTop, 0, h);
-    waterGrad.addColorStop(0, '#4A90A4');
-    waterGrad.addColorStop(0.3, '#3D7A8C');
-    waterGrad.addColorStop(1, '#2A5A6A');
-    ctx.fillStyle = waterGrad;
+    // N64 style: Use flat color bands instead of gradient
+    ctx.fillStyle = '#3A7A8A'; // Main water - flat teal
     ctx.fillRect(0, waterTop, w, h - waterTop);
 
-    // Draw wave lines for motion effect
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
-    ctx.lineWidth = 2;
+    // Darker band near horizon
+    ctx.fillStyle = '#4A9AAA';
+    ctx.fillRect(0, waterTop, w, 60);
 
+    // Draw chunky N64-style wave strips (flat colored rectangles)
     const speedFactor = raceState.currentSpeed / raceState.maxSpeed;
+    const waveColors = ['#5AAABC', '#4A9AAA', '#3A8A9A'];
 
-    for (let i = 0; i < 15; i++) {
-        const baseY = waterTop + 50 + i * 40;
-        const offset = (raceState.waterOffset + i * 100) % (w + 200) - 100;
+    for (let i = 0; i < 8; i++) {
+        const baseY = waterTop + 80 + i * 60;
+        const offset = (raceState.waterOffset * 2 + i * 80) % w;
 
-        ctx.beginPath();
-        ctx.moveTo(-100 + offset, baseY);
-
-        for (let x = -100 + offset; x < w + 100; x += 50) {
-            const waveY = baseY + Math.sin(x * 0.02 + raceState.wavePhase + i) * (5 + speedFactor * 10);
-            ctx.lineTo(x, waveY);
+        ctx.fillStyle = waveColors[i % 3];
+        // Chunky wave bars that move with speed
+        for (let x = -100 + offset; x < w + 100; x += 200) {
+            ctx.fillRect(x, baseY, 120, 8);
         }
-        ctx.stroke();
     }
 
-    // Speed lines on water
+    // Speed lines - thicker, more visible for N64 look
     if (raceState.currentSpeed > 20) {
-        ctx.strokeStyle = `rgba(255, 255, 255, ${speedFactor * 0.5})`;
-        ctx.lineWidth = 1;
+        ctx.fillStyle = `rgba(255, 255, 255, ${speedFactor * 0.6})`;
 
-        for (let i = 0; i < 20; i++) {
-            const x = Math.random() * w;
-            const y = waterTop + 100 + Math.random() * (h - waterTop - 150);
-            const len = 20 + speedFactor * 80;
+        for (let i = 0; i < 12; i++) {
+            const x = (i * 97 + raceState.waterOffset * 3) % w;
+            const y = waterTop + 100 + (i * 47) % (h - waterTop - 150);
+            const len = 30 + speedFactor * 100;
 
-            ctx.beginPath();
-            ctx.moveTo(x, y);
-            ctx.lineTo(x, y + len);
-            ctx.stroke();
+            // Chunky speed lines (rectangles instead of lines)
+            ctx.fillRect(x, y, 4, len);
         }
     }
 }
 
-// Draw the boat from behind
+// Draw the boat from behind - N64 STYLE (flat colors, blocky shapes)
 function drawRacingBoat(ctx, w, h) {
     const boatX = raceState.boatX;
     const boatY = raceState.boatY;
-    const bounce = Math.sin(raceState.wavePhase * 2) * (raceState.currentSpeed / raceState.maxSpeed) * 5;
+    const bounce = Math.sin(raceState.wavePhase * 2) * (raceState.currentSpeed / raceState.maxSpeed) * 6;
 
     ctx.save();
     ctx.translate(boatX, boatY + bounce);
@@ -1299,157 +2001,151 @@ function drawRacingBoat(ctx, w, h) {
     const colors = boatData.colors;
 
     if (selectedStarterBoat === 'sundancer') {
-        // Pontoon from behind - wide and flat
-        const pontoonWidth = 180;
-        const pontoonHeight = 60;
+        // N64 Pontoon from behind - blocky flat shapes
+        const pontoonWidth = 200;
 
-        // Left pontoon
-        ctx.fillStyle = '#707070';
+        // Left pontoon - flat rectangle
+        ctx.fillStyle = '#606060';
+        ctx.fillRect(-pontoonWidth/2, 25, 50, 20);
+
+        // Right pontoon - flat rectangle
+        ctx.fillRect(pontoonWidth/2 - 50, 25, 50, 20);
+
+        // Deck - main flat rectangle
+        ctx.fillStyle = '#D8C8A8';
+        ctx.fillRect(-pontoonWidth/2 + 5, -35, pontoonWidth - 10, 55);
+
+        // Maroon stripe - flat
+        ctx.fillStyle = '#722F37';
+        ctx.fillRect(-pontoonWidth/2 + 5, -5, pontoonWidth - 10, 18);
+
+        // Back seats - blocky
+        ctx.fillStyle = '#5A3A2A';
+        ctx.fillRect(-65, -28, 130, 28);
+
+        // Bimini top - N64 flat polygon
+        ctx.fillStyle = '#E0D0C0';
         ctx.beginPath();
-        ctx.ellipse(-pontoonWidth/2 + 25, 30, 25, 15, 0, 0, Math.PI * 2);
+        ctx.moveTo(-75, -60);
+        ctx.lineTo(75, -60);
+        ctx.lineTo(65, -35);
+        ctx.lineTo(-65, -35);
+        ctx.closePath();
         ctx.fill();
 
-        // Right pontoon
-        ctx.beginPath();
-        ctx.ellipse(pontoonWidth/2 - 25, 30, 25, 15, 0, 0, Math.PI * 2);
-        ctx.fill();
-
-        // Deck
-        ctx.fillStyle = colors.deck;
-        ctx.fillRect(-pontoonWidth/2, -30, pontoonWidth, 50);
-
-        // Maroon stripe
-        ctx.fillStyle = colors.accent;
-        ctx.fillRect(-pontoonWidth/2, -5, pontoonWidth, 15);
-
-        // Back seats
-        ctx.fillStyle = colors.furniture;
-        ctx.fillRect(-60, -25, 120, 25);
-
-        // Bimini top
-        ctx.fillStyle = colors.biminiTop;
-        ctx.globalAlpha = 0.9;
-        ctx.beginPath();
-        ctx.moveTo(-70, -60);
-        ctx.quadraticCurveTo(0, -80, 70, -60);
-        ctx.lineTo(60, -35);
-        ctx.quadraticCurveTo(0, -50, -60, -35);
-        ctx.fill();
-        ctx.globalAlpha = 1;
-
-        // Motor
+        // Motor - blocky
         ctx.fillStyle = '#1A1A1A';
-        ctx.fillRect(-15, 35, 30, 40);
+        ctx.fillRect(-18, 35, 36, 45);
 
-        // Evinrude colors
+        // Evinrude colors - flat
         ctx.fillStyle = '#1E90FF';
-        ctx.fillRect(-12, 40, 24, 8);
+        ctx.fillRect(-14, 42, 28, 10);
         ctx.fillStyle = '#FFFFFF';
-        ctx.fillRect(-12, 48, 24, 5);
+        ctx.fillRect(-14, 52, 28, 8);
 
     } else {
-        // Ski Supreme from behind - sleek V shape
-        const boatWidth = 120;
+        // N64 Ski Supreme from behind - blocky V shape
+        const boatWidth = 130;
 
-        // Hull - back view
-        ctx.fillStyle = colors.hull;
+        // Hull - N64 flat polygon (no curves)
+        ctx.fillStyle = '#B02020';
         ctx.beginPath();
-        ctx.moveTo(-boatWidth/2, 20);
-        ctx.quadraticCurveTo(-boatWidth/2 - 10, -10, -30, -40);
-        ctx.lineTo(30, -40);
-        ctx.quadraticCurveTo(boatWidth/2 + 10, -10, boatWidth/2, 20);
-        ctx.lineTo(boatWidth/2 - 10, 35);
-        ctx.lineTo(-boatWidth/2 + 10, 35);
+        ctx.moveTo(-boatWidth/2, 25);
+        ctx.lineTo(-boatWidth/2 + 15, -10);
+        ctx.lineTo(-35, -45);
+        ctx.lineTo(35, -45);
+        ctx.lineTo(boatWidth/2 - 15, -10);
+        ctx.lineTo(boatWidth/2, 25);
+        ctx.lineTo(boatWidth/2 - 12, 40);
+        ctx.lineTo(-boatWidth/2 + 12, 40);
         ctx.closePath();
         ctx.fill();
 
-        // White stripe
-        ctx.fillStyle = colors.stripe;
-        ctx.fillRect(-boatWidth/2 + 5, -15, boatWidth - 10, 10);
+        // White stripe - flat rectangle
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fillRect(-boatWidth/2 + 8, -18, boatWidth - 16, 12);
 
-        // Deck/interior
-        ctx.fillStyle = colors.deck;
+        // Deck/interior - flat polygon
+        ctx.fillStyle = '#E8E0D0';
         ctx.beginPath();
-        ctx.moveTo(-40, -35);
-        ctx.lineTo(40, -35);
-        ctx.lineTo(35, -5);
-        ctx.lineTo(-35, -5);
+        ctx.moveTo(-42, -38);
+        ctx.lineTo(42, -38);
+        ctx.lineTo(38, -8);
+        ctx.lineTo(-38, -8);
         ctx.closePath();
         ctx.fill();
 
-        // Engine cover
-        ctx.fillStyle = colors.hull;
-        ctx.beginPath();
-        ctx.ellipse(0, 5, 35, 20, 0, 0, Math.PI * 2);
-        ctx.fill();
+        // Engine cover - flat rectangle (N64 no ellipses)
+        ctx.fillStyle = '#B02020';
+        ctx.fillRect(-38, -5, 76, 35);
 
-        // Engine vents
-        ctx.strokeStyle = '#000';
-        ctx.lineWidth = 2;
+        // Engine vents - thick flat lines
+        ctx.fillStyle = '#000';
         for (let i = -2; i <= 2; i++) {
-            ctx.beginPath();
-            ctx.moveTo(i * 8 - 5, 0);
-            ctx.lineTo(i * 8 + 5, 0);
-            ctx.stroke();
+            ctx.fillRect(i * 10 - 8, -2, 16, 3);
         }
 
-        // Swim platform
-        ctx.fillStyle = '#8B4513';
-        ctx.fillRect(-30, 30, 60, 10);
+        // Swim platform - flat
+        ctx.fillStyle = '#6B4423';
+        ctx.fillRect(-35, 32, 70, 12);
     }
 
     ctx.restore();
 }
 
-// Draw rooster tail water spray
+// Draw rooster tail water spray - N64 STYLE (chunky flat shapes)
 function drawRoosterTail(ctx, w, h) {
     const boatX = raceState.boatX;
     const boatY = raceState.boatY;
     const speedFactor = raceState.currentSpeed / raceState.maxSpeed;
-    const sprayHeight = 30 + speedFactor * 100;
+    const sprayHeight = 40 + speedFactor * 120;
 
     ctx.save();
     ctx.translate(boatX, boatY + 50);
 
-    // Main spray fan
-    const grad = ctx.createRadialGradient(0, 0, 0, 0, sprayHeight/2, sprayHeight);
-    grad.addColorStop(0, 'rgba(255, 255, 255, 0.9)');
-    grad.addColorStop(0.5, 'rgba(200, 230, 255, 0.6)');
-    grad.addColorStop(1, 'rgba(150, 200, 255, 0)');
-
-    ctx.fillStyle = grad;
+    // N64 style: flat triangular spray shape
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
     ctx.beginPath();
-    ctx.moveTo(-10, 0);
-    ctx.quadraticCurveTo(-sprayHeight * 0.8, sprayHeight * 0.5, -sprayHeight * 0.6, sprayHeight);
-    ctx.lineTo(sprayHeight * 0.6, sprayHeight);
-    ctx.quadraticCurveTo(sprayHeight * 0.8, sprayHeight * 0.5, 10, 0);
+    ctx.moveTo(-15, 0);
+    ctx.lineTo(-sprayHeight * 0.7, sprayHeight);
+    ctx.lineTo(sprayHeight * 0.7, sprayHeight);
+    ctx.lineTo(15, 0);
+    ctx.closePath();
     ctx.fill();
 
-    // Spray droplets
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
-    for (let i = 0; i < speedFactor * 30; i++) {
-        const angle = (Math.random() - 0.5) * Math.PI * 0.6;
-        const dist = Math.random() * sprayHeight;
-        const x = Math.sin(angle) * dist;
-        const y = Math.cos(angle) * dist * 0.8;
-        const size = Math.random() * 3 + 1;
+    // Secondary spray layer - slightly transparent
+    ctx.fillStyle = 'rgba(180, 220, 255, 0.6)';
+    ctx.beginPath();
+    ctx.moveTo(-25, 10);
+    ctx.lineTo(-sprayHeight * 0.9, sprayHeight * 0.8);
+    ctx.lineTo(sprayHeight * 0.9, sprayHeight * 0.8);
+    ctx.lineTo(25, 10);
+    ctx.closePath();
+    ctx.fill();
 
-        ctx.beginPath();
-        ctx.arc(x, y, size, 0, Math.PI * 2);
-        ctx.fill();
+    // Chunky spray droplets (square particles - very N64)
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+    const dropCount = Math.floor(speedFactor * 20);
+    for (let i = 0; i < dropCount; i++) {
+        const spread = (i / dropCount - 0.5) * sprayHeight * 1.2;
+        const dist = (i % 5) * 15 + 10;
+        const size = 4 + (i % 3) * 2;
+
+        // Square droplets
+        ctx.fillRect(spread - size/2, dist, size, size);
     }
 
     ctx.restore();
 }
 
-// Draw wake particles
+// Draw wake particles - N64 STYLE (square particles)
 function drawWakeParticles(ctx) {
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
     raceState.particles.forEach(p => {
         ctx.globalAlpha = p.life;
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-        ctx.fill();
+        // Square particles instead of circles
+        const size = Math.max(3, p.size);
+        ctx.fillRect(p.x - size/2, p.y - size/2, size, size);
     });
     ctx.globalAlpha = 1;
 }
@@ -1860,7 +2556,26 @@ function closeRaceOverlay() {
 }
 window.closeRaceOverlay = closeRaceOverlay;
 
-// Show the post-race trailer scene
+// Trailer driving simulation state
+let trailerState = {
+    active: false,
+    canvas: null,
+    ctx: null,
+    animationFrame: null,
+    boatX: 0,
+    boatY: 0,
+    boatSpeed: 0,
+    boatAngle: 0,
+    throttle: 0,
+    steering: 0,
+    distanceToRamp: 300,
+    phase: 'driving', // 'driving', 'approaching', 'loading', 'complete'
+    waterOffset: 0,
+    rampX: 0,
+    spectatorBoats: [],
+};
+
+// Show the post-race trailer scene - INTERACTIVE BOAT DRIVING!
 function showTrailerScene() {
     const overlay = document.getElementById('race-overlay');
     if (!overlay) return;
@@ -1869,26 +2584,19 @@ function showTrailerScene() {
     const activeBoat = gameState.garage.boats[0];
     const finalSpeed = activeBoat.bestSpeed || 0;
 
-    const speedComment = finalSpeed < 25 ?
-        `${finalSpeed} MPH. The crowd is... politely not laughing.` :
-        `${finalSpeed} MPH in the ${boat.nickname}. Respectable!`;
-
     overlay.innerHTML = `
         <div id="trailer-scene">
             <canvas id="trailer-canvas"></canvas>
-            <div class="trailer-narrative">
-                <div class="narrative-text" id="narrative-1">
-                    You idle back to the staging area, trying to look confident...
+            <div id="trailer-hud">
+                <div class="trailer-speed">
+                    <span class="speed-value">0</span>
+                    <span class="speed-label">MPH</span>
                 </div>
-                <div class="narrative-text hidden" id="narrative-2">
-                    ${speedComment}
-                </div>
-                <div class="narrative-text hidden" id="narrative-3">
-                    Back at the trailer, you watch a 200 MPH cat scream past. That'll be you someday.
-                </div>
-                <div class="narrative-text hidden" id="narrative-4">
-                    Time to get to work. Build docks. Flip boats. Save every penny. Build something FAST.
-                </div>
+                <div class="trailer-status">Drive to the boat ramp!</div>
+                <div class="trailer-distance">Distance: 300 ft</div>
+            </div>
+            <div class="trailer-controls-hint">
+                Hold SPACE or CLICK to throttle | A/D or ←/→ to steer
             </div>
             <button class="skip-btn" onclick="skipToGame()">Skip</button>
         </div>
@@ -1899,32 +2607,425 @@ function showTrailerScene() {
     if (trailerCanvas) {
         trailerCanvas.width = window.innerWidth;
         trailerCanvas.height = window.innerHeight;
-        animateTrailerScene(trailerCanvas);
+
+        // Initialize trailer driving state
+        trailerState.active = true;
+        trailerState.canvas = trailerCanvas;
+        trailerState.ctx = trailerCanvas.getContext('2d');
+        trailerState.boatX = trailerCanvas.width / 2;
+        trailerState.boatY = trailerCanvas.height * 0.6;
+        trailerState.boatSpeed = 0;
+        trailerState.boatAngle = 0;
+        trailerState.throttle = 0;
+        trailerState.steering = 0;
+        trailerState.distanceToRamp = 300;
+        trailerState.phase = 'driving';
+        trailerState.waterOffset = 0;
+        trailerState.rampX = trailerCanvas.width * 0.5;
+
+        // Generate spectator boats along the shore
+        trailerState.spectatorBoats = [];
+        for (let i = 0; i < 8; i++) {
+            trailerState.spectatorBoats.push({
+                x: trailerCanvas.width * 0.1 + Math.random() * trailerCanvas.width * 0.25,
+                y: trailerCanvas.height * 0.35 + Math.random() * 30,
+                type: ['pontoon', 'cruiser', 'speedboat', 'yacht'][Math.floor(Math.random() * 4)],
+                scale: 0.4 + Math.random() * 0.3
+            });
+        }
+
+        // Setup controls
+        setupTrailerControls();
+
+        // Start driving simulation
+        animateTrailerDriving();
+    }
+}
+
+// Setup controls for trailer driving
+function setupTrailerControls() {
+    const keyHandler = (e) => {
+        if (!trailerState.active) return;
+
+        if (e.type === 'keydown') {
+            if (e.code === 'Space') {
+                trailerState.throttle = 1;
+                e.preventDefault();
+            }
+            if (e.code === 'KeyA' || e.code === 'ArrowLeft') {
+                trailerState.steering = -1;
+            }
+            if (e.code === 'KeyD' || e.code === 'ArrowRight') {
+                trailerState.steering = 1;
+            }
+        } else if (e.type === 'keyup') {
+            if (e.code === 'Space') {
+                trailerState.throttle = 0;
+            }
+            if (e.code === 'KeyA' || e.code === 'ArrowLeft' || e.code === 'KeyD' || e.code === 'ArrowRight') {
+                trailerState.steering = 0;
+            }
+        }
+    };
+
+    const mouseHandler = (e) => {
+        if (!trailerState.active) return;
+        trailerState.throttle = e.type === 'mousedown' ? 1 : 0;
+    };
+
+    document.addEventListener('keydown', keyHandler);
+    document.addEventListener('keyup', keyHandler);
+    trailerState.canvas.addEventListener('mousedown', mouseHandler);
+    trailerState.canvas.addEventListener('mouseup', mouseHandler);
+
+    // Store handlers for cleanup
+    trailerState.keyHandler = keyHandler;
+    trailerState.mouseHandler = mouseHandler;
+}
+
+// Cleanup trailer controls
+function cleanupTrailerControls() {
+    if (trailerState.keyHandler) {
+        document.removeEventListener('keydown', trailerState.keyHandler);
+        document.removeEventListener('keyup', trailerState.keyHandler);
+    }
+    if (trailerState.mouseHandler && trailerState.canvas) {
+        trailerState.canvas.removeEventListener('mousedown', trailerState.mouseHandler);
+        trailerState.canvas.removeEventListener('mouseup', trailerState.mouseHandler);
+    }
+}
+
+// Main trailer driving animation loop
+function animateTrailerDriving() {
+    if (!trailerState.active) return;
+
+    const ctx = trailerState.ctx;
+    const canvas = trailerState.canvas;
+    const w = canvas.width;
+    const h = canvas.height;
+
+    // Update physics
+    updateTrailerPhysics();
+
+    // Clear
+    ctx.clearRect(0, 0, w, h);
+
+    // Draw evening sky
+    const skyGrad = ctx.createLinearGradient(0, 0, 0, h * 0.4);
+    skyGrad.addColorStop(0, '#1a1a2e');
+    skyGrad.addColorStop(0.3, '#16213e');
+    skyGrad.addColorStop(0.6, '#e94560');
+    skyGrad.addColorStop(1, '#ff9a3c');
+    ctx.fillStyle = skyGrad;
+    ctx.fillRect(0, 0, w, h * 0.4);
+
+    // Stars
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+    for (let i = 0; i < 30; i++) {
+        const sx = (i * 73) % w;
+        const sy = (i * 31) % (h * 0.25);
+        const twinkle = Math.sin(Date.now() * 0.003 + i) * 0.5 + 0.5;
+        ctx.globalAlpha = twinkle * 0.7;
+        ctx.beginPath();
+        ctx.arc(sx, sy, 1, 0, Math.PI * 2);
+        ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+
+    // Draw shore/trees on left
+    drawTrailerShore(ctx, w, h);
+
+    // Draw water
+    drawTrailerWater(ctx, w, h);
+
+    // Draw spectator boats (anchored near shore)
+    trailerState.spectatorBoats.forEach(boat => {
+        const bob = Math.sin(Date.now() * 0.002 + boat.x * 0.01) * 2;
+        ctx.save();
+        ctx.translate(boat.x, boat.y + bob);
+        ctx.scale(boat.scale, boat.scale);
+        drawSpectatorBoat(ctx, 0, 0, boat.type);
+        ctx.restore();
+    });
+
+    // Draw boat ramp (destination)
+    drawBoatRamp(ctx, w, h);
+
+    // Draw player's boat
+    drawTrailerBoat(ctx, w, h);
+
+    // Draw wake behind boat
+    if (trailerState.boatSpeed > 2) {
+        drawTrailerWake(ctx);
     }
 
-    // Narrative sequence
-    let narrativeIndex = 1;
-    const narrativeInterval = setInterval(() => {
-        narrativeIndex++;
-        if (narrativeIndex <= 4) {
-            // Hide previous
-            const prev = document.getElementById(`narrative-${narrativeIndex - 1}`);
-            if (prev) prev.classList.add('fade-out');
+    // Update HUD
+    updateTrailerHUD();
 
-            // Show next
-            setTimeout(() => {
-                const next = document.getElementById(`narrative-${narrativeIndex}`);
-                if (next) {
-                    next.classList.remove('hidden');
-                    next.classList.add('fade-in');
-                }
-            }, 500);
-        } else {
-            clearInterval(narrativeInterval);
-            // Auto-transition to game after narrative
-            setTimeout(skipToGame, 2000);
+    // Check if reached ramp
+    if (trailerState.distanceToRamp <= 0 && trailerState.phase === 'driving') {
+        trailerState.phase = 'loading';
+        showTrailerLoadingSequence();
+        return;
+    }
+
+    // Continue loop
+    if (trailerState.active && trailerState.phase === 'driving') {
+        trailerState.animationFrame = requestAnimationFrame(animateTrailerDriving);
+    }
+}
+
+// Update trailer driving physics
+function updateTrailerPhysics() {
+    const maxSpeed = 15; // Idle speed, no racing allowed at the ramp!
+    const acceleration = 0.3;
+    const deceleration = 0.15;
+    const turnSpeed = 0.03;
+
+    // Throttle
+    if (trailerState.throttle > 0) {
+        trailerState.boatSpeed += acceleration;
+        if (trailerState.boatSpeed > maxSpeed) trailerState.boatSpeed = maxSpeed;
+    } else {
+        trailerState.boatSpeed -= deceleration;
+        if (trailerState.boatSpeed < 0) trailerState.boatSpeed = 0;
+    }
+
+    // Steering (only when moving)
+    if (trailerState.boatSpeed > 1) {
+        trailerState.boatAngle += trailerState.steering * turnSpeed * (trailerState.boatSpeed / maxSpeed);
+    }
+
+    // Move boat forward based on angle
+    trailerState.boatX += Math.sin(trailerState.boatAngle) * trailerState.boatSpeed * 0.5;
+    trailerState.boatY -= Math.cos(trailerState.boatAngle) * trailerState.boatSpeed * 0.3;
+
+    // Keep boat on screen
+    trailerState.boatX = Math.max(100, Math.min(trailerState.canvas.width - 100, trailerState.boatX));
+    trailerState.boatY = Math.max(trailerState.canvas.height * 0.4, Math.min(trailerState.canvas.height * 0.7, trailerState.boatY));
+
+    // Update distance to ramp based on Y position and speed
+    if (trailerState.boatSpeed > 0) {
+        trailerState.distanceToRamp -= trailerState.boatSpeed * 0.15;
+    }
+
+    // Water scroll effect
+    trailerState.waterOffset += trailerState.boatSpeed * 0.5;
+}
+
+// Draw the shore and trees
+function drawTrailerShore(ctx, w, h) {
+    const horizonY = h * 0.38;
+
+    // Distant treeline
+    ctx.fillStyle = '#0a1510';
+    ctx.beginPath();
+    ctx.moveTo(0, horizonY);
+    for (let x = 0; x < w * 0.3; x += 12) {
+        const treeH = 25 + Math.sin(x * 0.08) * 15;
+        ctx.lineTo(x, horizonY - treeH);
+    }
+    ctx.lineTo(w * 0.3, horizonY);
+    ctx.lineTo(0, horizonY);
+    ctx.fill();
+
+    // Shore edge
+    ctx.fillStyle = '#2a3a2a';
+    ctx.fillRect(0, horizonY, w * 0.25, 15);
+}
+
+// Draw the water for trailer scene
+function drawTrailerWater(ctx, w, h) {
+    const waterTop = h * 0.38;
+
+    // Water gradient
+    const waterGrad = ctx.createLinearGradient(0, waterTop, 0, h);
+    waterGrad.addColorStop(0, '#1a3a4a');
+    waterGrad.addColorStop(0.5, '#0d2836');
+    waterGrad.addColorStop(1, '#061621');
+    ctx.fillStyle = waterGrad;
+    ctx.fillRect(0, waterTop, w, h - waterTop);
+
+    // Sunset reflections
+    ctx.strokeStyle = 'rgba(255, 150, 80, 0.15)';
+    ctx.lineWidth = 3;
+    for (let i = 0; i < 6; i++) {
+        const ry = waterTop + 20 + i * 25;
+        ctx.beginPath();
+        for (let x = w * 0.3; x < w * 0.7; x += 15) {
+            const offset = Math.sin((x + trailerState.waterOffset) * 0.03 + i) * 4;
+            if (x === w * 0.3) ctx.moveTo(x, ry + offset);
+            else ctx.lineTo(x, ry + offset);
         }
-    }, 3000);
+        ctx.stroke();
+    }
+}
+
+// Draw the boat ramp destination
+function drawBoatRamp(ctx, w, h) {
+    const rampX = w * 0.5;
+    const rampTop = h * 0.38;
+    const rampWidth = 80;
+
+    // Parking area behind ramp
+    ctx.fillStyle = '#3a3530';
+    ctx.fillRect(rampX - 100, rampTop - 30, 200, 35);
+
+    // Concrete ramp going into water
+    ctx.fillStyle = '#6a6560';
+    ctx.beginPath();
+    ctx.moveTo(rampX - rampWidth/2, rampTop);
+    ctx.lineTo(rampX + rampWidth/2, rampTop);
+    ctx.lineTo(rampX + rampWidth/2 - 10, h * 0.55);
+    ctx.lineTo(rampX - rampWidth/2 + 10, h * 0.55);
+    ctx.fill();
+
+    // Ramp edge lines
+    ctx.strokeStyle = '#8a8580';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(rampX - rampWidth/2, rampTop);
+    ctx.lineTo(rampX - rampWidth/2 + 10, h * 0.55);
+    ctx.moveTo(rampX + rampWidth/2, rampTop);
+    ctx.lineTo(rampX + rampWidth/2 - 10, h * 0.55);
+    ctx.stroke();
+
+    // Truck and trailer waiting (simple shapes)
+    ctx.fillStyle = '#2a2a35';
+    ctx.fillRect(rampX - 25, rampTop - 25, 50, 20); // Truck
+    ctx.fillStyle = '#4a4a55';
+    ctx.fillRect(rampX - 20, rampTop - 8, 40, 12); // Trailer
+
+    // Target indicator
+    if (trailerState.distanceToRamp > 50) {
+        ctx.strokeStyle = 'rgba(0, 255, 100, ' + (0.3 + Math.sin(Date.now() * 0.005) * 0.2) + ')';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(rampX, h * 0.48, 30, 0, Math.PI * 2);
+        ctx.stroke();
+
+        // Arrow pointing to ramp
+        ctx.fillStyle = 'rgba(0, 255, 100, 0.7)';
+        ctx.font = 'bold 24px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('↑ RAMP', rampX, h * 0.48 + 50);
+    }
+}
+
+// Draw the player's boat from above
+function drawTrailerBoat(ctx, w, h) {
+    ctx.save();
+    ctx.translate(trailerState.boatX, trailerState.boatY);
+    ctx.rotate(trailerState.boatAngle);
+
+    const boat = STARTER_BOATS[selectedStarterBoat];
+
+    if (selectedStarterBoat === 'sundancer') {
+        // Pontoon from above
+        ctx.fillStyle = '#8A8A8A';
+        ctx.fillRect(-25, -40, 8, 80); // Left pontoon
+        ctx.fillRect(17, -40, 8, 80);  // Right pontoon
+
+        ctx.fillStyle = '#E8DCC8';
+        ctx.fillRect(-20, -35, 40, 70); // Deck
+
+        ctx.fillStyle = '#722F37';
+        ctx.fillRect(-18, -30, 36, 8); // Front seats
+        ctx.fillRect(-18, 15, 36, 8);  // Back seats
+    } else {
+        // Ski boat from above
+        ctx.fillStyle = '#B22222';
+        ctx.beginPath();
+        ctx.moveTo(0, -40);
+        ctx.lineTo(20, 10);
+        ctx.lineTo(18, 35);
+        ctx.lineTo(-18, 35);
+        ctx.lineTo(-20, 10);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.fillStyle = '#F5F5F5';
+        ctx.fillRect(-12, -10, 24, 20); // Cockpit
+    }
+
+    ctx.restore();
+}
+
+// Draw wake behind boat
+function drawTrailerWake(ctx) {
+    const speed = trailerState.boatSpeed;
+
+    ctx.save();
+    ctx.translate(trailerState.boatX, trailerState.boatY);
+    ctx.rotate(trailerState.boatAngle);
+
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+    ctx.lineWidth = 2;
+
+    // V-wake
+    for (let i = 0; i < 3; i++) {
+        const spread = 10 + i * 8;
+        const length = 30 + speed * 3;
+        ctx.beginPath();
+        ctx.moveTo(0, 40);
+        ctx.lineTo(-spread, 40 + length);
+        ctx.moveTo(0, 40);
+        ctx.lineTo(spread, 40 + length);
+        ctx.stroke();
+    }
+
+    ctx.restore();
+}
+
+// Update the trailer HUD
+function updateTrailerHUD() {
+    const speedEl = document.querySelector('#trailer-hud .speed-value');
+    const distEl = document.querySelector('.trailer-distance');
+    const statusEl = document.querySelector('.trailer-status');
+
+    if (speedEl) speedEl.textContent = Math.round(trailerState.boatSpeed);
+    if (distEl) distEl.textContent = `Distance: ${Math.max(0, Math.round(trailerState.distanceToRamp))} ft`;
+
+    if (trailerState.distanceToRamp < 50) {
+        if (statusEl) statusEl.textContent = 'Almost there! Line up with the trailer!';
+    } else if (trailerState.distanceToRamp < 150) {
+        if (statusEl) statusEl.textContent = 'Slow down, approaching ramp...';
+    }
+}
+
+// Show loading sequence when boat reaches ramp
+function showTrailerLoadingSequence() {
+    trailerState.active = false;
+    cleanupTrailerControls();
+
+    if (trailerState.animationFrame) {
+        cancelAnimationFrame(trailerState.animationFrame);
+    }
+
+    const overlay = document.getElementById('race-overlay');
+    if (!overlay) return;
+
+    const boat = STARTER_BOATS[selectedStarterBoat];
+    const activeBoat = gameState.garage.boats[0];
+
+    overlay.innerHTML = `
+        <div class="trailer-complete">
+            <h2>BOAT LOADED!</h2>
+            <div class="trailer-animation">
+                <div class="truck-trailer-icon">🚚🚤</div>
+            </div>
+            <p class="trailer-message">
+                You winch ${boat.nickname} onto the trailer like a pro.<br>
+                Well... mostly like a pro. Only scraped the prop once.
+            </p>
+            <div class="narrative-sequence">
+                <p>Back at the trailer, a 200 MPH cat screams past on the water.</p>
+                <p><em>That'll be you someday.</em></p>
+            </div>
+            <p class="next-tip">Time to get to work. Build docks. Flip boats. Save every penny. Build something FAST.</p>
+            <button class="continue-btn" onclick="skipToGame()">Get to Work!</button>
+        </div>
+    `;
 }
 
 // Animate the trailer scene
