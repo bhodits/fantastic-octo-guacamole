@@ -1,234 +1,333 @@
-// Ozarks City Builder - Main Game Engine
+// Lake of the Ozarks Tycoon - Main Game Engine
+// Build your lakefront empire at Missouri's premier party lake!
 
 // ==================== GAME CONFIGURATION ====================
 const CONFIG = {
-    GRID_WIDTH: 40,
-    GRID_HEIGHT: 30,
+    GRID_WIDTH: 50,
+    GRID_HEIGHT: 35,
     TILE_SIZE: 40,
-    TICK_RATE: 1000, // ms per game tick
-    SEASONS: ['Spring', 'Summer', 'Fall', 'Winter'],
-    TICKS_PER_SEASON: 30,
+    TICK_RATE: 1000,
+    SEASONS: ['Spring', 'Summer', 'Summer', 'Fall'], // Double summer for lake life!
+    TICKS_PER_SEASON: 25,
+    LAKE_MILE_MARKERS: 92, // The real lake has mile markers 0-92
 };
 
 // ==================== TERRAIN TYPES ====================
 const TERRAIN = {
-    GRASS: { id: 'grass', name: 'Grassland', color: '#5a8a4a', buildable: true },
-    FOREST: { id: 'forest', name: 'Forest', color: '#2d5a27', buildable: true, hasResource: 'lumber' },
-    WATER: { id: 'water', name: 'Lake', color: '#4a90a4', buildable: false, hasResource: 'fish' },
-    HILL: { id: 'hill', name: 'Hills', color: '#7a9a5a', buildable: true },
-    MOUNTAIN: { id: 'mountain', name: 'Mountain', color: '#8b8b7a', buildable: false, hasResource: 'stone' },
-    RIVER: { id: 'river', name: 'River', color: '#5ba3b8', buildable: false, hasResource: 'fish' },
+    LAND: { id: 'land', name: 'Shoreline', color: '#4a7c3f', buildable: true },
+    FOREST: { id: 'forest', name: 'Woods', color: '#2d5a27', buildable: true },
+    WATER: { id: 'water', name: 'Lake', color: '#2d7eb5', buildable: false, isWater: true },
+    DEEP_WATER: { id: 'deep_water', name: 'Deep Channel', color: '#1a5a8a', buildable: false, isWater: true },
+    COVE: { id: 'cove', name: 'Cove', color: '#4090b8', buildable: false, isWater: true, isCove: true },
+    SHALLOW: { id: 'shallow', name: 'Shallow Water', color: '#5ab0d0', buildable: false, isWater: true },
+    DOCK_ZONE: { id: 'dock_zone', name: 'Dock Area', color: '#3a9ac0', buildable: true, isWater: true },
+    DAM: { id: 'dam', name: 'Bagnell Dam', color: '#666666', buildable: false },
+    STRIP: { id: 'strip', name: 'The Strip', color: '#8b7355', buildable: true, isStrip: true },
+    PARKING: { id: 'parking', name: 'Parking Lot', color: '#555555', buildable: true },
 };
 
 // ==================== BUILDING DEFINITIONS ====================
 const BUILDINGS = {
-    // Housing
-    cabin: {
-        id: 'cabin',
-        name: 'Log Cabin',
-        icon: '🏠',
-        category: 'housing',
-        description: 'A cozy cabin for settlers. Provides housing for 4 people.',
-        cost: { money: 100, lumber: 20 },
-        provides: { population: 4 },
-        upkeep: { money: 2 },
-        size: 1,
-    },
-    farmhouse: {
-        id: 'farmhouse',
-        name: 'Farmhouse',
-        icon: '🏡',
-        category: 'housing',
-        description: 'A larger home with land. Houses 6 people and produces food.',
-        cost: { money: 250, lumber: 40, stone: 10 },
-        provides: { population: 6 },
-        produces: { money: 5 },
-        upkeep: { money: 3 },
-        size: 1,
-    },
-    mansion: {
-        id: 'mansion',
-        name: 'Lake Mansion',
-        icon: '🏰',
-        category: 'housing',
-        description: 'A grand lakeside estate. Houses 10 wealthy residents.',
-        cost: { money: 1000, lumber: 80, stone: 50 },
-        provides: { population: 10, happiness: 10 },
-        produces: { money: 25 },
-        upkeep: { money: 15 },
-        requiresAdjacent: ['water'],
-        size: 1,
-    },
-
-    // Economy
-    sawmill: {
-        id: 'sawmill',
-        name: 'Sawmill',
-        icon: '🪚',
-        category: 'economy',
-        description: 'Harvests lumber from nearby forests. Must be near trees.',
-        cost: { money: 200, lumber: 30 },
-        produces: { lumber: 3 },
-        upkeep: { money: 5 },
-        requiresAdjacent: ['forest'],
-        requiresWorkers: 2,
-        size: 1,
-    },
-    quarry: {
-        id: 'quarry',
-        name: 'Stone Quarry',
-        icon: '⛏️',
-        category: 'economy',
-        description: 'Extracts stone from the mountains.',
-        cost: { money: 300, lumber: 40 },
-        produces: { stone: 2 },
-        upkeep: { money: 8 },
-        requiresAdjacent: ['mountain'],
-        requiresWorkers: 3,
-        size: 1,
-    },
-    general_store: {
-        id: 'general_store',
-        name: 'General Store',
-        icon: '🏪',
-        category: 'economy',
-        description: 'A country store selling goods. Generates income from population.',
-        cost: { money: 300, lumber: 35, stone: 15 },
+    // Marina Category
+    boat_dock: {
+        id: 'boat_dock',
+        name: 'Boat Dock',
+        icon: '🛥️',
+        category: 'marina',
+        description: 'Basic dock for boat storage. Every lakefront empire starts here!',
+        cost: { money: 500 },
         produces: { money: 10 },
-        provides: { happiness: 5 },
-        upkeep: { money: 3 },
-        requiresWorkers: 2,
+        provides: { boats: 4 },
+        upkeep: { money: 5 },
+        requiresTerrain: ['dock_zone', 'shallow', 'cove'],
         size: 1,
     },
-    bank: {
-        id: 'bank',
-        name: 'Bank',
-        icon: '🏦',
-        category: 'economy',
-        description: 'Increases income from all businesses by 20%.',
-        cost: { money: 800, lumber: 50, stone: 40 },
-        produces: { money: 20 },
-        upkeep: { money: 10 },
+    marina: {
+        id: 'marina',
+        name: 'Full Service Marina',
+        icon: '⚓',
+        category: 'marina',
+        description: 'Gas, repairs, and slip rentals. The backbone of lake business.',
+        cost: { money: 2500 },
+        produces: { money: 50, boats: 2 },
+        provides: { boats: 12 },
+        upkeep: { money: 20 },
+        requiresTerrain: ['dock_zone', 'shallow', 'cove'],
         requiresWorkers: 3,
-        bonus: { incomeMultiplier: 1.2 },
-        size: 1,
-    },
-
-    // Nature & Recreation
-    park: {
-        id: 'park',
-        name: 'Town Park',
-        icon: '🌳',
-        category: 'nature',
-        description: 'A peaceful park. Increases happiness of nearby residents.',
-        cost: { money: 150, lumber: 10 },
-        provides: { happiness: 15 },
-        upkeep: { money: 2 },
-        size: 1,
-    },
-    campground: {
-        id: 'campground',
-        name: 'Campground',
-        icon: '⛺',
-        category: 'nature',
-        description: 'Attracts tourists who love the outdoors.',
-        cost: { money: 200, lumber: 25 },
-        produces: { money: 8 },
-        provides: { happiness: 5 },
-        upkeep: { money: 3 },
-        requiresAdjacent: ['forest'],
-        size: 1,
-    },
-    trail: {
-        id: 'trail',
-        name: 'Hiking Trail',
-        icon: '🥾',
-        category: 'nature',
-        description: 'A scenic trail through the hills. Popular with hikers.',
-        cost: { money: 100, lumber: 5 },
-        produces: { money: 3 },
-        provides: { happiness: 8 },
-        upkeep: { money: 1 },
-        requiresAdjacent: ['hill', 'forest', 'mountain'],
-        size: 1,
-    },
-
-    // Tourism
-    fishing_dock: {
-        id: 'fishing_dock',
-        name: 'Fishing Dock',
-        icon: '🎣',
-        category: 'tourism',
-        description: 'Catch bass and catfish from the lake!',
-        cost: { money: 150, lumber: 30 },
-        produces: { fish: 3, money: 5 },
-        upkeep: { money: 3 },
-        requiresAdjacent: ['water', 'river'],
-        requiresWorkers: 1,
         size: 1,
     },
     boat_rental: {
         id: 'boat_rental',
         name: 'Boat Rental',
         icon: '🚤',
-        category: 'tourism',
-        description: 'Rent boats to tourists exploring the lake.',
-        cost: { money: 400, lumber: 40 },
-        produces: { money: 15 },
-        provides: { happiness: 10 },
-        upkeep: { money: 5 },
-        requiresAdjacent: ['water'],
+        category: 'marina',
+        description: 'Rent pontoons and ski boats to tourists. Summer gold mine!',
+        cost: { money: 3000 },
+        produces: { money: 80, tourism: 5 },
+        provides: { boats: 8 },
+        upkeep: { money: 25 },
+        requiresTerrain: ['dock_zone', 'shallow'],
         requiresWorkers: 2,
+        size: 1,
+    },
+    yacht_club: {
+        id: 'yacht_club',
+        name: 'Yacht Club',
+        icon: '⛵',
+        category: 'marina',
+        description: 'Exclusive club for the lake elite. Major reputation boost.',
+        cost: { money: 15000 },
+        produces: { money: 200, reputation: 3 },
+        provides: { boats: 20 },
+        upkeep: { money: 80 },
+        requiresTerrain: ['dock_zone', 'cove'],
+        requiresWorkers: 5,
+        size: 1,
+    },
+    boat_dealer: {
+        id: 'boat_dealer',
+        name: 'Boat Dealership',
+        icon: '🏪',
+        category: 'marina',
+        description: 'Sell new boats to lake lovers. Big profits, big reputation.',
+        cost: { money: 8000 },
+        produces: { money: 150, boats: 5 },
+        upkeep: { money: 40 },
+        requiresTerrain: ['land', 'strip'],
+        requiresWorkers: 4,
+        size: 1,
+    },
+
+    // Lodging Category
+    lake_cabin: {
+        id: 'lake_cabin',
+        name: 'Lake Cabin',
+        icon: '🏠',
+        category: 'lodging',
+        description: 'Cozy cabin rental. Attracts families and fishermen.',
+        cost: { money: 800 },
+        produces: { money: 15, tourism: 2 },
+        provides: { population: 4 },
+        upkeep: { money: 5 },
+        requiresTerrain: ['land', 'forest'],
+        size: 1,
+    },
+    condo: {
+        id: 'condo',
+        name: 'Lakefront Condo',
+        icon: '🏢',
+        category: 'lodging',
+        description: 'Modern condos with lake views. Popular with weekenders.',
+        cost: { money: 5000 },
+        produces: { money: 60, tourism: 8 },
+        provides: { population: 12 },
+        upkeep: { money: 25 },
+        requiresAdjacent: ['water', 'cove', 'shallow', 'dock_zone'],
+        requiresTerrain: ['land'],
         size: 1,
     },
     resort: {
         id: 'resort',
         name: 'Lake Resort',
         icon: '🏨',
-        category: 'tourism',
-        description: 'A lakeside resort attracting visitors from far and wide.',
-        cost: { money: 1500, lumber: 100, stone: 60 },
-        produces: { money: 50 },
-        provides: { happiness: 20, population: 5 },
-        upkeep: { money: 25 },
-        requiresAdjacent: ['water'],
-        requiresWorkers: 8,
+        category: 'lodging',
+        description: 'Full-service resort with pools and amenities. Tourist magnet!',
+        cost: { money: 20000 },
+        produces: { money: 250, tourism: 25, reputation: 2 },
+        provides: { population: 20 },
+        upkeep: { money: 100 },
+        requiresAdjacent: ['water', 'cove', 'shallow', 'dock_zone'],
+        requiresTerrain: ['land'],
+        requiresWorkers: 10,
         size: 1,
     },
-    country_music_hall: {
-        id: 'country_music_hall',
-        name: 'Music Hall',
-        icon: '🎸',
-        category: 'tourism',
-        description: 'Home of Ozark country music! Major tourist attraction.',
-        cost: { money: 1200, lumber: 80, stone: 50 },
-        produces: { money: 40 },
-        provides: { happiness: 30 },
-        upkeep: { money: 20 },
-        requiresWorkers: 5,
+    houseboat: {
+        id: 'houseboat',
+        name: 'Houseboat',
+        icon: '🛳️',
+        category: 'lodging',
+        description: 'Live on the water! The ultimate lake lifestyle.',
+        cost: { money: 3500 },
+        produces: { money: 40, tourism: 5 },
+        provides: { population: 6, boats: 1 },
+        upkeep: { money: 15 },
+        requiresTerrain: ['cove', 'dock_zone'],
         size: 1,
     },
 
-    // Infrastructure
-    dirt_road: {
-        id: 'dirt_road',
-        name: 'Dirt Road',
-        icon: '🛤️',
-        category: 'infrastructure',
-        description: 'A simple country road connecting buildings.',
-        cost: { money: 10 },
-        isRoad: true,
+    // Entertainment Category
+    tiki_bar: {
+        id: 'tiki_bar',
+        name: 'Tiki Bar',
+        icon: '🍹',
+        category: 'entertainment',
+        description: 'Swim-up bar vibes! Party central on the water.',
+        cost: { money: 2000 },
+        produces: { money: 45, tourism: 8 },
+        provides: { reputation: 5 },
+        upkeep: { money: 15 },
+        requiresTerrain: ['dock_zone', 'shallow', 'cove'],
+        requiresWorkers: 3,
         size: 1,
     },
-    paved_road: {
-        id: 'paved_road',
-        name: 'Paved Road',
+    party_cove: {
+        id: 'party_cove',
+        name: 'Party Cove',
+        icon: '🎉',
+        category: 'entertainment',
+        description: 'THE legendary party spot. Massive tourism but watch your reputation!',
+        cost: { money: 5000 },
+        produces: { money: 150, tourism: 50 },
+        provides: { reputation: -5 },
+        upkeep: { money: 30 },
+        requiresTerrain: ['cove'],
+        size: 1,
+    },
+    mini_golf: {
+        id: 'mini_golf',
+        name: 'Mini Golf',
+        icon: '⛳',
+        category: 'entertainment',
+        description: 'Family fun off the water. Good for rainy days.',
+        cost: { money: 1500 },
+        produces: { money: 25, tourism: 5 },
+        provides: { reputation: 3 },
+        upkeep: { money: 8 },
+        requiresTerrain: ['land', 'strip'],
+        requiresWorkers: 2,
+        size: 1,
+    },
+    waterpark: {
+        id: 'waterpark',
+        name: 'Waterpark',
+        icon: '🎢',
+        category: 'entertainment',
+        description: 'Big Surf style! Major attraction for families.',
+        cost: { money: 25000 },
+        produces: { money: 300, tourism: 40, reputation: 5 },
+        upkeep: { money: 120 },
+        requiresTerrain: ['land'],
+        requiresWorkers: 15,
+        size: 1,
+    },
+    live_music: {
+        id: 'live_music',
+        name: 'Live Music Venue',
+        icon: '🎸',
+        category: 'entertainment',
+        description: 'Country and rock on the lake. Draws crowds every weekend.',
+        cost: { money: 6000 },
+        produces: { money: 80, tourism: 15 },
+        provides: { reputation: 8 },
+        upkeep: { money: 30 },
+        requiresTerrain: ['land', 'strip'],
+        requiresWorkers: 4,
+        size: 1,
+    },
+    casino_boat: {
+        id: 'casino_boat',
+        name: 'Casino Boat',
+        icon: '🎰',
+        category: 'entertainment',
+        description: 'Floating casino! High risk, high reward.',
+        cost: { money: 30000 },
+        produces: { money: 400, tourism: 30 },
+        provides: { reputation: -3 },
+        upkeep: { money: 150 },
+        requiresTerrain: ['deep_water', 'water'],
+        requiresWorkers: 12,
+        size: 1,
+    },
+
+    // Dining Category
+    fish_shack: {
+        id: 'fish_shack',
+        name: 'Fish Shack',
+        icon: '🐟',
+        category: 'dining',
+        description: 'Fresh catfish and crappie. Lake tradition!',
+        cost: { money: 600 },
+        produces: { money: 20, tourism: 3 },
+        upkeep: { money: 5 },
+        requiresTerrain: ['land', 'strip'],
+        requiresWorkers: 2,
+        size: 1,
+    },
+    bbq_joint: {
+        id: 'bbq_joint',
+        name: 'BBQ Joint',
+        icon: '🍖',
+        category: 'dining',
+        description: 'Missouri BBQ at its finest. Smells bring em in!',
+        cost: { money: 1200 },
+        produces: { money: 35, tourism: 5 },
+        provides: { reputation: 2 },
+        upkeep: { money: 10 },
+        requiresTerrain: ['land', 'strip'],
+        requiresWorkers: 3,
+        size: 1,
+    },
+    lakeside_grill: {
+        id: 'lakeside_grill',
+        name: 'Lakeside Grill',
+        icon: '🍽️',
+        category: 'dining',
+        description: 'Upscale dining with sunset views. Date night destination.',
+        cost: { money: 4000 },
+        produces: { money: 70, tourism: 10 },
+        provides: { reputation: 5 },
+        upkeep: { money: 25 },
+        requiresAdjacent: ['water', 'cove', 'dock_zone'],
+        requiresTerrain: ['land'],
+        requiresWorkers: 5,
+        size: 1,
+    },
+    gas_station: {
+        id: 'gas_station',
+        name: 'Gas & Snacks',
+        icon: '⛽',
+        category: 'dining',
+        description: 'Fuel and quick bites. Every road trip needs one.',
+        cost: { money: 1000 },
+        produces: { money: 30 },
+        upkeep: { money: 8 },
+        requiresTerrain: ['land', 'strip', 'parking'],
+        requiresWorkers: 2,
+        size: 1,
+    },
+
+    // Infrastructure Category
+    road: {
+        id: 'road',
+        name: 'Road',
         icon: '🛣️',
         category: 'infrastructure',
-        description: 'A proper paved road. Increases efficiency.',
-        cost: { money: 30, stone: 5 },
+        description: 'Connect your properties. Essential for growth.',
+        cost: { money: 50 },
         isRoad: true,
-        bonus: { efficiencyBonus: 1.1 },
+        requiresTerrain: ['land', 'strip', 'forest'],
+        size: 1,
+    },
+    parking_lot: {
+        id: 'parking_lot',
+        name: 'Parking Lot',
+        icon: '🅿️',
+        category: 'infrastructure',
+        description: 'Where the boats come from! Visitors need parking.',
+        cost: { money: 200 },
+        produces: { money: 5, tourism: 2 },
+        requiresTerrain: ['land', 'strip'],
+        size: 1,
+    },
+    boat_ramp: {
+        id: 'boat_ramp',
+        name: 'Boat Ramp',
+        icon: '📐',
+        category: 'infrastructure',
+        description: 'Public launch = more boats on the water.',
+        cost: { money: 800 },
+        produces: { boats: 3, tourism: 5 },
+        requiresTerrain: ['shallow', 'dock_zone'],
         size: 1,
     },
     bridge: {
@@ -236,27 +335,29 @@ const BUILDINGS = {
         name: 'Bridge',
         icon: '🌉',
         category: 'infrastructure',
-        description: 'Cross rivers and connect your town.',
-        cost: { money: 200, lumber: 50, stone: 30 },
+        description: 'Cross the coves! Opens up new development areas.',
+        cost: { money: 5000 },
         isRoad: true,
-        canBuildOn: ['water', 'river'],
+        requiresTerrain: ['water', 'shallow', 'cove'],
         size: 1,
     },
 };
 
 // ==================== GAME STATE ====================
 let gameState = {
-    townName: 'Ozark Hollow',
+    playerName: 'Lake Boss',
     resources: {
         population: 0,
-        money: 1000,
-        lumber: 50,
-        stone: 30,
-        fish: 0,
-        happiness: 100,
+        money: 5000,
+        boats: 0,
+        tourism: 0,
+        power: 100,
+        reputation: 50,
     },
     grid: [],
     buildings: [],
+    mileMarkers: [], // Store mile marker positions
+    coves: [], // Named coves
     selectedBuilding: null,
     demolishMode: false,
     gameSpeed: 1,
@@ -267,7 +368,16 @@ let gameState = {
     events: [],
     camera: { x: 0, y: 0, zoom: 1 },
     workers: { total: 0, employed: 0 },
+    lakeLevel: 660, // Normal pool level
+    weekendBonus: false,
 };
+
+// Famous Lake of the Ozarks cove names
+const COVE_NAMES = [
+    'Party Cove', 'Millionaire\'s Cove', 'Gravois Arm', 'Glaize Arm',
+    'Niangua Arm', 'Grand Glaize', 'Linn Creek Cove', 'Hurricane Deck',
+    'Horseshoe Bend', 'Tan-Tar-A Cove', 'Ha Ha Tonka', 'Bagnel Dam Area'
+];
 
 // ==================== CANVAS & RENDERING ====================
 let canvas, ctx;
@@ -287,7 +397,6 @@ function resizeCanvas() {
     canvas.width = container.clientWidth;
     canvas.height = container.clientHeight;
 
-    // Center camera on map
     const mapWidth = CONFIG.GRID_WIDTH * CONFIG.TILE_SIZE;
     const mapHeight = CONFIG.GRID_HEIGHT * CONFIG.TILE_SIZE;
     gameState.camera.x = (canvas.width - mapWidth * gameState.camera.zoom) / 2;
@@ -297,8 +406,11 @@ function resizeCanvas() {
 }
 
 function render() {
-    // Clear canvas
-    ctx.fillStyle = '#1a3d18';
+    // Sky/water background
+    const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+    gradient.addColorStop(0, '#87ceeb');
+    gradient.addColorStop(1, '#1e5f8a');
+    ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     ctx.save();
@@ -313,6 +425,9 @@ function render() {
         }
     }
 
+    // Draw mile markers
+    drawMileMarkers();
+
     // Draw buildings
     gameState.buildings.forEach(building => {
         drawBuilding(building);
@@ -321,7 +436,7 @@ function render() {
     // Draw hover highlight
     if (hoverTile && gameState.selectedBuilding) {
         const canPlace = canPlaceBuilding(gameState.selectedBuilding, hoverTile.x, hoverTile.y);
-        ctx.fillStyle = canPlace ? 'rgba(100, 200, 100, 0.4)' : 'rgba(200, 100, 100, 0.4)';
+        ctx.fillStyle = canPlace ? 'rgba(0, 210, 106, 0.4)' : 'rgba(200, 50, 50, 0.4)';
         ctx.fillRect(
             hoverTile.x * CONFIG.TILE_SIZE,
             hoverTile.y * CONFIG.TILE_SIZE,
@@ -342,6 +457,9 @@ function render() {
 
     // Draw minimap
     drawMinimap();
+
+    // Update mile marker display
+    updateMileMarkerDisplay();
 }
 
 function drawTile(x, y, tile) {
@@ -349,91 +467,85 @@ function drawTile(x, y, tile) {
     const px = x * CONFIG.TILE_SIZE;
     const py = y * CONFIG.TILE_SIZE;
 
-    // Base terrain color
     ctx.fillStyle = terrain.color;
     ctx.fillRect(px, py, CONFIG.TILE_SIZE, CONFIG.TILE_SIZE);
 
     // Add terrain details
     if (tile.terrain === 'forest') {
-        drawForestDetail(px, py, tile.variation);
-    } else if (tile.terrain === 'water') {
-        drawWaterDetail(px, py);
-    } else if (tile.terrain === 'hill') {
-        drawHillDetail(px, py, tile.variation);
-    } else if (tile.terrain === 'mountain') {
-        drawMountainDetail(px, py);
-    } else if (tile.terrain === 'river') {
-        drawRiverDetail(px, py, tile.riverDirection);
+        drawTreeDetail(px, py);
+    } else if (terrain.isWater) {
+        drawWaterDetail(px, py, tile.terrain);
+    } else if (tile.terrain === 'dam') {
+        drawDamDetail(px, py);
+    } else if (tile.terrain === 'strip') {
+        drawStripDetail(px, py);
     }
 
-    // Grid lines (subtle)
-    ctx.strokeStyle = 'rgba(0,0,0,0.1)';
+    // Subtle grid
+    ctx.strokeStyle = 'rgba(0,0,0,0.05)';
     ctx.strokeRect(px, py, CONFIG.TILE_SIZE, CONFIG.TILE_SIZE);
 }
 
-function drawForestDetail(px, py, variation) {
+function drawTreeDetail(px, py) {
     ctx.fillStyle = '#1a4d1a';
-    const trees = variation || 3;
-    for (let i = 0; i < trees; i++) {
-        const tx = px + 8 + (i % 2) * 18;
-        const ty = py + 8 + Math.floor(i / 2) * 16;
+    const positions = [[12, 10], [28, 15], [18, 28]];
+    positions.forEach(([ox, oy]) => {
         ctx.beginPath();
-        ctx.moveTo(tx, ty);
-        ctx.lineTo(tx + 8, ty + 14);
-        ctx.lineTo(tx - 8, ty + 14);
+        ctx.moveTo(px + ox, py + oy - 8);
+        ctx.lineTo(px + ox + 6, py + oy + 6);
+        ctx.lineTo(px + ox - 6, py + oy + 6);
         ctx.closePath();
         ctx.fill();
+    });
+}
+
+function drawWaterDetail(px, py, terrainType) {
+    const time = Date.now() / 2000;
+    ctx.fillStyle = 'rgba(255,255,255,0.15)';
+
+    if (terrainType === 'deep_water') {
+        // Darker ripples for channel
+        ctx.fillStyle = 'rgba(0,0,0,0.1)';
+    }
+
+    for (let i = 0; i < 2; i++) {
+        const wx = px + 8 + i * 15 + Math.sin(time + px * 0.1 + i) * 3;
+        const wy = py + 12 + i * 12;
+        ctx.fillRect(wx, wy, 12, 2);
     }
 }
 
-function drawWaterDetail(px, py) {
-    ctx.fillStyle = 'rgba(255,255,255,0.1)';
-    const time = Date.now() / 1000;
-    for (let i = 0; i < 3; i++) {
-        const wx = px + 5 + i * 12 + Math.sin(time + i) * 2;
-        const wy = py + 15 + i * 8;
-        ctx.fillRect(wx, wy, 10, 2);
-    }
+function drawDamDetail(px, py) {
+    // Dam structure
+    ctx.fillStyle = '#555';
+    ctx.fillRect(px + 5, py + 5, CONFIG.TILE_SIZE - 10, CONFIG.TILE_SIZE - 10);
+    ctx.fillStyle = '#777';
+    ctx.fillRect(px + 8, py + 15, CONFIG.TILE_SIZE - 16, 10);
 }
 
-function drawHillDetail(px, py, variation) {
-    ctx.fillStyle = '#6a8a4a';
-    ctx.beginPath();
-    ctx.arc(px + 20, py + 25, 15, Math.PI, 0);
-    ctx.fill();
-    if (variation > 1) {
+function drawStripDetail(px, py) {
+    // Road markings
+    ctx.fillStyle = '#6b5a45';
+    ctx.fillRect(px + 2, py + 2, CONFIG.TILE_SIZE - 4, CONFIG.TILE_SIZE - 4);
+}
+
+function drawMileMarkers() {
+    ctx.font = 'bold 10px Arial';
+    ctx.textAlign = 'center';
+
+    gameState.mileMarkers.forEach(marker => {
+        const px = marker.x * CONFIG.TILE_SIZE + CONFIG.TILE_SIZE / 2;
+        const py = marker.y * CONFIG.TILE_SIZE + CONFIG.TILE_SIZE / 2;
+
+        // Buoy
+        ctx.fillStyle = '#f4b942';
         ctx.beginPath();
-        ctx.arc(px + 12, py + 30, 10, Math.PI, 0);
+        ctx.arc(px, py, 8, 0, Math.PI * 2);
         ctx.fill();
-    }
-}
 
-function drawMountainDetail(px, py) {
-    ctx.fillStyle = '#6b6b5a';
-    ctx.beginPath();
-    ctx.moveTo(px + 20, py + 5);
-    ctx.lineTo(px + 35, py + 35);
-    ctx.lineTo(px + 5, py + 35);
-    ctx.closePath();
-    ctx.fill();
-
-    // Snow cap
-    ctx.fillStyle = '#ddd';
-    ctx.beginPath();
-    ctx.moveTo(px + 20, py + 5);
-    ctx.lineTo(px + 26, py + 15);
-    ctx.lineTo(px + 14, py + 15);
-    ctx.closePath();
-    ctx.fill();
-}
-
-function drawRiverDetail(px, py, direction) {
-    ctx.fillStyle = '#4a90a4';
-    if (direction === 'horizontal') {
-        ctx.fillRect(px, py + 12, CONFIG.TILE_SIZE, 16);
-    } else {
-        ctx.fillRect(px + 12, py, 16, CONFIG.TILE_SIZE);
-    }
+        ctx.fillStyle = '#000';
+        ctx.fillText(marker.mile, px, py + 3);
+    });
 }
 
 function drawBuilding(building) {
@@ -442,11 +554,15 @@ function drawBuilding(building) {
     const py = building.y * CONFIG.TILE_SIZE;
 
     // Building background
-    ctx.fillStyle = building.working ? '#e8d8b8' : '#c8b898';
+    let bgColor = building.working ? '#f5f0e6' : '#d0c8b8';
+    if (def.category === 'entertainment') bgColor = building.working ? '#ffe4ec' : '#e0d0d8';
+    if (def.category === 'marina') bgColor = building.working ? '#e4f0ff' : '#d0dce8';
+
+    ctx.fillStyle = bgColor;
     ctx.fillRect(px + 2, py + 2, CONFIG.TILE_SIZE - 4, CONFIG.TILE_SIZE - 4);
 
     // Border
-    ctx.strokeStyle = building.working ? '#8b6914' : '#6b4914';
+    ctx.strokeStyle = building.working ? '#1e5f8a' : '#888';
     ctx.lineWidth = 2;
     ctx.strokeRect(px + 2, py + 2, CONFIG.TILE_SIZE - 4, CONFIG.TILE_SIZE - 4);
 
@@ -458,25 +574,23 @@ function drawBuilding(building) {
 
     // Not working indicator
     if (!building.working && def.requiresWorkers) {
-        ctx.fillStyle = 'rgba(255,0,0,0.3)';
+        ctx.fillStyle = 'rgba(255,100,100,0.4)';
         ctx.fillRect(px + 2, py + 2, CONFIG.TILE_SIZE - 4, CONFIG.TILE_SIZE - 4);
     }
 }
 
 function drawMinimap() {
-    const minimapSize = 120;
+    const minimapSize = 130;
     const margin = 10;
     const mx = canvas.width - minimapSize - margin;
     const my = margin;
 
-    // Background
     ctx.fillStyle = 'rgba(0,0,0,0.7)';
     ctx.fillRect(mx - 2, my - 2, minimapSize + 4, minimapSize + 4);
 
     const scaleX = minimapSize / CONFIG.GRID_WIDTH;
     const scaleY = minimapSize / CONFIG.GRID_HEIGHT;
 
-    // Draw terrain
     for (let y = 0; y < CONFIG.GRID_HEIGHT; y++) {
         for (let x = 0; x < CONFIG.GRID_WIDTH; x++) {
             const tile = gameState.grid[y][x];
@@ -486,13 +600,13 @@ function drawMinimap() {
         }
     }
 
-    // Draw buildings
-    ctx.fillStyle = '#f5f0e6';
+    // Buildings
+    ctx.fillStyle = '#f4b942';
     gameState.buildings.forEach(b => {
-        ctx.fillRect(mx + b.x * scaleX, my + b.y * scaleY, scaleX * 1.5, scaleY * 1.5);
+        ctx.fillRect(mx + b.x * scaleX - 1, my + b.y * scaleY - 1, 3, 3);
     });
 
-    // Viewport indicator
+    // Viewport
     const viewX = -gameState.camera.x / (CONFIG.TILE_SIZE * gameState.camera.zoom);
     const viewY = -gameState.camera.y / (CONFIG.TILE_SIZE * gameState.camera.zoom);
     const viewW = canvas.width / (CONFIG.TILE_SIZE * gameState.camera.zoom);
@@ -503,170 +617,200 @@ function drawMinimap() {
     ctx.strokeRect(mx + viewX * scaleX, my + viewY * scaleY, viewW * scaleX, viewH * scaleY);
 }
 
+function updateMileMarkerDisplay() {
+    const display = document.getElementById('current-mile');
+    if (hoverTile) {
+        // Find nearest mile marker
+        let nearest = null;
+        let minDist = Infinity;
+        gameState.mileMarkers.forEach(m => {
+            const dist = Math.abs(m.x - hoverTile.x) + Math.abs(m.y - hoverTile.y);
+            if (dist < minDist) {
+                minDist = dist;
+                nearest = m;
+            }
+        });
+        if (nearest && minDist < 10) {
+            display.textContent = `Mile Marker: ${nearest.mile}`;
+        } else {
+            display.textContent = 'Mile Marker: --';
+        }
+    }
+}
+
 // ==================== MAP GENERATION ====================
 function generateMap() {
     gameState.grid = [];
+    gameState.mileMarkers = [];
 
-    // Initialize with grass
+    // Initialize with forest
     for (let y = 0; y < CONFIG.GRID_HEIGHT; y++) {
         gameState.grid[y] = [];
         for (let x = 0; x < CONFIG.GRID_WIDTH; x++) {
             gameState.grid[y][x] = {
-                terrain: 'grass',
+                terrain: Math.random() < 0.6 ? 'land' : 'forest',
                 building: null,
-                variation: Math.floor(Math.random() * 3) + 1,
             };
         }
     }
 
-    // Generate lake (Table Rock Lake style)
-    generateLake();
+    // Generate the serpentine Lake of the Ozarks shape
+    generateLakeOfTheOzarks();
 
-    // Generate river flowing into lake
-    generateRiver();
+    // Add The Strip (entertainment district)
+    generateTheStrip();
 
-    // Generate forests
-    generateForests();
-
-    // Generate hills and mountains
-    generateHills();
-
-    // Ensure some buildable starting area
-    clearStartingArea();
+    // Add Bagnell Dam at mile 0
+    generateBagnellDam();
 }
 
-function generateLake() {
-    // Create an irregular lake shape
-    const centerX = CONFIG.GRID_WIDTH * 0.6;
-    const centerY = CONFIG.GRID_HEIGHT * 0.5;
-    const baseRadius = 6;
+function generateLakeOfTheOzarks() {
+    // The lake is famous for its serpentine shape - let's create that!
+    // Main channel runs roughly from dam (east) going west with lots of arms
 
-    for (let y = 0; y < CONFIG.GRID_HEIGHT; y++) {
-        for (let x = 0; x < CONFIG.GRID_WIDTH; x++) {
-            const dx = x - centerX;
-            const dy = y - centerY;
-            const noise = Math.sin(x * 0.5) * 2 + Math.cos(y * 0.7) * 2;
-            const dist = Math.sqrt(dx * dx + dy * dy * 1.5);
+    const mainChannel = [];
 
-            if (dist < baseRadius + noise) {
-                gameState.grid[y][x].terrain = 'water';
+    // Start at Bagnell Dam (right side)
+    let x = CONFIG.GRID_WIDTH - 5;
+    let y = Math.floor(CONFIG.GRID_HEIGHT / 2);
+
+    // Create main winding channel
+    let mile = 0;
+    while (x > 3) {
+        mainChannel.push({ x, y, mile });
+
+        // Add mile marker every few tiles
+        if (mile % 8 === 0) {
+            gameState.mileMarkers.push({ x, y, mile: Math.floor(mile / 8) * 10 });
+        }
+
+        // Carve out the channel (3 tiles wide)
+        for (let dy = -1; dy <= 1; dy++) {
+            for (let dx = -1; dx <= 1; dx++) {
+                const nx = x + dx;
+                const ny = y + dy;
+                if (ny >= 0 && ny < CONFIG.GRID_HEIGHT && nx >= 0 && nx < CONFIG.GRID_WIDTH) {
+                    gameState.grid[ny][nx].terrain = dy === 0 ? 'deep_water' : 'water';
+                }
             }
         }
-    }
 
-    // Add a second smaller lake section (like lake branches)
-    const branch1X = centerX - 8;
-    const branch1Y = centerY - 3;
-    for (let y = 0; y < CONFIG.GRID_HEIGHT; y++) {
-        for (let x = 0; x < CONFIG.GRID_WIDTH; x++) {
-            const dx = x - branch1X;
-            const dy = y - branch1Y;
-            const dist = Math.sqrt(dx * dx * 0.8 + dy * dy * 2);
-            if (dist < 4) {
-                gameState.grid[y][x].terrain = 'water';
-            }
-        }
-    }
-}
-
-function generateRiver() {
-    // River flowing from top-left toward the lake
-    let rx = 5;
-    let ry = 0;
-
-    while (ry < CONFIG.GRID_HEIGHT && gameState.grid[ry][rx].terrain !== 'water') {
-        gameState.grid[ry][rx].terrain = 'river';
-        gameState.grid[ry][rx].riverDirection = 'vertical';
-
-        ry++;
-        if (Math.random() < 0.3) {
-            rx += Math.random() < 0.5 ? 1 : -1;
-            rx = Math.max(2, Math.min(rx, CONFIG.GRID_WIDTH - 3));
-            if (ry < CONFIG.GRID_HEIGHT) {
-                gameState.grid[ry][rx].terrain = 'river';
-                gameState.grid[ry][rx].riverDirection = 'horizontal';
-            }
-        }
-    }
-}
-
-function generateForests() {
-    // Create forest clusters
-    const numClusters = 8;
-    for (let i = 0; i < numClusters; i++) {
-        const cx = Math.floor(Math.random() * CONFIG.GRID_WIDTH);
-        const cy = Math.floor(Math.random() * CONFIG.GRID_HEIGHT);
-        const size = Math.floor(Math.random() * 4) + 3;
-
-        for (let dy = -size; dy <= size; dy++) {
-            for (let dx = -size; dx <= size; dx++) {
-                const x = cx + dx;
-                const y = cy + dy;
-                if (x >= 0 && x < CONFIG.GRID_WIDTH && y >= 0 && y < CONFIG.GRID_HEIGHT) {
-                    const dist = Math.sqrt(dx * dx + dy * dy);
-                    if (dist < size && Math.random() < 0.7) {
-                        const tile = gameState.grid[y][x];
-                        if (tile.terrain === 'grass') {
-                            tile.terrain = 'forest';
-                            tile.variation = Math.floor(Math.random() * 3) + 2;
-                        }
+        // Add shallow water edges
+        for (let dy = -2; dy <= 2; dy++) {
+            const ny = y + dy;
+            if (ny >= 0 && ny < CONFIG.GRID_HEIGHT) {
+                if (Math.abs(dy) === 2 && gameState.grid[ny][x].terrain !== 'deep_water') {
+                    if (Math.random() < 0.7) {
+                        gameState.grid[ny][x].terrain = 'shallow';
                     }
                 }
             }
         }
+
+        // Serpentine movement
+        x -= 1;
+        if (Math.random() < 0.4) {
+            y += Math.random() < 0.5 ? 1 : -1;
+            y = Math.max(4, Math.min(CONFIG.GRID_HEIGHT - 5, y));
+        }
+
+        mile++;
+
+        // Create cove arms branching off
+        if (mile % 12 === 6 && Math.random() < 0.8) {
+            createCove(x, y, Math.random() < 0.5 ? -1 : 1);
+        }
     }
+
+    // Add dock zones along shoreline
+    addDockZones();
 }
 
-function generateHills() {
-    // Create hill regions along edges and scattered
-    const hillRegions = [
-        { x: 0, y: 0, w: 10, h: 8 },
-        { x: CONFIG.GRID_WIDTH - 8, y: 0, w: 8, h: 10 },
-        { x: 0, y: CONFIG.GRID_HEIGHT - 6, w: 12, h: 6 },
-    ];
+function createCove(startX, startY, direction) {
+    let cx = startX;
+    let cy = startY;
+    const armLength = Math.floor(Math.random() * 8) + 5;
 
-    hillRegions.forEach(region => {
-        for (let y = region.y; y < region.y + region.h && y < CONFIG.GRID_HEIGHT; y++) {
-            for (let x = region.x; x < region.x + region.w && x < CONFIG.GRID_WIDTH; x++) {
-                const tile = gameState.grid[y][x];
-                if (tile.terrain === 'grass' || tile.terrain === 'forest') {
-                    if (Math.random() < 0.4) {
-                        tile.terrain = 'hill';
-                        tile.variation = Math.floor(Math.random() * 2) + 1;
-                    } else if (Math.random() < 0.15) {
-                        tile.terrain = 'mountain';
-                    }
-                }
+    for (let i = 0; i < armLength; i++) {
+        cy += direction;
+        if (Math.random() < 0.3) cx += Math.random() < 0.5 ? 1 : -1;
+
+        if (cy < 2 || cy >= CONFIG.GRID_HEIGHT - 2 || cx < 2 || cx >= CONFIG.GRID_WIDTH - 2) break;
+
+        // Cove water
+        for (let dx = -1; dx <= 1; dx++) {
+            const nx = cx + dx;
+            if (nx >= 0 && nx < CONFIG.GRID_WIDTH) {
+                gameState.grid[cy][nx].terrain = 'cove';
             }
         }
-    });
 
-    // Add some scattered mountains
-    for (let i = 0; i < 5; i++) {
-        const x = Math.floor(Math.random() * CONFIG.GRID_WIDTH);
-        const y = Math.floor(Math.random() * (CONFIG.GRID_HEIGHT / 2));
-        if (gameState.grid[y][x].terrain === 'grass' || gameState.grid[y][x].terrain === 'hill') {
-            gameState.grid[y][x].terrain = 'mountain';
-        }
-    }
-}
-
-function clearStartingArea() {
-    // Ensure there's a nice buildable area to start
-    const startX = 12;
-    const startY = 12;
-    const clearSize = 6;
-
-    for (let y = startY; y < startY + clearSize; y++) {
-        for (let x = startX; x < startX + clearSize; x++) {
-            if (y < CONFIG.GRID_HEIGHT && x < CONFIG.GRID_WIDTH) {
-                const tile = gameState.grid[y][x];
-                if (tile.terrain !== 'water' && tile.terrain !== 'river') {
-                    tile.terrain = 'grass';
-                }
+        // Shallow edges
+        if (cy + direction >= 0 && cy + direction < CONFIG.GRID_HEIGHT) {
+            if (gameState.grid[cy + direction][cx].terrain.includes('land') ||
+                gameState.grid[cy + direction][cx].terrain === 'forest') {
+                gameState.grid[cy + direction][cx].terrain = 'shallow';
             }
         }
     }
+
+    // Add a dock zone at cove end
+    if (cy >= 0 && cy < CONFIG.GRID_HEIGHT && cx >= 0 && cx < CONFIG.GRID_WIDTH) {
+        gameState.grid[cy][cx].terrain = 'dock_zone';
+    }
+}
+
+function addDockZones() {
+    // Add dock zones where water meets land
+    for (let y = 1; y < CONFIG.GRID_HEIGHT - 1; y++) {
+        for (let x = 1; x < CONFIG.GRID_WIDTH - 1; x++) {
+            const tile = gameState.grid[y][x];
+            if (tile.terrain === 'shallow' || tile.terrain === 'cove') {
+                // Check if adjacent to land
+                const adjacent = getAdjacentTiles(x, y);
+                const nearLand = adjacent.some(a =>
+                    a.terrain === 'land' || a.terrain === 'forest' || a.terrain === 'strip'
+                );
+                if (nearLand && Math.random() < 0.3) {
+                    tile.terrain = 'dock_zone';
+                }
+            }
+        }
+    }
+}
+
+function generateTheStrip() {
+    // The Strip - the famous entertainment district near Bagnell Dam
+    const stripY = Math.floor(CONFIG.GRID_HEIGHT / 2) - 5;
+    const stripStartX = CONFIG.GRID_WIDTH - 12;
+
+    for (let y = stripY; y < stripY + 4; y++) {
+        for (let x = stripStartX; x < CONFIG.GRID_WIDTH - 3; x++) {
+            if (y >= 0 && y < CONFIG.GRID_HEIGHT && x >= 0 && x < CONFIG.GRID_WIDTH) {
+                if (gameState.grid[y][x].terrain !== 'water' &&
+                    gameState.grid[y][x].terrain !== 'deep_water') {
+                    gameState.grid[y][x].terrain = 'strip';
+                }
+            }
+        }
+    }
+}
+
+function generateBagnellDam() {
+    // Bagnell Dam at the east end (mile 0)
+    const damX = CONFIG.GRID_WIDTH - 3;
+    const damY = Math.floor(CONFIG.GRID_HEIGHT / 2);
+
+    for (let dy = -2; dy <= 2; dy++) {
+        const y = damY + dy;
+        if (y >= 0 && y < CONFIG.GRID_HEIGHT) {
+            gameState.grid[y][damX].terrain = 'dam';
+            gameState.grid[y][damX + 1].terrain = 'dam';
+        }
+    }
+
+    // Mile marker 0 at dam
+    gameState.mileMarkers.push({ x: damX - 2, y: damY, mile: 0 });
 }
 
 // ==================== BUILDING SYSTEM ====================
@@ -678,22 +822,13 @@ function canPlaceBuilding(buildingType, x, y) {
     const tile = gameState.grid[y][x];
     const def = BUILDINGS[buildingType];
 
-    // Check if tile already has a building
-    if (tile.building) {
-        return false;
-    }
+    if (tile.building) return false;
 
-    // Check terrain restrictions
-    const terrain = TERRAIN[tile.terrain.toUpperCase()];
-
-    // Bridges can be built on water
-    if (def.canBuildOn && def.canBuildOn.includes(tile.terrain)) {
-        return canAfford(def.cost);
-    }
-
-    // Normal buildable check
-    if (!terrain.buildable) {
-        return false;
+    // Check terrain requirements
+    if (def.requiresTerrain) {
+        if (!def.requiresTerrain.includes(tile.terrain)) {
+            return false;
+        }
     }
 
     // Check adjacent requirements
@@ -702,18 +837,15 @@ function canPlaceBuilding(buildingType, x, y) {
         const hasRequired = adjacent.some(adj =>
             def.requiresAdjacent.includes(adj.terrain)
         );
-        if (!hasRequired) {
-            return false;
-        }
+        if (!hasRequired) return false;
     }
 
-    // Check cost
     return canAfford(def.cost);
 }
 
 function canAfford(cost) {
     for (const [resource, amount] of Object.entries(cost)) {
-        if (gameState.resources[resource] < amount) {
+        if ((gameState.resources[resource] || 0) < amount) {
             return false;
         }
     }
@@ -722,7 +854,7 @@ function canAfford(cost) {
 
 function getAdjacentTiles(x, y) {
     const adjacent = [];
-    const dirs = [[-1, 0], [1, 0], [0, -1], [0, 1], [-1, -1], [1, -1], [-1, 1], [1, 1]];
+    const dirs = [[-1, 0], [1, 0], [0, -1], [0, 1]];
 
     dirs.forEach(([dx, dy]) => {
         const nx = x + dx;
@@ -736,9 +868,7 @@ function getAdjacentTiles(x, y) {
 }
 
 function placeBuilding(buildingType, x, y) {
-    if (!canPlaceBuilding(buildingType, x, y)) {
-        return false;
-    }
+    if (!canPlaceBuilding(buildingType, x, y)) return false;
 
     const def = BUILDINGS[buildingType];
 
@@ -747,7 +877,6 @@ function placeBuilding(buildingType, x, y) {
         gameState.resources[resource] -= amount;
     }
 
-    // Create building
     const building = {
         type: buildingType,
         x: x,
@@ -756,12 +885,11 @@ function placeBuilding(buildingType, x, y) {
         level: 1,
     };
 
-    // Check if can work (has workers if required)
+    // Check workers
     if (def.requiresWorkers) {
         const availableWorkers = gameState.workers.total - gameState.workers.employed;
         if (availableWorkers >= def.requiresWorkers) {
             gameState.workers.employed += def.requiresWorkers;
-            building.working = true;
         } else {
             building.working = false;
         }
@@ -775,9 +903,9 @@ function placeBuilding(buildingType, x, y) {
         for (const [resource, amount] of Object.entries(def.provides)) {
             if (resource === 'population') {
                 gameState.resources.population += amount;
-                gameState.workers.total += Math.floor(amount * 0.6); // 60% work
+                gameState.workers.total += Math.floor(amount * 0.7);
             } else {
-                gameState.resources[resource] += amount;
+                gameState.resources[resource] = (gameState.resources[resource] || 0) + amount;
             }
         }
     }
@@ -796,37 +924,27 @@ function demolishBuilding(x, y) {
     const building = tile.building;
     const def = BUILDINGS[building.type];
 
-    // Remove building
     const index = gameState.buildings.indexOf(building);
-    if (index > -1) {
-        gameState.buildings.splice(index, 1);
-    }
+    if (index > -1) gameState.buildings.splice(index, 1);
     tile.building = null;
 
-    // Remove provides
     if (def.provides) {
         for (const [resource, amount] of Object.entries(def.provides)) {
             if (resource === 'population') {
                 gameState.resources.population -= amount;
-                gameState.workers.total -= Math.floor(amount * 0.6);
+                gameState.workers.total -= Math.floor(amount * 0.7);
             } else {
                 gameState.resources[resource] -= amount;
             }
         }
     }
 
-    // Free workers
     if (def.requiresWorkers && building.working) {
         gameState.workers.employed -= def.requiresWorkers;
     }
 
-    // Refund some materials
-    if (def.cost.lumber) {
-        gameState.resources.lumber += Math.floor(def.cost.lumber * 0.3);
-    }
-    if (def.cost.stone) {
-        gameState.resources.stone += Math.floor(def.cost.stone * 0.3);
-    }
+    // Partial refund
+    gameState.resources.money += Math.floor((def.cost.money || 0) * 0.3);
 
     addEvent(`Demolished ${def.name}`, 'neutral');
     updateUI();
@@ -836,7 +954,6 @@ function demolishBuilding(x, y) {
 }
 
 // ==================== GAME LOOP ====================
-let lastTick = 0;
 let gameLoop;
 
 function startGameLoop() {
@@ -850,184 +967,148 @@ function startGameLoop() {
 function gameTick() {
     gameState.tick++;
 
-    // Update season/year
+    // Weekend bonus (every 7 ticks)
+    gameState.weekendBonus = (gameState.tick % 7 === 5 || gameState.tick % 7 === 6);
+
+    // Season change
     if (gameState.tick % CONFIG.TICKS_PER_SEASON === 0) {
         gameState.season = (gameState.season + 1) % 4;
         if (gameState.season === 0) {
             gameState.year++;
             addEvent(`Year ${gameState.year} begins!`, 'neutral');
         }
-        addEvent(`${CONFIG.SEASONS[gameState.season]} has arrived`, 'neutral');
+        const seasonName = CONFIG.SEASONS[gameState.season];
+        addEvent(`${seasonName} has arrived!`, 'neutral');
+
+        // Lake level fluctuation
+        if (seasonName === 'Spring') {
+            gameState.lakeLevel = 660 + Math.floor(Math.random() * 5);
+            addEvent('Spring rains fill the lake!', 'positive');
+        } else if (seasonName === 'Fall') {
+            gameState.lakeLevel = 656 + Math.floor(Math.random() * 4);
+        }
     }
 
-    // Calculate income and production
+    // Calculate production
     let income = 0;
-    let lumberProduction = 0;
-    let stoneProduction = 0;
-    let fishProduction = 0;
+    let boatProduction = 0;
+    let tourismProduction = 0;
+    let reputationChange = 0;
     let expenses = 0;
 
-    // Check worker availability and update building status
+    const isSummer = CONFIG.SEASONS[gameState.season] === 'Summer';
+    const seasonMultiplier = isSummer ? 2.0 : (CONFIG.SEASONS[gameState.season] === 'Spring' ? 1.2 : 0.6);
+    const weekendMultiplier = gameState.weekendBonus ? 1.5 : 1.0;
+
     updateWorkerAssignments();
 
     gameState.buildings.forEach(building => {
         const def = BUILDINGS[building.type];
 
-        if (building.working) {
-            // Production
-            if (def.produces) {
-                if (def.produces.money) income += def.produces.money;
-                if (def.produces.lumber) lumberProduction += def.produces.lumber;
-                if (def.produces.stone) stoneProduction += def.produces.stone;
-                if (def.produces.fish) fishProduction += def.produces.fish;
-            }
+        if (building.working && def.produces) {
+            let multiplier = seasonMultiplier * weekendMultiplier;
+
+            if (def.produces.money) income += def.produces.money * multiplier;
+            if (def.produces.boats) boatProduction += def.produces.boats;
+            if (def.produces.tourism) tourismProduction += def.produces.tourism * multiplier;
+            if (def.produces.reputation) reputationChange += def.produces.reputation;
         }
 
-        // Upkeep always applies
-        if (def.upkeep) {
-            if (def.upkeep.money) expenses += def.upkeep.money;
-        }
+        if (def.upkeep?.money) expenses += def.upkeep.money;
     });
 
-    // Apply bank bonus if exists
-    const hasBank = gameState.buildings.some(b => b.type === 'bank' && b.working);
-    if (hasBank) {
-        income = Math.floor(income * 1.2);
-    }
-
-    // Season effects
-    if (CONFIG.SEASONS[gameState.season] === 'Winter') {
-        lumberProduction = Math.floor(lumberProduction * 0.5);
-        fishProduction = Math.floor(fishProduction * 0.3);
-        income = Math.floor(income * 0.7);
-    } else if (CONFIG.SEASONS[gameState.season] === 'Summer') {
-        income = Math.floor(income * 1.3); // Tourism boost
-    }
-
-    // Population happiness affects income
-    const happinessMultiplier = gameState.resources.happiness / 100;
-    income = Math.floor(income * happinessMultiplier);
+    // Tourism affects income
+    income += gameState.resources.tourism * 2;
 
     // Apply resources
-    gameState.resources.money += income - expenses;
-    gameState.resources.lumber += lumberProduction;
-    gameState.resources.stone += stoneProduction;
-    gameState.resources.fish += fishProduction;
+    gameState.resources.money += Math.floor(income - expenses);
+    gameState.resources.boats += boatProduction;
+    gameState.resources.tourism = Math.floor(Math.max(0, gameState.resources.tourism * 0.95 + tourismProduction));
+    gameState.resources.reputation = Math.max(0, Math.min(100,
+        gameState.resources.reputation + reputationChange * 0.1
+    ));
 
-    // Sell excess fish for money
-    if (gameState.resources.fish > 50) {
-        const sold = gameState.resources.fish - 50;
-        gameState.resources.money += sold * 2;
-        gameState.resources.fish = 50;
-    }
-
-    // Update happiness based on various factors
-    updateHappiness();
-
-    // Random events (rare)
-    if (Math.random() < 0.02) {
+    // Random events
+    if (Math.random() < 0.03) {
         triggerRandomEvent();
     }
 
-    // Bankruptcy check
-    if (gameState.resources.money < 0) {
-        gameState.resources.money = 0;
-        addEvent('Town treasury is empty!', 'negative');
+    // Weekend party event
+    if (gameState.weekendBonus && isSummer && Math.random() < 0.1) {
+        addEvent('Weekend warriors flood the lake! 🎉', 'party');
+        gameState.resources.tourism += 20;
+        gameState.resources.money += 500;
     }
 
-    // Update income display
-    document.getElementById('income').textContent = `+$${income - expenses}/s`;
+    document.getElementById('income').textContent = `+$${Math.floor(income - expenses)}/s`;
+    document.getElementById('lake-level').textContent = `${gameState.lakeLevel} ft`;
 
     updateUI();
     render();
 }
 
 function updateWorkerAssignments() {
-    const availableWorkers = gameState.workers.total - gameState.workers.employed;
+    const available = gameState.workers.total - gameState.workers.employed;
 
     gameState.buildings.forEach(building => {
         const def = BUILDINGS[building.type];
-        if (def.requiresWorkers) {
-            if (!building.working && availableWorkers >= def.requiresWorkers) {
-                building.working = true;
-                gameState.workers.employed += def.requiresWorkers;
-            }
+        if (def.requiresWorkers && !building.working && available >= def.requiresWorkers) {
+            building.working = true;
+            gameState.workers.employed += def.requiresWorkers;
         }
     });
-}
-
-function updateHappiness() {
-    let targetHappiness = 50; // Base happiness
-
-    // Buildings that provide happiness
-    gameState.buildings.forEach(building => {
-        const def = BUILDINGS[building.type];
-        if (def.provides && def.provides.happiness) {
-            targetHappiness += def.provides.happiness;
-        }
-    });
-
-    // Population density penalty
-    const density = gameState.resources.population / gameState.buildings.filter(b =>
-        BUILDINGS[b.type].provides?.population
-    ).length || 1;
-    if (density > 8) {
-        targetHappiness -= (density - 8) * 2;
-    }
-
-    // Season effects
-    if (CONFIG.SEASONS[gameState.season] === 'Summer') {
-        targetHappiness += 10;
-    } else if (CONFIG.SEASONS[gameState.season] === 'Winter') {
-        targetHappiness -= 10;
-    }
-
-    // Gradually move toward target
-    targetHappiness = Math.max(10, Math.min(150, targetHappiness));
-    gameState.resources.happiness += (targetHappiness - gameState.resources.happiness) * 0.1;
-    gameState.resources.happiness = Math.round(gameState.resources.happiness);
 }
 
 function triggerRandomEvent() {
+    const isSummer = CONFIG.SEASONS[gameState.season] === 'Summer';
+
     const events = [
         {
-            text: 'Tourists flock to see the fall colors!',
-            effect: () => { gameState.resources.money += 100; },
+            text: 'Bass tournament brings anglers from KC and STL!',
+            effect: () => { gameState.resources.money += 300; gameState.resources.tourism += 15; },
+            type: 'positive'
+        },
+        {
+            text: 'Boat parade on the main channel!',
+            effect: () => { gameState.resources.tourism += 25; gameState.resources.reputation += 2; },
+            type: 'party',
+            requiresSummer: true
+        },
+        {
+            text: 'Celebrity spotted at the lake! Social media buzzing!',
+            effect: () => { gameState.resources.tourism += 40; gameState.resources.reputation += 5; },
+            type: 'positive'
+        },
+        {
+            text: 'Storm rolls through - some dock damage',
+            effect: () => { gameState.resources.money -= 200; },
+            type: 'negative'
+        },
+        {
+            text: 'Aquapalooza draws huge crowds!',
+            effect: () => { gameState.resources.money += 800; gameState.resources.tourism += 50; },
+            type: 'party',
+            requiresSummer: true
+        },
+        {
+            text: 'Gas prices up - more boaters staying local!',
+            effect: () => { gameState.resources.tourism += 20; },
+            type: 'positive'
+        },
+        {
+            text: 'Lake featured on travel show!',
+            effect: () => { gameState.resources.reputation += 8; gameState.resources.tourism += 30; },
+            type: 'positive'
+        },
+        {
+            text: 'Poker run brings high rollers!',
+            effect: () => { gameState.resources.money += 600; },
             type: 'positive',
-            season: 'Fall'
-        },
-        {
-            text: 'A fishing tournament brings visitors!',
-            effect: () => { gameState.resources.money += 150; gameState.resources.fish += 10; },
-            type: 'positive'
-        },
-        {
-            text: 'Storm damages some buildings',
-            effect: () => { gameState.resources.money -= 50; },
-            type: 'negative',
-            season: 'Spring'
-        },
-        {
-            text: 'Country music festival is a hit!',
-            effect: () => { gameState.resources.money += 200; gameState.resources.happiness += 10; },
-            type: 'positive'
-        },
-        {
-            text: 'New settlers heard about your town!',
-            effect: () => { gameState.resources.population += 2; gameState.workers.total += 1; },
-            type: 'positive'
-        },
-        {
-            text: 'Lumber prices are up!',
-            effect: () => { gameState.resources.money += gameState.resources.lumber * 3; },
-            type: 'positive'
+            requiresSummer: true
         },
     ];
 
-    // Filter by season if applicable
-    const currentSeason = CONFIG.SEASONS[gameState.season];
-    const validEvents = events.filter(e => !e.season || e.season === currentSeason);
-
+    const validEvents = events.filter(e => !e.requiresSummer || isSummer);
     const event = validEvents[Math.floor(Math.random() * validEvents.length)];
     event.effect();
     addEvent(event.text, event.type);
@@ -1037,21 +1118,22 @@ function triggerRandomEvent() {
 function updateUI() {
     document.getElementById('population').textContent = gameState.resources.population;
     document.getElementById('money').textContent = Math.floor(gameState.resources.money);
-    document.getElementById('lumber').textContent = Math.floor(gameState.resources.lumber);
-    document.getElementById('stone').textContent = Math.floor(gameState.resources.stone);
-    document.getElementById('fish').textContent = Math.floor(gameState.resources.fish);
-    document.getElementById('happiness').textContent = Math.floor(gameState.resources.happiness);
+    document.getElementById('boats').textContent = gameState.resources.boats;
+    document.getElementById('tourism').textContent = Math.floor(gameState.resources.tourism);
+    document.getElementById('power').textContent = gameState.resources.power;
+    document.getElementById('reputation').textContent = Math.floor(gameState.resources.reputation);
 
-    document.getElementById('season').textContent = CONFIG.SEASONS[gameState.season];
+    document.getElementById('season').textContent = CONFIG.SEASONS[gameState.season] +
+        (gameState.weekendBonus ? ' (Weekend!)' : '');
     document.getElementById('year').textContent = gameState.year;
-    document.getElementById('town-name').textContent = gameState.townName;
+    document.getElementById('town-name').textContent = gameState.playerName;
 
     updateBuildingList();
 }
 
 function updateBuildingList() {
     const list = document.getElementById('building-list');
-    const activeCategory = document.querySelector('.category-btn.active')?.dataset.category || 'housing';
+    const activeCategory = document.querySelector('.category-btn.active')?.dataset.category || 'marina';
 
     list.innerHTML = '';
 
@@ -1062,9 +1144,7 @@ function updateBuildingList() {
         div.className = `building-item ${!canAffordIt ? 'disabled' : ''} ${gameState.selectedBuilding === building.id ? 'selected' : ''}`;
         div.dataset.building = building.id;
 
-        let costText = Object.entries(building.cost)
-            .map(([r, a]) => `${a} ${r}`)
-            .join(', ');
+        const costText = `$${building.cost.money || 0}`;
 
         div.innerHTML = `
             <div class="building-header">
@@ -1099,16 +1179,14 @@ function updateBuildingInfo() {
 
     const building = BUILDINGS[gameState.selectedBuilding];
     let html = `<p><strong>${building.icon} ${building.name}</strong></p>`;
-    html += `<p>${building.description}</p>`;
+    html += `<p style="font-size:0.8rem">${building.description}</p>`;
 
     if (building.produces) {
-        html += `<p><em>Produces: ${Object.entries(building.produces).map(([r,a]) => `${a} ${r}`).join(', ')}</em></p>`;
+        const prods = Object.entries(building.produces).map(([r,a]) => `+${a} ${r}`).join(', ');
+        html += `<p><em>Produces: ${prods}</em></p>`;
     }
     if (building.requiresWorkers) {
-        html += `<p><em>Workers needed: ${building.requiresWorkers}</em></p>`;
-    }
-    if (building.requiresAdjacent) {
-        html += `<p><em>Must be near: ${building.requiresAdjacent.join(' or ')}</em></p>`;
+        html += `<p><em>Workers: ${building.requiresWorkers}</em></p>`;
     }
 
     info.innerHTML = html;
@@ -1116,9 +1194,7 @@ function updateBuildingInfo() {
 
 function addEvent(text, type = 'neutral') {
     gameState.events.unshift({ text, type, tick: gameState.tick });
-    if (gameState.events.length > 20) {
-        gameState.events.pop();
-    }
+    if (gameState.events.length > 15) gameState.events.pop();
 
     const log = document.getElementById('event-log');
     log.innerHTML = gameState.events.map(e =>
@@ -1130,11 +1206,11 @@ function addEvent(text, type = 'neutral') {
 function initInput() {
     canvas.addEventListener('mousedown', onMouseDown);
     canvas.addEventListener('mousemove', onMouseMove);
-    canvas.addEventListener('mouseup', onMouseUp);
+    canvas.addEventListener('mouseup', () => { isDragging = false; });
     canvas.addEventListener('wheel', onWheel);
     canvas.addEventListener('mouseleave', () => { hoverTile = null; render(); });
+    canvas.addEventListener('contextmenu', e => e.preventDefault());
 
-    // Category buttons
     document.querySelectorAll('.category-btn').forEach(btn => {
         btn.addEventListener('click', () => {
             document.querySelectorAll('.category-btn').forEach(b => b.classList.remove('active'));
@@ -1145,7 +1221,6 @@ function initInput() {
         });
     });
 
-    // Control buttons
     document.getElementById('btn-demolish').addEventListener('click', () => {
         gameState.demolishMode = !gameState.demolishMode;
         gameState.selectedBuilding = null;
@@ -1159,7 +1234,7 @@ function initInput() {
     });
 
     document.getElementById('btn-zoom-out').addEventListener('click', () => {
-        gameState.camera.zoom = Math.max(0.5, gameState.camera.zoom - 0.2);
+        gameState.camera.zoom = Math.max(0.4, gameState.camera.zoom - 0.2);
         render();
     });
 
@@ -1172,16 +1247,15 @@ function initInput() {
         startGameLoop();
     });
 
-    // Welcome modal
     document.getElementById('start-game').addEventListener('click', () => {
-        gameState.townName = document.getElementById('town-name-input').value || 'Ozark Hollow';
+        gameState.playerName = document.getElementById('town-name-input').value || 'Lake Boss';
         document.getElementById('welcome-modal').classList.add('hidden');
         updateUI();
     });
 }
 
 function onMouseDown(e) {
-    if (e.button === 0) { // Left click
+    if (e.button === 0) {
         const tile = getTileAtMouse(e);
         if (tile) {
             if (gameState.selectedBuilding) {
@@ -1190,20 +1264,17 @@ function onMouseDown(e) {
                 demolishBuilding(tile.x, tile.y);
             }
         }
-    } else if (e.button === 2 || e.button === 1) { // Right or middle click - pan
+    } else {
         isDragging = true;
         lastMouse = { x: e.clientX, y: e.clientY };
     }
-
     e.preventDefault();
 }
 
 function onMouseMove(e) {
     if (isDragging) {
-        const dx = e.clientX - lastMouse.x;
-        const dy = e.clientY - lastMouse.y;
-        gameState.camera.x += dx;
-        gameState.camera.y += dy;
+        gameState.camera.x += e.clientX - lastMouse.x;
+        gameState.camera.y += e.clientY - lastMouse.y;
         lastMouse = { x: e.clientX, y: e.clientY };
         render();
     } else {
@@ -1213,21 +1284,16 @@ function onMouseMove(e) {
     }
 }
 
-function onMouseUp(e) {
-    isDragging = false;
-}
-
 function onWheel(e) {
     const delta = e.deltaY > 0 ? -0.1 : 0.1;
     const oldZoom = gameState.camera.zoom;
-    gameState.camera.zoom = Math.max(0.5, Math.min(2, gameState.camera.zoom + delta));
+    gameState.camera.zoom = Math.max(0.4, Math.min(2, gameState.camera.zoom + delta));
 
-    // Zoom toward mouse position
     const rect = canvas.getBoundingClientRect();
     const mx = e.clientX - rect.left;
     const my = e.clientY - rect.top;
-
     const zoomRatio = gameState.camera.zoom / oldZoom;
+
     gameState.camera.x = mx - (mx - gameState.camera.x) * zoomRatio;
     gameState.camera.y = my - (my - gameState.camera.y) * zoomRatio;
 
@@ -1269,13 +1335,15 @@ function updateTooltip(e) {
         const def = BUILDINGS[tile.building.type];
         text = `<strong>${def.icon} ${def.name}</strong>`;
         if (!tile.building.working && def.requiresWorkers) {
-            text += '<br><span style="color:#f88">Needs workers!</span>';
+            text += '<br><span style="color:#ff8888">Needs workers!</span>';
         }
     }
 
     if (gameState.selectedBuilding) {
         const canPlace = canPlaceBuilding(gameState.selectedBuilding, hoverTile.x, hoverTile.y);
-        text += canPlace ? '<br><span style="color:#8f8">Click to build</span>' : '<br><span style="color:#f88">Cannot build here</span>';
+        text += canPlace ?
+            '<br><span style="color:#88ff88">Click to build</span>' :
+            '<br><span style="color:#ff8888">Cannot build here</span>';
     }
 
     tooltip.innerHTML = text;
@@ -1283,9 +1351,6 @@ function updateTooltip(e) {
     tooltip.style.top = (e.clientY + 15) + 'px';
     tooltip.classList.remove('hidden');
 }
-
-// Prevent context menu
-canvas?.addEventListener('contextmenu', e => e.preventDefault());
 
 // ==================== INITIALIZATION ====================
 function init() {
@@ -1296,9 +1361,9 @@ function init() {
     render();
     startGameLoop();
 
-    addEvent('Welcome to the Ozarks!', 'positive');
-    addEvent('Build cabins to attract settlers', 'neutral');
+    addEvent('Welcome to the Lake! 🚤', 'positive');
+    addEvent('Start with boat docks on the water', 'neutral');
+    addEvent('Build lodging to grow your workforce', 'neutral');
 }
 
-// Start the game when the page loads
 window.addEventListener('load', init);

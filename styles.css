@@ -1,4 +1,4 @@
-/* Ozarks City Builder - Styles */
+/* Lake of the Ozarks Tycoon - Styles */
 
 * {
     margin: 0;
@@ -7,23 +7,24 @@
 }
 
 :root {
-    --ozark-green: #2d5a27;
-    --ozark-dark-green: #1a3d18;
-    --ozark-blue: #4a90a4;
-    --ozark-lake: #5ba3b8;
-    --ozark-brown: #6b4423;
-    --ozark-light-brown: #8b6914;
-    --ozark-tan: #d4b896;
-    --ozark-cream: #f5f0e6;
-    --ozark-stone: #8b8b7a;
-    --ozark-sunset: #e8a857;
-    --panel-bg: rgba(245, 240, 230, 0.95);
+    --lake-blue: #1e5f8a;
+    --lake-deep: #0d3d5c;
+    --lake-light: #4fa3d1;
+    --lake-water: #2d7eb5;
+    --sunset-orange: #e87d3e;
+    --sunset-gold: #f4b942;
+    --dock-brown: #5c4033;
+    --sand: #e8dcc4;
+    --cream: #faf8f5;
+    --party-pink: #e84393;
+    --neon-green: #00d26a;
+    --panel-bg: rgba(250, 248, 245, 0.95);
     --shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
 }
 
 body {
-    font-family: 'Georgia', 'Times New Roman', serif;
-    background: linear-gradient(135deg, #87a878 0%, #5a8a4a 50%, #3d6b35 100%);
+    font-family: 'Segoe UI', 'Arial', sans-serif;
+    background: linear-gradient(180deg, #87ceeb 0%, #4fa3d1 30%, #1e5f8a 100%);
     min-height: 100vh;
     color: #2c2c2c;
 }
@@ -38,53 +39,55 @@ body {
 
 /* Header */
 #game-header {
-    background: linear-gradient(180deg, var(--ozark-brown) 0%, var(--ozark-dark-green) 100%);
+    background: linear-gradient(180deg, var(--lake-deep) 0%, var(--lake-blue) 100%);
     padding: 10px 20px;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    border-bottom: 4px solid var(--ozark-light-brown);
+    border-bottom: 4px solid var(--sunset-gold);
     box-shadow: var(--shadow);
 }
 
 #game-header h1 {
-    color: var(--ozark-cream);
-    font-size: 1.8rem;
+    color: white;
+    font-size: 1.6rem;
     text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
     font-weight: bold;
+    letter-spacing: 1px;
 }
 
 #resources {
     display: flex;
-    gap: 20px;
+    gap: 15px;
 }
 
 .resource {
-    background: var(--ozark-cream);
-    padding: 8px 15px;
+    background: linear-gradient(180deg, #fff 0%, var(--sand) 100%);
+    padding: 8px 12px;
     border-radius: 8px;
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
     box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
-    border: 2px solid var(--ozark-brown);
+    border: 2px solid var(--lake-blue);
 }
 
 .resource-icon {
-    font-size: 1.2rem;
+    font-size: 1.1rem;
 }
 
 .resource span:nth-child(2) {
     font-weight: bold;
-    font-size: 1.1rem;
-    color: var(--ozark-brown);
-    min-width: 40px;
+    font-size: 1rem;
+    color: var(--lake-deep);
+    min-width: 35px;
 }
 
 .resource-label {
-    font-size: 0.75rem;
+    font-size: 0.7rem;
     color: #666;
     text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 
 /* Main Area */
@@ -100,19 +103,19 @@ aside {
     background: var(--panel-bg);
     padding: 15px;
     overflow-y: auto;
-    border: 3px solid var(--ozark-brown);
+    border: 3px solid var(--lake-blue);
 }
 
 aside h2 {
-    color: var(--ozark-dark-green);
+    color: var(--lake-deep);
     font-size: 1.2rem;
     margin-bottom: 10px;
     padding-bottom: 8px;
-    border-bottom: 2px solid var(--ozark-tan);
+    border-bottom: 2px solid var(--lake-light);
 }
 
 aside h3 {
-    color: var(--ozark-brown);
+    color: var(--dock-brown);
     font-size: 1rem;
     margin: 15px 0 8px 0;
 }
@@ -137,21 +140,22 @@ aside h3 {
     flex: 1 1 45%;
     padding: 8px 5px;
     font-size: 0.75rem;
-    background: var(--ozark-cream);
-    border: 2px solid var(--ozark-stone);
+    background: var(--cream);
+    border: 2px solid var(--lake-light);
     border-radius: 5px;
     cursor: pointer;
     transition: all 0.2s;
 }
 
 .category-btn:hover {
-    background: var(--ozark-tan);
+    background: var(--sand);
+    border-color: var(--lake-blue);
 }
 
 .category-btn.active {
-    background: var(--ozark-green);
+    background: var(--lake-blue);
     color: white;
-    border-color: var(--ozark-dark-green);
+    border-color: var(--lake-deep);
 }
 
 /* Building List */
@@ -167,20 +171,21 @@ aside h3 {
     background: white;
     padding: 10px;
     border-radius: 8px;
-    border: 2px solid var(--ozark-tan);
+    border: 2px solid var(--sand);
     cursor: pointer;
     transition: all 0.2s;
 }
 
 .building-item:hover {
-    border-color: var(--ozark-green);
+    border-color: var(--lake-blue);
     transform: translateX(3px);
+    box-shadow: 0 2px 8px rgba(30, 95, 138, 0.2);
 }
 
 .building-item.selected {
-    border-color: var(--ozark-green);
-    background: #e8f5e3;
-    box-shadow: 0 0 0 2px var(--ozark-green);
+    border-color: var(--neon-green);
+    background: #e8fff2;
+    box-shadow: 0 0 0 2px var(--neon-green);
 }
 
 .building-item.disabled {
@@ -201,6 +206,7 @@ aside h3 {
 .building-item .building-name {
     font-weight: bold;
     font-size: 0.9rem;
+    color: var(--lake-deep);
 }
 
 .building-item .building-cost {
@@ -215,7 +221,7 @@ aside h3 {
     padding: 10px;
     background: white;
     border-radius: 8px;
-    border: 2px solid var(--ozark-tan);
+    border: 2px solid var(--sand);
     font-size: 0.85rem;
 }
 
@@ -227,13 +233,29 @@ aside h3 {
 #game-area {
     flex: 1;
     position: relative;
-    background: #3a5a2a;
+    background: #1a4d3a;
     overflow: hidden;
 }
 
 #game-canvas {
     display: block;
     cursor: pointer;
+}
+
+/* Mile Marker Display */
+#mile-marker-display {
+    position: absolute;
+    top: 15px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0,0,0,0.8);
+    color: var(--sunset-gold);
+    padding: 8px 20px;
+    border-radius: 20px;
+    font-size: 0.9rem;
+    font-weight: bold;
+    border: 2px solid var(--sunset-gold);
+    z-index: 100;
 }
 
 /* Game Controls */
@@ -250,7 +272,7 @@ aside h3 {
     height: 45px;
     font-size: 1.2rem;
     background: var(--panel-bg);
-    border: 3px solid var(--ozark-brown);
+    border: 3px solid var(--lake-blue);
     border-radius: 8px;
     cursor: pointer;
     transition: all 0.2s;
@@ -258,13 +280,14 @@ aside h3 {
 }
 
 #game-controls button:hover {
-    background: var(--ozark-tan);
+    background: var(--sand);
     transform: scale(1.1);
 }
 
 #game-controls button.active {
-    background: var(--ozark-sunset);
+    background: var(--sunset-orange);
     border-color: #c44;
+    color: white;
 }
 
 #btn-speed {
@@ -278,7 +301,7 @@ aside h3 {
     background: white;
     padding: 10px;
     border-radius: 8px;
-    border: 2px solid var(--ozark-tan);
+    border: 2px solid var(--sand);
 }
 
 .stat {
@@ -298,7 +321,12 @@ aside h3 {
 }
 
 #income {
-    color: var(--ozark-green);
+    color: var(--neon-green);
+    font-weight: bold;
+}
+
+#lake-level {
+    color: var(--lake-blue);
     font-weight: bold;
 }
 
@@ -307,7 +335,7 @@ aside h3 {
     background: white;
     padding: 10px;
     border-radius: 8px;
-    border: 2px solid var(--ozark-tan);
+    border: 2px solid var(--sand);
     max-height: 200px;
     overflow-y: auto;
     font-size: 0.8rem;
@@ -323,31 +351,36 @@ aside h3 {
 }
 
 .event-item.positive {
-    color: var(--ozark-green);
+    color: var(--neon-green);
 }
 
 .event-item.negative {
-    color: #a33;
+    color: #c44;
 }
 
 .event-item.neutral {
     color: #666;
 }
 
+.event-item.party {
+    color: var(--party-pink);
+    font-weight: bold;
+}
+
 /* Footer */
 #game-footer {
-    background: var(--ozark-dark-green);
-    color: var(--ozark-cream);
+    background: linear-gradient(180deg, var(--lake-blue) 0%, var(--lake-deep) 100%);
+    color: white;
     padding: 10px;
     text-align: center;
     font-size: 0.9rem;
-    border-top: 3px solid var(--ozark-brown);
+    border-top: 3px solid var(--sunset-gold);
 }
 
 /* Tooltip */
 #tooltip {
     position: absolute;
-    background: rgba(0,0,0,0.85);
+    background: rgba(13, 61, 92, 0.95);
     color: white;
     padding: 10px 15px;
     border-radius: 8px;
@@ -356,6 +389,7 @@ aside h3 {
     z-index: 1000;
     max-width: 250px;
     box-shadow: var(--shadow);
+    border: 2px solid var(--lake-light);
 }
 
 #tooltip.hidden {
@@ -381,22 +415,22 @@ aside h3 {
 }
 
 .modal-content {
-    background: var(--ozark-cream);
+    background: linear-gradient(180deg, #fff 0%, var(--sand) 100%);
     padding: 30px;
     border-radius: 15px;
-    max-width: 500px;
-    border: 5px solid var(--ozark-brown);
+    max-width: 520px;
+    border: 5px solid var(--lake-blue);
     box-shadow: 0 10px 30px rgba(0,0,0,0.5);
 }
 
 .modal-content h2 {
-    color: var(--ozark-dark-green);
+    color: var(--lake-deep);
     margin-bottom: 15px;
     font-size: 1.6rem;
 }
 
 .modal-content h3 {
-    color: var(--ozark-brown);
+    color: var(--dock-brown);
     margin: 15px 0 10px;
 }
 
@@ -414,11 +448,23 @@ aside h3 {
     line-height: 1.4;
 }
 
+.lake-facts {
+    background: var(--lake-light);
+    color: white;
+    padding: 12px;
+    border-radius: 8px;
+    margin: 15px 0;
+}
+
+.lake-facts p {
+    margin: 0;
+}
+
 .modal-content input {
     width: 100%;
     padding: 12px;
     margin: 15px 0;
-    border: 2px solid var(--ozark-tan);
+    border: 2px solid var(--lake-light);
     border-radius: 8px;
     font-size: 1rem;
     font-family: inherit;
@@ -427,18 +473,21 @@ aside h3 {
 .modal-content button {
     width: 100%;
     padding: 15px;
-    background: var(--ozark-green);
+    background: linear-gradient(180deg, var(--sunset-orange) 0%, #d35400 100%);
     color: white;
     border: none;
     border-radius: 8px;
     font-size: 1.1rem;
     font-family: inherit;
     cursor: pointer;
-    transition: background 0.2s;
+    transition: all 0.2s;
+    font-weight: bold;
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
 }
 
 .modal-content button:hover {
-    background: var(--ozark-dark-green);
+    background: linear-gradient(180deg, #f39c12 0%, var(--sunset-orange) 100%);
+    transform: scale(1.02);
 }
 
 /* Scrollbar Styling */
@@ -447,16 +496,16 @@ aside h3 {
 }
 
 ::-webkit-scrollbar-track {
-    background: var(--ozark-cream);
+    background: var(--cream);
 }
 
 ::-webkit-scrollbar-thumb {
-    background: var(--ozark-tan);
+    background: var(--lake-light);
     border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-    background: var(--ozark-brown);
+    background: var(--lake-blue);
 }
 
 /* Responsive */
@@ -466,11 +515,15 @@ aside h3 {
     }
 
     #resources {
-        gap: 10px;
+        gap: 8px;
     }
 
     .resource {
-        padding: 5px 10px;
+        padding: 5px 8px;
+    }
+
+    #game-header h1 {
+        font-size: 1.3rem;
     }
 }
 

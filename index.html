@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ozarks City Builder</title>
+    <title>Lake of the Ozarks Tycoon</title>
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
     <div id="game-container">
         <header id="game-header">
-            <h1>🏔️ Ozarks City Builder</h1>
+            <h1>🚤 Lake of the Ozarks Tycoon</h1>
             <div id="resources">
                 <div class="resource">
                     <span class="resource-icon">👥</span>
@@ -17,42 +17,42 @@
                     <span class="resource-label">Pop</span>
                 </div>
                 <div class="resource">
-                    <span class="resource-icon">💰</span>
-                    <span id="money">1000</span>
-                    <span class="resource-label">Dollars</span>
+                    <span class="resource-icon">💵</span>
+                    <span id="money">5000</span>
+                    <span class="resource-label">Cash</span>
                 </div>
                 <div class="resource">
-                    <span class="resource-icon">🪵</span>
-                    <span id="lumber">50</span>
-                    <span class="resource-label">Lumber</span>
+                    <span class="resource-icon">🚤</span>
+                    <span id="boats">0</span>
+                    <span class="resource-label">Boats</span>
                 </div>
                 <div class="resource">
-                    <span class="resource-icon">🪨</span>
-                    <span id="stone">30</span>
-                    <span class="resource-label">Stone</span>
-                </div>
-                <div class="resource">
-                    <span class="resource-icon">🐟</span>
-                    <span id="fish">0</span>
-                    <span class="resource-label">Fish</span>
+                    <span class="resource-icon">🍺</span>
+                    <span id="tourism">0</span>
+                    <span class="resource-label">Tourists</span>
                 </div>
                 <div class="resource">
                     <span class="resource-icon">⚡</span>
-                    <span id="happiness">100</span>
-                    <span class="resource-label">Happy</span>
+                    <span id="power">100</span>
+                    <span class="resource-label">Power</span>
+                </div>
+                <div class="resource">
+                    <span class="resource-icon">⭐</span>
+                    <span id="reputation">50</span>
+                    <span class="resource-label">Rep</span>
                 </div>
             </div>
         </header>
 
         <div id="main-area">
             <aside id="building-panel">
-                <h2>Buildings</h2>
+                <h2>Build</h2>
                 <div id="building-categories">
-                    <button class="category-btn active" data-category="housing">🏠 Housing</button>
-                    <button class="category-btn" data-category="economy">💼 Economy</button>
-                    <button class="category-btn" data-category="nature">🌲 Nature</button>
-                    <button class="category-btn" data-category="tourism">🎣 Tourism</button>
-                    <button class="category-btn" data-category="infrastructure">🛤️ Roads</button>
+                    <button class="category-btn active" data-category="marina">⚓ Marina</button>
+                    <button class="category-btn" data-category="lodging">🏨 Lodging</button>
+                    <button class="category-btn" data-category="entertainment">🎉 Fun</button>
+                    <button class="category-btn" data-category="dining">🍔 Food</button>
+                    <button class="category-btn" data-category="infrastructure">🛣️ Roads</button>
                 </div>
                 <div id="building-list"></div>
                 <div id="building-info">
@@ -62,6 +62,9 @@
 
             <main id="game-area">
                 <canvas id="game-canvas"></canvas>
+                <div id="mile-marker-display">
+                    <span id="current-mile">Mile Marker: --</span>
+                </div>
                 <div id="game-controls">
                     <button id="btn-demolish" title="Demolish">🔨</button>
                     <button id="btn-zoom-in" title="Zoom In">➕</button>
@@ -71,11 +74,11 @@
             </main>
 
             <aside id="info-panel">
-                <h2>Town Info</h2>
+                <h2>Lake Stats</h2>
                 <div id="town-stats">
                     <div class="stat">
-                        <span class="stat-label">Town Name:</span>
-                        <span id="town-name">Ozark Hollow</span>
+                        <span class="stat-label">Your Name:</span>
+                        <span id="town-name">Lake Developer</span>
                     </div>
                     <div class="stat">
                         <span class="stat-label">Season:</span>
@@ -89,14 +92,18 @@
                         <span class="stat-label">Income:</span>
                         <span id="income">+$0/s</span>
                     </div>
+                    <div class="stat">
+                        <span class="stat-label">Lake Level:</span>
+                        <span id="lake-level">660 ft</span>
+                    </div>
                 </div>
-                <h3>Recent Events</h3>
+                <h3>Lake News</h3>
                 <div id="event-log"></div>
             </aside>
         </div>
 
         <footer id="game-footer">
-            <p>Build your dream town in the beautiful Ozark Mountains! 🏔️🌲💧</p>
+            <p>Build your lakefront empire at Missouri's Lake of the Ozarks! 🚤🌊🎉</p>
         </footer>
     </div>
 
@@ -104,19 +111,22 @@
 
     <div id="welcome-modal" class="modal">
         <div class="modal-content">
-            <h2>🏔️ Welcome to Ozarks City Builder!</h2>
-            <p>Build a thriving town in the beautiful Ozark Mountains of Missouri and Arkansas.</p>
+            <h2>🚤 Lake of the Ozarks Tycoon</h2>
+            <p>Welcome to the Lake! Build marinas, resorts, and entertainment along Missouri's most famous party lake.</p>
+            <div class="lake-facts">
+                <p><strong>The Lake:</strong> 54,000 acres of water, 1,150 miles of shoreline, and endless opportunity!</p>
+            </div>
             <h3>Getting Started:</h3>
             <ul>
-                <li>🏠 Place <strong>cabins</strong> to attract settlers</li>
-                <li>🪵 Build <strong>sawmills</strong> near forests for lumber</li>
-                <li>🎣 Construct <strong>fishing docks</strong> on the lake</li>
-                <li>🏪 Add <strong>general stores</strong> for your economy</li>
-                <li>🛤️ Connect buildings with <strong>dirt roads</strong></li>
+                <li>⚓ Build <strong>marinas</strong> and <strong>boat docks</strong> on the water</li>
+                <li>🏨 Add <strong>resorts</strong> and <strong>condos</strong> to attract visitors</li>
+                <li>🍺 Open <strong>bars</strong> and <strong>restaurants</strong> on the Strip</li>
+                <li>🎢 Build <strong>attractions</strong> to boost tourism</li>
+                <li>🚤 Don't forget - it's all about the <strong>boats</strong>!</li>
             </ul>
-            <p><em>Tip: The Ozarks are famous for their lakes, forests, and country hospitality!</em></p>
-            <input type="text" id="town-name-input" placeholder="Name your town..." value="Ozark Hollow">
-            <button id="start-game">Start Building!</button>
+            <p><em>Remember: Memorial Day to Labor Day is prime season!</em></p>
+            <input type="text" id="town-name-input" placeholder="Your developer name..." value="Lake Boss">
+            <button id="start-game">Let's Party! 🎉</button>
         </div>
     </div>
 
