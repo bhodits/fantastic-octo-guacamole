@@ -101,6 +101,7 @@ const TimeManager = {
 };
 
 // ==================== VISUAL EFFECTS MANAGER ====================
+// The 'JUICE' ENGINE - Makes the game feel alive and responsive
 const VisualEffectsManager = {
     // Particle pools for different effect types
     particles: [],
@@ -108,11 +109,25 @@ const VisualEffectsManager = {
     splashes: [],
     screenShake: { intensity: 0, duration: 0 },
 
-    // Water animation state
+    // Water animation state with BREATHING effect
     water: {
         time: 0,
         waves: [],
-        ripples: []
+        ripples: [],
+        // Breathing/pulse effect - makes water feel alive
+        breathingPhase: 0,
+        breathingSpeed: 0.5,      // Cycles per second
+        breathingIntensity: 0.03, // Subtle color shift
+        // Global shimmer
+        shimmerTime: 0,
+        shimmerSpeed: 2.0
+    },
+
+    // Ambient world pulse - everything "breathes" together
+    ambientPulse: {
+        phase: 0,
+        speed: 0.3, // Slow, calming pulse
+        intensity: 0.02
     },
 
     // Button juice animations
@@ -139,6 +154,13 @@ const VisualEffectsManager = {
 
         // Update water animation
         this.water.time += dt;
+
+        // Update water breathing effect (subtle oscillation)
+        this.water.breathingPhase += dt * this.water.breathingSpeed * Math.PI * 2;
+        this.water.shimmerTime += dt * this.water.shimmerSpeed;
+
+        // Update ambient world pulse
+        this.ambientPulse.phase += dt * this.ambientPulse.speed * Math.PI * 2;
 
         // Update particles
         this.particles = this.particles.filter(p => {
@@ -315,6 +337,106 @@ const VisualEffectsManager = {
             ctx.arc(r.x, r.y, r.radius, 0, Math.PI * 2);
             ctx.stroke();
             ctx.restore();
+        }
+    },
+
+    // ===== BREATHING / AMBIENT EFFECTS =====
+    // Get the current breathing intensity (0-1 oscillating)
+    getBreathingValue() {
+        return (Math.sin(this.water.breathingPhase) + 1) * 0.5;
+    },
+
+    // Get ambient pulse value for world-wide effects
+    getAmbientPulse() {
+        return (Math.sin(this.ambientPulse.phase) + 1) * 0.5 * this.ambientPulse.intensity;
+    },
+
+    // Render breathing water overlay (subtle color shift)
+    renderWaterBreathing(ctx, canvasWidth, canvasHeight, waterY) {
+        const breathValue = this.getBreathingValue();
+        const intensity = this.water.breathingIntensity;
+
+        // Subtle blue-green color pulse overlay
+        const alpha = 0.02 + breathValue * intensity;
+        ctx.fillStyle = `rgba(100, 180, 200, ${alpha})`;
+        ctx.fillRect(0, waterY, canvasWidth, canvasHeight - waterY);
+
+        // Shimmer effect - moving highlights
+        const shimmerAlpha = 0.03 + breathValue * 0.02;
+        ctx.fillStyle = `rgba(255, 255, 255, ${shimmerAlpha})`;
+
+        // Create subtle moving shimmer bands
+        const bandCount = 5;
+        for (let i = 0; i < bandCount; i++) {
+            const offset = (this.water.shimmerTime * 50 + i * 200) % (canvasWidth + 200) - 100;
+            const bandY = waterY + 50 + i * 80 + Math.sin(this.water.shimmerTime + i) * 20;
+            ctx.fillRect(offset, bandY, 150, 3);
+        }
+    },
+
+    // ===== BUTTON JUICE =====
+    // Animate a button press with scale and glow
+    animateButton(element, type = 'click') {
+        if (!element) return;
+
+        // Remove any existing animation
+        element.style.transition = 'transform 0.15s ease-out, box-shadow 0.15s ease-out';
+
+        if (type === 'click') {
+            // Quick scale down then up
+            element.style.transform = 'scale(0.95)';
+            setTimeout(() => {
+                element.style.transform = 'scale(1.05)';
+                setTimeout(() => {
+                    element.style.transform = 'scale(1)';
+                }, 100);
+            }, 50);
+        } else if (type === 'hover') {
+            element.style.transform = 'scale(1.05)';
+            element.style.boxShadow = '0 6px 20px rgba(0,0,0,0.3)';
+        } else if (type === 'unhover') {
+            element.style.transform = 'scale(1)';
+            element.style.boxShadow = '';
+        }
+    },
+
+    // ===== RESOURCE CHANGE EFFECTS =====
+    // Called when money changes - spawns floating text at resource bar
+    onMoneyChange(amount, sourceX = null, sourceY = null) {
+        // Get money display position for floating text
+        const moneyEl = document.getElementById('money');
+        if (moneyEl) {
+            const rect = moneyEl.getBoundingClientRect();
+            const x = sourceX !== null ? sourceX : rect.left + rect.width / 2;
+            const y = sourceY !== null ? sourceY : rect.top + rect.height;
+            this.spawnMoneyText(x, y, amount);
+        }
+
+        // Screen shake for large amounts
+        if (Math.abs(amount) >= 1000) {
+            this.shake(2, 0.1);
+        }
+    },
+
+    // Called when population changes
+    onPopulationChange(amount) {
+        const popEl = document.getElementById('population');
+        if (popEl) {
+            const rect = popEl.getBoundingClientRect();
+            const color = amount > 0 ? '#44ff88' : '#ff6644';
+            const prefix = amount > 0 ? '+' : '';
+            this.spawnFloatingText(rect.left + rect.width / 2, rect.top + rect.height, `${prefix}${amount} Pop`, color, 16);
+        }
+    },
+
+    // Called when tourism changes
+    onTourismChange(amount) {
+        const tourismEl = document.getElementById('tourism');
+        if (tourismEl) {
+            const rect = tourismEl.getBoundingClientRect();
+            const color = amount > 0 ? '#88ddff' : '#ff8844';
+            const prefix = amount > 0 ? '+' : '';
+            this.spawnFloatingText(rect.left + rect.width / 2, rect.top + rect.height, `${prefix}${amount} Tourism`, color, 14);
         }
     }
 };
@@ -6438,6 +6560,11 @@ function render() {
     const ambientColor = TimeManager.getAmbientOverlay();
     ctx.fillStyle = ambientColor;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Add water breathing/shimmer effect for "alive" feel
+    // Calculate approximate water start position on screen
+    const waterStartY = Math.max(0, canvas.height * 0.3);
+    VisualEffectsManager.renderWaterBreathing(ctx, canvas.width, canvas.height, waterStartY);
 
     // Draw minimap
     drawMinimap();
