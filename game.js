@@ -740,6 +740,282 @@ const ICONS = {
     }
 };
 
+// ==================== BOAT RACING SYSTEM ====================
+// The Shootout is the heart of Lake of the Ozarks - like New Year's Eve!
+
+// Boat Classes - Different categories for racing
+const BOAT_CLASSES = {
+    STOCK: { id: 'stock', name: 'Stock Outboard', minSpeed: 40, maxSpeed: 70 },
+    MODIFIED: { id: 'modified', name: 'Modified', minSpeed: 70, maxSpeed: 120 },
+    SUPERSTOCK: { id: 'superstock', name: 'Super Stock', minSpeed: 100, maxSpeed: 160 },
+    PRO: { id: 'pro', name: 'Pro Class', minSpeed: 140, maxSpeed: 200 },
+    UNLIMITED: { id: 'unlimited', name: 'Unlimited', minSpeed: 180, maxSpeed: 250 },
+    TOP_SPEED: { id: 'top_speed', name: 'Top Speed', minSpeed: 200, maxSpeed: 300 },
+};
+
+// Boat Hulls - Base boat types you can buy
+const BOAT_HULLS = {
+    pontoon: {
+        id: 'pontoon', name: 'Party Pontoon', price: 2000,
+        baseSpeed: 25, handling: 40, durability: 90,
+        description: 'Slow but steady. Great for learning.',
+        maxClass: 'STOCK',
+    },
+    fishing: {
+        id: 'fishing', name: 'Bass Boat', price: 8000,
+        baseSpeed: 45, handling: 60, durability: 70,
+        description: 'Nimble fishing boat with decent speed.',
+        maxClass: 'STOCK',
+    },
+    bowrider: {
+        id: 'bowrider', name: 'Bowrider', price: 25000,
+        baseSpeed: 55, handling: 70, durability: 65,
+        description: 'Popular family boat, can be modified.',
+        maxClass: 'MODIFIED',
+    },
+    deckboat: {
+        id: 'deckboat', name: 'Deck Boat', price: 35000,
+        baseSpeed: 50, handling: 65, durability: 75,
+        description: 'Spacious with room for upgrades.',
+        maxClass: 'MODIFIED',
+    },
+    cigarette: {
+        id: 'cigarette', name: 'Cigarette Boat', price: 150000,
+        baseSpeed: 85, handling: 55, durability: 50,
+        description: 'Classic offshore racer. Built for speed.',
+        maxClass: 'PRO',
+    },
+    catamaran: {
+        id: 'catamaran', name: 'Racing Catamaran', price: 300000,
+        baseSpeed: 100, handling: 70, durability: 45,
+        description: 'Twin-hull speed machine.',
+        maxClass: 'UNLIMITED',
+    },
+    hydroplane: {
+        id: 'hydroplane', name: 'Hydroplane', price: 500000,
+        baseSpeed: 120, handling: 40, durability: 30,
+        description: 'Skims the water at incredible speeds.',
+        maxClass: 'TOP_SPEED',
+    },
+    custom: {
+        id: 'custom', name: 'Custom Build', price: 1000000,
+        baseSpeed: 80, handling: 80, durability: 60,
+        description: 'Start from scratch. Unlimited potential.',
+        maxClass: 'TOP_SPEED',
+    },
+};
+
+// Engine Upgrades
+const ENGINES = {
+    stock: { id: 'stock', name: 'Stock Engine', price: 0, speedBonus: 0, reliability: 95 },
+    tuned: { id: 'tuned', name: 'Tuned Engine', price: 5000, speedBonus: 15, reliability: 90 },
+    performance: { id: 'performance', name: 'Performance', price: 15000, speedBonus: 30, reliability: 85 },
+    racing: { id: 'racing', name: 'Racing Engine', price: 40000, speedBonus: 50, reliability: 75 },
+    supercharged: { id: 'supercharged', name: 'Supercharged', price: 80000, speedBonus: 70, reliability: 65 },
+    turbocharged: { id: 'turbocharged', name: 'Twin Turbo', price: 120000, speedBonus: 90, reliability: 55 },
+    nitro: { id: 'nitro', name: 'Nitro Injected', price: 200000, speedBonus: 120, reliability: 40 },
+};
+
+// Propeller Upgrades
+const PROPELLERS = {
+    stock: { id: 'stock', name: 'Stock Prop', price: 0, speedBonus: 0, handling: 0 },
+    stainless: { id: 'stainless', name: 'Stainless Steel', price: 2000, speedBonus: 5, handling: 5 },
+    cleaver: { id: 'cleaver', name: 'Cleaver Prop', price: 8000, speedBonus: 12, handling: -5 },
+    racing: { id: 'racing', name: 'Racing Prop', price: 15000, speedBonus: 20, handling: 0 },
+    surface: { id: 'surface', name: 'Surface Drive', price: 35000, speedBonus: 35, handling: 10 },
+};
+
+// Hull Modifications
+const HULL_MODS = {
+    none: { id: 'none', name: 'Stock Hull', price: 0, speedBonus: 0, handling: 0 },
+    gel_coat: { id: 'gel_coat', name: 'Gel Coat Polish', price: 3000, speedBonus: 3, handling: 0 },
+    fiberglass: { id: 'fiberglass', name: 'Fiberglass Reinforced', price: 10000, speedBonus: 5, handling: 5 },
+    carbon_fiber: { id: 'carbon_fiber', name: 'Carbon Fiber', price: 50000, speedBonus: 15, handling: 10 },
+    kevlar: { id: 'kevlar', name: 'Kevlar Composite', price: 100000, speedBonus: 25, handling: 15 },
+};
+
+// Weight Reduction
+const WEIGHT_MODS = {
+    none: { id: 'none', name: 'Stock Weight', price: 0, speedBonus: 0 },
+    light: { id: 'light', name: 'Lightweight Interior', price: 5000, speedBonus: 8 },
+    stripped: { id: 'stripped', name: 'Stripped Down', price: 12000, speedBonus: 18 },
+    racing: { id: 'racing', name: 'Racing Stripped', price: 30000, speedBonus: 30 },
+    skeleton: { id: 'skeleton', name: 'Skeleton Build', price: 75000, speedBonus: 45 },
+};
+
+// Paint Jobs / Wraps
+const PAINT_JOBS = {
+    stock: { id: 'stock', name: 'Factory Paint', price: 0, style: 'basic' },
+    metallic: { id: 'metallic', name: 'Metallic', price: 3000, style: 'shiny' },
+    pearl: { id: 'pearl', name: 'Pearl White', price: 5000, style: 'elegant' },
+    flames: { id: 'flames', name: 'Racing Flames', price: 8000, style: 'aggressive' },
+    lightning: { id: 'lightning', name: 'Lightning Bolt', price: 8000, style: 'electric' },
+    camo: { id: 'camo', name: 'Lake Camo', price: 6000, style: 'stealth' },
+    custom_wrap: { id: 'custom_wrap', name: 'Custom Wrap', price: 15000, style: 'unique' },
+    chrome: { id: 'chrome', name: 'Chrome Finish', price: 25000, style: 'flashy' },
+    gold: { id: 'gold', name: 'Gold Plated', price: 100000, style: 'luxury' },
+};
+
+// Racing Calendar - Events throughout the year
+const RACE_CALENDAR = [
+    { week: 8, name: 'Spring Splash', type: 'circuit', purse: 5000, prestige: 10 },
+    { week: 12, name: 'Gravois Arm GP', type: 'circuit', purse: 10000, prestige: 20 },
+    { week: 16, name: 'Party Cove Classic', type: 'circuit', purse: 15000, prestige: 30 },
+    { week: 20, name: 'Niangua Shootout Preview', type: 'circuit', purse: 25000, prestige: 50 },
+    { week: 24, name: 'THE SHOOTOUT - Day 1', type: 'shootout', purse: 50000, prestige: 100 },
+    { week: 25, name: 'THE SHOOTOUT - Day 2', type: 'shootout', purse: 75000, prestige: 150 },
+    { week: 26, name: 'THE SHOOTOUT - Day 3', type: 'shootout', purse: 100000, prestige: 200 },
+    { week: 27, name: 'THE SHOOTOUT - FINALS', type: 'shootout_finals', purse: 250000, prestige: 500 },
+];
+
+// Create a new boat
+function createBoat(hullId, name) {
+    const hull = BOAT_HULLS[hullId];
+    return {
+        id: Date.now(),
+        name: name || `${hull.name} #${Math.floor(Math.random() * 999)}`,
+        hull: hullId,
+        engine: 'stock',
+        propeller: 'stock',
+        hullMod: 'none',
+        weightMod: 'none',
+        paint: 'stock',
+        stats: calculateBoatStats(hullId, 'stock', 'stock', 'none', 'none'),
+        races: 0,
+        wins: 0,
+        bestSpeed: 0,
+        totalEarnings: 0,
+    };
+}
+
+// Calculate boat's total stats based on parts
+function calculateBoatStats(hullId, engineId, propId, hullModId, weightModId) {
+    const hull = BOAT_HULLS[hullId];
+    const engine = ENGINES[engineId];
+    const prop = PROPELLERS[propId];
+    const hullMod = HULL_MODS[hullModId];
+    const weightMod = WEIGHT_MODS[weightModId];
+
+    const speed = hull.baseSpeed + engine.speedBonus + prop.speedBonus + hullMod.speedBonus + weightMod.speedBonus;
+    const handling = hull.handling + prop.handling + hullMod.handling;
+    const reliability = Math.max(10, engine.reliability - (100 - hull.durability) / 5);
+
+    return {
+        speed: Math.round(speed),
+        topSpeed: Math.round(speed * 1.15), // Top speed with perfect run
+        handling: Math.max(10, Math.min(100, handling)),
+        reliability: Math.round(reliability),
+        class: determineBoatClass(speed),
+    };
+}
+
+// Determine which racing class a boat qualifies for
+function determineBoatClass(speed) {
+    if (speed >= 200) return 'TOP_SPEED';
+    if (speed >= 180) return 'UNLIMITED';
+    if (speed >= 140) return 'PRO';
+    if (speed >= 100) return 'SUPERSTOCK';
+    if (speed >= 70) return 'MODIFIED';
+    return 'STOCK';
+}
+
+// Calculate race result
+function simulateRace(boat, raceType, weather = 'clear') {
+    const stats = boat.stats;
+    let baseSpeed = stats.speed;
+
+    // Weather effects
+    const weatherMods = {
+        clear: 1.0,
+        cloudy: 0.98,
+        windy: 0.92,
+        choppy: 0.85,
+        stormy: 0.75,
+    };
+    baseSpeed *= weatherMods[weather] || 1.0;
+
+    // Handling affects consistency
+    const handlingFactor = stats.handling / 100;
+    const variance = (1 - handlingFactor) * 15; // More handling = less variance
+
+    // Reliability check - can break down!
+    const breakdownRoll = Math.random() * 100;
+    if (breakdownRoll > stats.reliability) {
+        return {
+            success: false,
+            speed: 0,
+            breakdown: true,
+            message: 'Mechanical failure! DNF',
+        };
+    }
+
+    // Calculate final speed with some randomness
+    const randomFactor = 1 + (Math.random() - 0.5) * (variance / 100);
+    const finalSpeed = Math.round(baseSpeed * randomFactor);
+
+    // Determine placement based on speed and class
+    const classInfo = BOAT_CLASSES[stats.class];
+    const competitorSpeeds = [];
+    const numCompetitors = raceType === 'shootout_finals' ? 15 : raceType === 'shootout' ? 10 : 6;
+
+    for (let i = 0; i < numCompetitors; i++) {
+        const compSpeed = classInfo.minSpeed + Math.random() * (classInfo.maxSpeed - classInfo.minSpeed);
+        competitorSpeeds.push(compSpeed);
+    }
+    competitorSpeeds.sort((a, b) => b - a);
+
+    let placement = 1;
+    for (const compSpeed of competitorSpeeds) {
+        if (compSpeed > finalSpeed) placement++;
+    }
+
+    return {
+        success: true,
+        speed: finalSpeed,
+        placement: placement,
+        totalRacers: numCompetitors + 1,
+        breakdown: false,
+    };
+}
+
+// Get value of a boat (for selling)
+function getBoatValue(boat) {
+    const hull = BOAT_HULLS[boat.hull];
+    const engine = ENGINES[boat.engine];
+    const prop = PROPELLERS[boat.propeller];
+    const hullMod = HULL_MODS[boat.hullMod];
+    const weightMod = WEIGHT_MODS[boat.weightMod];
+    const paint = PAINT_JOBS[boat.paint];
+
+    const totalValue = hull.price + engine.price + prop.price + hullMod.price + weightMod.price + paint.price;
+    // Depreciation based on races
+    const depreciation = Math.max(0.5, 1 - (boat.races * 0.02));
+    // Wins add value
+    const winBonus = boat.wins * 500;
+
+    return Math.round(totalValue * depreciation * 0.7 + winBonus);
+}
+
+// Starter boat for Year 1
+function createStarterBoat() {
+    return {
+        id: 1,
+        name: 'Old Faithful',
+        hull: 'fishing',
+        engine: 'stock',
+        propeller: 'stock',
+        hullMod: 'none',
+        weightMod: 'none',
+        paint: 'stock',
+        stats: calculateBoatStats('fishing', 'stock', 'stock', 'none', 'none'),
+        races: 0,
+        wins: 0,
+        bestSpeed: 0,
+        totalEarnings: 0,
+        isStarter: true,
+    };
+}
+
 // ==================== BUILDING DEFINITIONS ====================
 const BUILDINGS = {
     // Marina Category
@@ -1189,8 +1465,8 @@ let gameState = {
     },
     grid: [],
     buildings: [],
-    mileMarkers: [], // Store mile marker positions
-    coves: [], // Named coves
+    mileMarkers: [],
+    coves: [],
     selectedBuilding: null,
     demolishMode: false,
     gameSpeed: 1,
@@ -1198,20 +1474,41 @@ let gameState = {
     tick: 0,
     season: 0,
     year: 1,
+    week: 24, // Start at Shootout week!
     events: [],
     camera: { x: 0, y: 0, zoom: 1 },
     workers: { total: 0, employed: 0 },
-    lakeLevel: 660, // Normal pool level
+    lakeLevel: 660,
     weekendBonus: false,
-    // Shootout & Racing
+
+    // ===== BOAT GARAGE & RACING =====
+    garage: {
+        boats: [], // Owned boats
+        activeBoat: null, // Currently selected boat for racing
+        maxSlots: 3, // Can expand with buildings
+    },
+    racing: {
+        currentRace: null,
+        upcomingRaces: [],
+        completedRaces: [],
+        seasonWins: 0,
+        seasonEarnings: 0,
+        careerWins: 0,
+        careerEarnings: 0,
+        bestSpeed: 0,
+        shootoutWins: 0, // Career Shootout victories
+    },
     shootout: {
         active: false,
-        day: 0, // 0-3 for 4-day event
-        totalEarnings: 0,
-        bestSpeed: 0,
-        lastYearEarnings: 0,
+        day: 0,
+        qualified: false,
+        results: [],
+        currentYearBest: 0,
     },
-    raceResults: [], // Track past Shootout results
+    raceHistory: [], // All race results ever
+    showingBoatShop: false,
+    showingGarage: false,
+    showingRaceEvent: false,
 };
 
 // Famous Lake of the Ozarks cove names
@@ -2609,6 +2906,14 @@ function initInput() {
         startGameLoop();
     });
 
+    // Garage/Boat Shop button
+    const garageBtn = document.getElementById('btn-garage');
+    if (garageBtn) {
+        garageBtn.addEventListener('click', () => {
+            openBoatShop();
+        });
+    }
+
     function startGame() {
         try {
             // Hide modal FIRST
@@ -2761,19 +3066,416 @@ function updateTooltip(e) {
     tooltip.classList.remove('hidden');
 }
 
+// ==================== BOAT SHOP UI ====================
+function openBoatShop() {
+    const modal = document.getElementById('boat-shop-modal');
+    if (modal) {
+        modal.classList.remove('hidden');
+        modal.style.display = 'flex';
+        updateShopMoney();
+        renderShopContent('buy');
+
+        // Set up tab listeners
+        document.querySelectorAll('.shop-tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                document.querySelectorAll('.shop-tab').forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+                renderShopContent(tab.dataset.tab);
+            });
+        });
+    }
+}
+
+function closeBoatShop() {
+    const modal = document.getElementById('boat-shop-modal');
+    if (modal) {
+        modal.classList.add('hidden');
+        modal.style.display = 'none';
+    }
+}
+
+// Make closeBoatShop available globally for onclick
+window.closeBoatShop = closeBoatShop;
+
+function updateShopMoney() {
+    const shopMoney = document.getElementById('shop-money');
+    if (shopMoney) {
+        shopMoney.textContent = Math.floor(gameState.resources.money);
+    }
+}
+
+function renderShopContent(tab) {
+    const content = document.getElementById('shop-content');
+    if (!content) return;
+
+    switch(tab) {
+        case 'buy':
+            renderBuyBoats(content);
+            break;
+        case 'upgrade':
+            renderUpgrades(content);
+            break;
+        case 'garage':
+            renderGarage(content);
+            break;
+        case 'paint':
+            renderPaintShop(content);
+            break;
+    }
+}
+
+function renderBuyBoats(container) {
+    let html = '<div class="boat-grid">';
+
+    Object.entries(BOAT_HULLS).forEach(([id, hull]) => {
+        const canAfford = gameState.resources.money >= hull.basePrice;
+        const stats = calculateBoatStats(id, 'stock', 'stock', 'none', 'none');
+
+        html += `
+            <div class="boat-card ${!canAfford ? 'disabled' : ''}">
+                <div class="boat-image">🚤</div>
+                <h3>${hull.name}</h3>
+                <div class="boat-stats">
+                    <span>⚡ ${stats.topSpeed} MPH</span>
+                    <span>🎯 ${Math.round(stats.handling * 100)}%</span>
+                    <span>🔧 ${Math.round(stats.reliability * 100)}%</span>
+                </div>
+                <div class="boat-price">$${hull.basePrice.toLocaleString()}</div>
+                <button class="buy-btn" onclick="buyBoat('${id}')" ${!canAfford ? 'disabled' : ''}>
+                    ${canAfford ? 'Buy' : 'Too Expensive'}
+                </button>
+            </div>
+        `;
+    });
+
+    html += '</div>';
+    container.innerHTML = html;
+}
+
+function renderUpgrades(container) {
+    const activeBoat = gameState.garage.boats.find(b => b.id === gameState.garage.activeBoat);
+
+    if (!activeBoat) {
+        container.innerHTML = '<div class="no-boat"><p>Select a boat in your garage first!</p></div>';
+        return;
+    }
+
+    let html = `<div class="active-boat-header">
+        <h3>Upgrading: ${activeBoat.name}</h3>
+        <span class="current-speed">Current Speed: ⚡ ${activeBoat.stats.topSpeed} MPH</span>
+    </div>`;
+
+    // Engines
+    html += '<div class="upgrade-section"><h4>🔧 Engines</h4><div class="upgrade-grid">';
+    Object.entries(ENGINES).forEach(([id, engine]) => {
+        const isOwned = activeBoat.engine === id;
+        const canAfford = gameState.resources.money >= engine.price;
+        html += `
+            <div class="upgrade-card ${isOwned ? 'owned' : ''} ${!canAfford && !isOwned ? 'disabled' : ''}">
+                <h5>${engine.name}</h5>
+                <span class="stat">+${engine.speedBonus} MPH</span>
+                <span class="stat">⚖️ +${engine.weight} lbs</span>
+                ${isOwned ?
+                    '<span class="badge">Installed</span>' :
+                    `<button onclick="purchaseUpgrade('engine', '${id}')" ${!canAfford ? 'disabled' : ''}>$${engine.price.toLocaleString()}</button>`
+                }
+            </div>
+        `;
+    });
+    html += '</div></div>';
+
+    // Propellers
+    html += '<div class="upgrade-section"><h4>⚙️ Propellers</h4><div class="upgrade-grid">';
+    Object.entries(PROPELLERS).forEach(([id, prop]) => {
+        const isOwned = activeBoat.propeller === id;
+        const canAfford = gameState.resources.money >= prop.price;
+        html += `
+            <div class="upgrade-card ${isOwned ? 'owned' : ''} ${!canAfford && !isOwned ? 'disabled' : ''}">
+                <h5>${prop.name}</h5>
+                <span class="stat">+${prop.speedBonus} MPH</span>
+                <span class="stat">🎯 ${prop.handlingMod > 0 ? '+' : ''}${Math.round(prop.handlingMod * 100)}%</span>
+                ${isOwned ?
+                    '<span class="badge">Installed</span>' :
+                    `<button onclick="purchaseUpgrade('propeller', '${id}')" ${!canAfford ? 'disabled' : ''}>$${prop.price.toLocaleString()}</button>`
+                }
+            </div>
+        `;
+    });
+    html += '</div></div>';
+
+    // Hull Mods
+    html += '<div class="upgrade-section"><h4>🛥️ Hull Modifications</h4><div class="upgrade-grid">';
+    Object.entries(HULL_MODS).forEach(([id, mod]) => {
+        const isOwned = activeBoat.hullMod === id;
+        const canAfford = gameState.resources.money >= mod.price;
+        html += `
+            <div class="upgrade-card ${isOwned ? 'owned' : ''} ${!canAfford && !isOwned ? 'disabled' : ''}">
+                <h5>${mod.name}</h5>
+                <span class="stat">+${mod.speedBonus} MPH</span>
+                <span class="stat">🎯 ${mod.handlingMod > 0 ? '+' : ''}${Math.round(mod.handlingMod * 100)}%</span>
+                ${isOwned ?
+                    '<span class="badge">Installed</span>' :
+                    `<button onclick="purchaseUpgrade('hullMod', '${id}')" ${!canAfford ? 'disabled' : ''}>$${mod.price.toLocaleString()}</button>`
+                }
+            </div>
+        `;
+    });
+    html += '</div></div>';
+
+    // Weight Mods
+    html += '<div class="upgrade-section"><h4>⚖️ Weight Reduction</h4><div class="upgrade-grid">';
+    Object.entries(WEIGHT_MODS).forEach(([id, mod]) => {
+        const isOwned = activeBoat.weightMod === id;
+        const canAfford = gameState.resources.money >= mod.price;
+        html += `
+            <div class="upgrade-card ${isOwned ? 'owned' : ''} ${!canAfford && !isOwned ? 'disabled' : ''}">
+                <h5>${mod.name}</h5>
+                <span class="stat">⚡ ${mod.speedBonus > 0 ? '+' : ''}${mod.speedBonus} MPH</span>
+                <span class="stat">🔧 ${mod.reliabilityMod > 0 ? '+' : ''}${Math.round(mod.reliabilityMod * 100)}%</span>
+                ${isOwned ?
+                    '<span class="badge">Installed</span>' :
+                    `<button onclick="purchaseUpgrade('weightMod', '${id}')" ${!canAfford ? 'disabled' : ''}>$${mod.price.toLocaleString()}</button>`
+                }
+            </div>
+        `;
+    });
+    html += '</div></div>';
+
+    container.innerHTML = html;
+}
+
+function renderGarage(container) {
+    const boats = gameState.garage.boats;
+
+    if (boats.length === 0) {
+        container.innerHTML = '<div class="empty-garage"><p>Your garage is empty! Buy a boat to get started.</p></div>';
+        return;
+    }
+
+    let html = '<div class="garage-grid">';
+
+    boats.forEach(boat => {
+        const isActive = boat.id === gameState.garage.activeBoat;
+        const boatClass = determineBoatClass(boat.stats.topSpeed);
+        const boatValue = getBoatValue(boat);
+
+        html += `
+            <div class="garage-boat ${isActive ? 'active-boat' : ''}">
+                <div class="boat-header">
+                    <h3>${boat.name}</h3>
+                    ${isActive ? '<span class="active-badge">🏁 Racing</span>' : ''}
+                </div>
+                <div class="boat-image large">🚤</div>
+                <div class="boat-details">
+                    <div class="stat-row"><span>Class:</span><span>${boatClass.name}</span></div>
+                    <div class="stat-row"><span>Top Speed:</span><span>⚡ ${boat.stats.topSpeed} MPH</span></div>
+                    <div class="stat-row"><span>Handling:</span><span>🎯 ${Math.round(boat.stats.handling * 100)}%</span></div>
+                    <div class="stat-row"><span>Reliability:</span><span>🔧 ${Math.round(boat.stats.reliability * 100)}%</span></div>
+                    <div class="stat-row"><span>Value:</span><span>💰 $${boatValue.toLocaleString()}</span></div>
+                </div>
+                <div class="boat-record">
+                    <span>Races: ${boat.races}</span>
+                    <span>Wins: ${boat.wins}</span>
+                    <span>Best: ${boat.bestSpeed || '--'} MPH</span>
+                </div>
+                <div class="boat-actions">
+                    ${!isActive ? `<button onclick="selectActiveBoat(${boat.id})">Select for Racing</button>` : ''}
+                    ${!boat.isStarter ? `<button class="sell-btn" onclick="sellBoat(${boat.id})">Sell ($${Math.floor(boatValue * 0.7).toLocaleString()})</button>` : ''}
+                </div>
+            </div>
+        `;
+    });
+
+    html += '</div>';
+    container.innerHTML = html;
+}
+
+function renderPaintShop(container) {
+    const activeBoat = gameState.garage.boats.find(b => b.id === gameState.garage.activeBoat);
+
+    if (!activeBoat) {
+        container.innerHTML = '<div class="no-boat"><p>Select a boat in your garage first!</p></div>';
+        return;
+    }
+
+    let html = `<div class="paint-header">
+        <h3>Paint Shop - ${activeBoat.name}</h3>
+    </div>`;
+
+    html += '<div class="paint-grid">';
+    Object.entries(PAINT_JOBS).forEach(([id, paint]) => {
+        const isOwned = activeBoat.paint === id;
+        const canAfford = gameState.resources.money >= paint.price;
+        html += `
+            <div class="paint-card ${isOwned ? 'owned' : ''} ${!canAfford && !isOwned ? 'disabled' : ''}">
+                <div class="paint-preview" style="background: ${paint.primary}; border: 3px solid ${paint.secondary || paint.primary};">
+                    🚤
+                </div>
+                <h4>${paint.name}</h4>
+                ${isOwned ?
+                    '<span class="badge">Applied</span>' :
+                    `<button onclick="purchaseUpgrade('paint', '${id}')" ${!canAfford ? 'disabled' : ''}>$${paint.price.toLocaleString()}</button>`
+                }
+            </div>
+        `;
+    });
+    html += '</div>';
+
+    container.innerHTML = html;
+}
+
+function buyBoat(hullId) {
+    const hull = BOAT_HULLS[hullId];
+    if (!hull || gameState.resources.money < hull.basePrice) return;
+
+    if (gameState.garage.boats.length >= gameState.garage.maxSlots) {
+        addEvent('Garage is full! Sell a boat first.', 'negative');
+        return;
+    }
+
+    gameState.resources.money -= hull.basePrice;
+
+    const newBoat = createBoat(hullId, hull.name);
+    gameState.garage.boats.push(newBoat);
+
+    // Set as active if it's the only boat
+    if (gameState.garage.boats.length === 1) {
+        gameState.garage.activeBoat = newBoat.id;
+    }
+
+    addEvent(`Bought new boat: ${hull.name}! 🚤`, 'positive');
+    updateShopMoney();
+    updateUI();
+    renderShopContent('garage');
+}
+
+// Make buyBoat available globally
+window.buyBoat = buyBoat;
+
+function purchaseUpgrade(type, itemId) {
+    const activeBoat = gameState.garage.boats.find(b => b.id === gameState.garage.activeBoat);
+    if (!activeBoat) return;
+
+    let item, price;
+
+    switch(type) {
+        case 'engine':
+            item = ENGINES[itemId];
+            price = item?.price || 0;
+            break;
+        case 'propeller':
+            item = PROPELLERS[itemId];
+            price = item?.price || 0;
+            break;
+        case 'hullMod':
+            item = HULL_MODS[itemId];
+            price = item?.price || 0;
+            break;
+        case 'weightMod':
+            item = WEIGHT_MODS[itemId];
+            price = item?.price || 0;
+            break;
+        case 'paint':
+            item = PAINT_JOBS[itemId];
+            price = item?.price || 0;
+            break;
+        default:
+            return;
+    }
+
+    if (!item || gameState.resources.money < price) return;
+
+    gameState.resources.money -= price;
+    activeBoat[type] = itemId;
+
+    // Recalculate boat stats
+    activeBoat.stats = calculateBoatStats(
+        activeBoat.hull,
+        activeBoat.engine,
+        activeBoat.propeller,
+        activeBoat.hullMod,
+        activeBoat.weightMod
+    );
+
+    addEvent(`Installed ${item.name}! ⚡ ${activeBoat.stats.topSpeed} MPH`, 'positive');
+    updateShopMoney();
+    updateUI();
+
+    // Refresh the current tab
+    const activeTab = document.querySelector('.shop-tab.active');
+    if (activeTab) {
+        renderShopContent(activeTab.dataset.tab);
+    }
+}
+
+// Make purchaseUpgrade available globally
+window.purchaseUpgrade = purchaseUpgrade;
+
+function selectActiveBoat(boatId) {
+    const boat = gameState.garage.boats.find(b => b.id === boatId);
+    if (boat) {
+        gameState.garage.activeBoat = boatId;
+        addEvent(`Selected ${boat.name} for racing!`, 'racing');
+        renderShopContent('garage');
+    }
+}
+
+// Make selectActiveBoat available globally
+window.selectActiveBoat = selectActiveBoat;
+
+function sellBoat(boatId) {
+    const boatIndex = gameState.garage.boats.findIndex(b => b.id === boatId);
+    if (boatIndex === -1) return;
+
+    const boat = gameState.garage.boats[boatIndex];
+    if (boat.isStarter) {
+        addEvent("Can't sell your starter boat!", 'negative');
+        return;
+    }
+
+    const sellPrice = Math.floor(getBoatValue(boat) * 0.7);
+    gameState.resources.money += sellPrice;
+    gameState.garage.boats.splice(boatIndex, 1);
+
+    // If we sold the active boat, select another
+    if (gameState.garage.activeBoat === boatId && gameState.garage.boats.length > 0) {
+        gameState.garage.activeBoat = gameState.garage.boats[0].id;
+    }
+
+    addEvent(`Sold ${boat.name} for $${sellPrice.toLocaleString()}!`, 'positive');
+    updateShopMoney();
+    updateUI();
+    renderShopContent('garage');
+}
+
+// Make sellBoat available globally
+window.sellBoat = sellBoat;
+
+function initializeStarterBoat() {
+    // Give player their starter boat
+    const starterBoat = createStarterBoat();
+    gameState.garage.boats.push(starterBoat);
+    gameState.garage.activeBoat = starterBoat.id;
+    gameState.resources.speedBoats = 1;
+}
+
 // ==================== INITIALIZATION ====================
 function init() {
     initCanvas();
     generateMap();
+
+    // Initialize starter boat
+    initializeStarterBoat();
+
     initInput();
     updateUI();
     render();
     startGameLoop();
 
-    addEvent('Welcome to the Lake! 🚤', 'positive');
-    addEvent('Start with boat docks on the water', 'neutral');
-    addEvent('Build lodging to grow your workforce', 'neutral');
-    addEvent('🏁 Build racing infrastructure for THE SHOOTOUT!', 'racing');
+    addEvent('Welcome to the Shootout! 🏁', 'racing');
+    addEvent("Your boat 'Old Faithful' is ready!", 'positive');
+    addEvent('Build docks and marinas to earn money', 'neutral');
+    addEvent('Upgrade your boat and win THE SHOOTOUT!', 'racing');
 }
 
 window.addEventListener('load', init);

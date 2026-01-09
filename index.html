@@ -13,7 +13,10 @@
 <body>
     <div id="game-container">
         <header id="game-header">
-            <h1>🚤 Lake of the Ozarks Tycoon</h1>
+            <div class="header-left">
+                <h1>🏁 Lake of the Ozarks Tycoon</h1>
+                <button id="btn-garage" class="header-btn" title="Boat Garage">🚤 Garage</button>
+            </div>
             <div id="resources">
                 <div class="resource">
                     <span class="resource-icon">👥</span>
@@ -120,25 +123,70 @@
     <div id="tooltip" class="hidden"></div>
 
     <div id="welcome-modal" class="modal">
-        <div class="modal-content">
-            <h2>🚤 Lake of the Ozarks Tycoon</h2>
-            <p>Welcome to the Lake! Build marinas, resorts, and entertainment along Missouri's most famous party lake.</p>
+        <div class="modal-content shootout-welcome">
+            <h2>🏁 THE SHOOTOUT</h2>
+            <p class="shootout-tagline">Lake of the Ozarks' Biggest Day of the Year</p>
+
             <div class="lake-facts">
-                <p><strong>The Lake:</strong> 54,000 acres of water, 1,150 miles of shoreline, and endless opportunity!</p>
+                <p>It's <strong>Shootout Weekend</strong> - the Super Bowl of powerboat racing! Every August, the fastest boats in the world come to compete on the mile-long course.</p>
             </div>
-            <h3>Getting Started:</h3>
+
+            <div class="starter-boat-info">
+                <h3>Your First Boat: "Old Faithful"</h3>
+                <p>You've got a trusty bass boat - not fast, but it's a start. Dream big! Work your way up from <strong>45 MPH</strong> to over <strong>200 MPH</strong>.</p>
+                <div class="boat-preview">
+                    <span class="boat-speed">⚡ 45 MPH</span>
+                    <span class="boat-class">Stock Class</span>
+                </div>
+            </div>
+
+            <h3>The Journey:</h3>
             <ul>
-                <li>⚓ Build <strong>marinas</strong> and <strong>boat docks</strong> on the water</li>
-                <li>🏨 Add <strong>resorts</strong> and <strong>condos</strong> to attract visitors</li>
-                <li>🍺 Open <strong>bars</strong> and <strong>restaurants</strong> on the Strip</li>
-                <li>🏁 Build <strong>racing infrastructure</strong> for THE SHOOTOUT!</li>
-                <li>🚤 Don't forget - it's all about the <strong>boats</strong>!</li>
+                <li>🏁 Race the <strong>Shootout</strong> every August</li>
+                <li>🔧 <strong>Customize</strong> your boats - engines, props, hulls</li>
+                <li>💰 Win races to earn <strong>prize money</strong></li>
+                <li>🚤 Buy faster boats and build your <strong>fleet</strong></li>
+                <li>🏆 Become the <strong>Shootout Champion</strong>!</li>
             </ul>
+
             <div class="shootout-info">
-                <p>🏁 <strong>THE SHOOTOUT</strong> - Every August, the world's fastest boats race on the lake. Build racing infrastructure to cash in BIG!</p>
+                <p>🎯 <strong>GOAL:</strong> Build the fastest boat on the lake and win the Shootout Finals!</p>
             </div>
-            <input type="text" id="town-name-input" placeholder="Your developer name..." value="Lake Boss">
-            <button id="start-game">Let's Race! 🏁</button>
+
+            <input type="text" id="town-name-input" placeholder="Your racer name..." value="Lake Boss">
+            <button id="start-game">Enter the Shootout! 🏁</button>
+        </div>
+    </div>
+
+    <!-- Boat Shop Modal -->
+    <div id="boat-shop-modal" class="modal hidden">
+        <div class="modal-content boat-shop">
+            <div class="shop-header">
+                <h2>🚤 Boat Shop</h2>
+                <button class="close-btn" onclick="closeBoatShop()">✕</button>
+            </div>
+            <div class="shop-tabs">
+                <button class="shop-tab active" data-tab="buy">Buy Boats</button>
+                <button class="shop-tab" data-tab="upgrade">Upgrades</button>
+                <button class="shop-tab" data-tab="garage">My Garage</button>
+                <button class="shop-tab" data-tab="paint">Paint Shop</button>
+            </div>
+            <div class="shop-content" id="shop-content">
+                <!-- Dynamic content loaded here -->
+            </div>
+            <div class="shop-footer">
+                <span class="player-money">💰 $<span id="shop-money">5000</span></span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Race Event Modal -->
+    <div id="race-modal" class="modal hidden">
+        <div class="modal-content race-event">
+            <h2 id="race-title">🏁 THE SHOOTOUT</h2>
+            <div id="race-content">
+                <!-- Race details loaded here -->
+            </div>
         </div>
     </div>
 
