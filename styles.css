@@ -1,0 +1,495 @@
+/* Ozarks City Builder - Styles */
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+:root {
+    --ozark-green: #2d5a27;
+    --ozark-dark-green: #1a3d18;
+    --ozark-blue: #4a90a4;
+    --ozark-lake: #5ba3b8;
+    --ozark-brown: #6b4423;
+    --ozark-light-brown: #8b6914;
+    --ozark-tan: #d4b896;
+    --ozark-cream: #f5f0e6;
+    --ozark-stone: #8b8b7a;
+    --ozark-sunset: #e8a857;
+    --panel-bg: rgba(245, 240, 230, 0.95);
+    --shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+}
+
+body {
+    font-family: 'Georgia', 'Times New Roman', serif;
+    background: linear-gradient(135deg, #87a878 0%, #5a8a4a 50%, #3d6b35 100%);
+    min-height: 100vh;
+    color: #2c2c2c;
+}
+
+#game-container {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    max-width: 1600px;
+    margin: 0 auto;
+}
+
+/* Header */
+#game-header {
+    background: linear-gradient(180deg, var(--ozark-brown) 0%, var(--ozark-dark-green) 100%);
+    padding: 10px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 4px solid var(--ozark-light-brown);
+    box-shadow: var(--shadow);
+}
+
+#game-header h1 {
+    color: var(--ozark-cream);
+    font-size: 1.8rem;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+    font-weight: bold;
+}
+
+#resources {
+    display: flex;
+    gap: 20px;
+}
+
+.resource {
+    background: var(--ozark-cream);
+    padding: 8px 15px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+    border: 2px solid var(--ozark-brown);
+}
+
+.resource-icon {
+    font-size: 1.2rem;
+}
+
+.resource span:nth-child(2) {
+    font-weight: bold;
+    font-size: 1.1rem;
+    color: var(--ozark-brown);
+    min-width: 40px;
+}
+
+.resource-label {
+    font-size: 0.75rem;
+    color: #666;
+    text-transform: uppercase;
+}
+
+/* Main Area */
+#main-area {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+}
+
+/* Side Panels */
+aside {
+    width: 220px;
+    background: var(--panel-bg);
+    padding: 15px;
+    overflow-y: auto;
+    border: 3px solid var(--ozark-brown);
+}
+
+aside h2 {
+    color: var(--ozark-dark-green);
+    font-size: 1.2rem;
+    margin-bottom: 10px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid var(--ozark-tan);
+}
+
+aside h3 {
+    color: var(--ozark-brown);
+    font-size: 1rem;
+    margin: 15px 0 8px 0;
+}
+
+#building-panel {
+    border-right: none;
+}
+
+#info-panel {
+    border-left: none;
+}
+
+/* Building Categories */
+#building-categories {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    margin-bottom: 10px;
+}
+
+.category-btn {
+    flex: 1 1 45%;
+    padding: 8px 5px;
+    font-size: 0.75rem;
+    background: var(--ozark-cream);
+    border: 2px solid var(--ozark-stone);
+    border-radius: 5px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.category-btn:hover {
+    background: var(--ozark-tan);
+}
+
+.category-btn.active {
+    background: var(--ozark-green);
+    color: white;
+    border-color: var(--ozark-dark-green);
+}
+
+/* Building List */
+#building-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.building-item {
+    background: white;
+    padding: 10px;
+    border-radius: 8px;
+    border: 2px solid var(--ozark-tan);
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.building-item:hover {
+    border-color: var(--ozark-green);
+    transform: translateX(3px);
+}
+
+.building-item.selected {
+    border-color: var(--ozark-green);
+    background: #e8f5e3;
+    box-shadow: 0 0 0 2px var(--ozark-green);
+}
+
+.building-item.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.building-item .building-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.building-item .building-icon {
+    font-size: 1.5rem;
+}
+
+.building-item .building-name {
+    font-weight: bold;
+    font-size: 0.9rem;
+}
+
+.building-item .building-cost {
+    font-size: 0.75rem;
+    color: #666;
+    margin-top: 4px;
+}
+
+/* Building Info */
+#building-info {
+    margin-top: 15px;
+    padding: 10px;
+    background: white;
+    border-radius: 8px;
+    border: 2px solid var(--ozark-tan);
+    font-size: 0.85rem;
+}
+
+#building-info p {
+    margin-bottom: 5px;
+}
+
+/* Game Area */
+#game-area {
+    flex: 1;
+    position: relative;
+    background: #3a5a2a;
+    overflow: hidden;
+}
+
+#game-canvas {
+    display: block;
+    cursor: pointer;
+}
+
+/* Game Controls */
+#game-controls {
+    position: absolute;
+    bottom: 20px;
+    right: 20px;
+    display: flex;
+    gap: 10px;
+}
+
+#game-controls button {
+    width: 45px;
+    height: 45px;
+    font-size: 1.2rem;
+    background: var(--panel-bg);
+    border: 3px solid var(--ozark-brown);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: var(--shadow);
+}
+
+#game-controls button:hover {
+    background: var(--ozark-tan);
+    transform: scale(1.1);
+}
+
+#game-controls button.active {
+    background: var(--ozark-sunset);
+    border-color: #c44;
+}
+
+#btn-speed {
+    width: auto;
+    padding: 0 15px;
+    font-size: 0.9rem;
+}
+
+/* Town Stats */
+#town-stats {
+    background: white;
+    padding: 10px;
+    border-radius: 8px;
+    border: 2px solid var(--ozark-tan);
+}
+
+.stat {
+    display: flex;
+    justify-content: space-between;
+    padding: 5px 0;
+    border-bottom: 1px solid #eee;
+}
+
+.stat:last-child {
+    border-bottom: none;
+}
+
+.stat-label {
+    color: #666;
+    font-size: 0.85rem;
+}
+
+#income {
+    color: var(--ozark-green);
+    font-weight: bold;
+}
+
+/* Event Log */
+#event-log {
+    background: white;
+    padding: 10px;
+    border-radius: 8px;
+    border: 2px solid var(--ozark-tan);
+    max-height: 200px;
+    overflow-y: auto;
+    font-size: 0.8rem;
+}
+
+.event-item {
+    padding: 5px 0;
+    border-bottom: 1px solid #eee;
+}
+
+.event-item:last-child {
+    border-bottom: none;
+}
+
+.event-item.positive {
+    color: var(--ozark-green);
+}
+
+.event-item.negative {
+    color: #a33;
+}
+
+.event-item.neutral {
+    color: #666;
+}
+
+/* Footer */
+#game-footer {
+    background: var(--ozark-dark-green);
+    color: var(--ozark-cream);
+    padding: 10px;
+    text-align: center;
+    font-size: 0.9rem;
+    border-top: 3px solid var(--ozark-brown);
+}
+
+/* Tooltip */
+#tooltip {
+    position: absolute;
+    background: rgba(0,0,0,0.85);
+    color: white;
+    padding: 10px 15px;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    pointer-events: none;
+    z-index: 1000;
+    max-width: 250px;
+    box-shadow: var(--shadow);
+}
+
+#tooltip.hidden {
+    display: none;
+}
+
+/* Modal */
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.7);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 2000;
+}
+
+.modal.hidden {
+    display: none;
+}
+
+.modal-content {
+    background: var(--ozark-cream);
+    padding: 30px;
+    border-radius: 15px;
+    max-width: 500px;
+    border: 5px solid var(--ozark-brown);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+}
+
+.modal-content h2 {
+    color: var(--ozark-dark-green);
+    margin-bottom: 15px;
+    font-size: 1.6rem;
+}
+
+.modal-content h3 {
+    color: var(--ozark-brown);
+    margin: 15px 0 10px;
+}
+
+.modal-content p {
+    margin-bottom: 10px;
+    line-height: 1.5;
+}
+
+.modal-content ul {
+    margin: 10px 0 15px 20px;
+}
+
+.modal-content li {
+    margin-bottom: 8px;
+    line-height: 1.4;
+}
+
+.modal-content input {
+    width: 100%;
+    padding: 12px;
+    margin: 15px 0;
+    border: 2px solid var(--ozark-tan);
+    border-radius: 8px;
+    font-size: 1rem;
+    font-family: inherit;
+}
+
+.modal-content button {
+    width: 100%;
+    padding: 15px;
+    background: var(--ozark-green);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 1.1rem;
+    font-family: inherit;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.modal-content button:hover {
+    background: var(--ozark-dark-green);
+}
+
+/* Scrollbar Styling */
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--ozark-cream);
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--ozark-tan);
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--ozark-brown);
+}
+
+/* Responsive */
+@media (max-width: 1200px) {
+    aside {
+        width: 180px;
+    }
+
+    #resources {
+        gap: 10px;
+    }
+
+    .resource {
+        padding: 5px 10px;
+    }
+}
+
+@media (max-width: 900px) {
+    #main-area {
+        flex-direction: column;
+    }
+
+    aside {
+        width: 100%;
+        max-height: 200px;
+    }
+
+    #building-list {
+        flex-direction: row;
+        flex-wrap: wrap;
+    }
+
+    .building-item {
+        flex: 1 1 120px;
+    }
+}

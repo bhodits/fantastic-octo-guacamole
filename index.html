@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ozarks City Builder</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div id="game-container">
+        <header id="game-header">
+            <h1>🏔️ Ozarks City Builder</h1>
+            <div id="resources">
+                <div class="resource">
+                    <span class="resource-icon">👥</span>
+                    <span id="population">0</span>
+                    <span class="resource-label">Pop</span>
+                </div>
+                <div class="resource">
+                    <span class="resource-icon">💰</span>
+                    <span id="money">1000</span>
+                    <span class="resource-label">Dollars</span>
+                </div>
+                <div class="resource">
+                    <span class="resource-icon">🪵</span>
+                    <span id="lumber">50</span>
+                    <span class="resource-label">Lumber</span>
+                </div>
+                <div class="resource">
+                    <span class="resource-icon">🪨</span>
+                    <span id="stone">30</span>
+                    <span class="resource-label">Stone</span>
+                </div>
+                <div class="resource">
+                    <span class="resource-icon">🐟</span>
+                    <span id="fish">0</span>
+                    <span class="resource-label">Fish</span>
+                </div>
+                <div class="resource">
+                    <span class="resource-icon">⚡</span>
+                    <span id="happiness">100</span>
+                    <span class="resource-label">Happy</span>
+                </div>
+            </div>
+        </header>
+
+        <div id="main-area">
+            <aside id="building-panel">
+                <h2>Buildings</h2>
+                <div id="building-categories">
+                    <button class="category-btn active" data-category="housing">🏠 Housing</button>
+                    <button class="category-btn" data-category="economy">💼 Economy</button>
+                    <button class="category-btn" data-category="nature">🌲 Nature</button>
+                    <button class="category-btn" data-category="tourism">🎣 Tourism</button>
+                    <button class="category-btn" data-category="infrastructure">🛤️ Roads</button>
+                </div>
+                <div id="building-list"></div>
+                <div id="building-info">
+                    <p>Select a building to see details</p>
+                </div>
+            </aside>
+
+            <main id="game-area">
+                <canvas id="game-canvas"></canvas>
+                <div id="game-controls">
+                    <button id="btn-demolish" title="Demolish">🔨</button>
+                    <button id="btn-zoom-in" title="Zoom In">➕</button>
+                    <button id="btn-zoom-out" title="Zoom Out">➖</button>
+                    <button id="btn-speed" title="Game Speed">⏩ 1x</button>
+                </div>
+            </main>
+
+            <aside id="info-panel">
+                <h2>Town Info</h2>
+                <div id="town-stats">
+                    <div class="stat">
+                        <span class="stat-label">Town Name:</span>
+                        <span id="town-name">Ozark Hollow</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-label">Season:</span>
+                        <span id="season">Spring</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-label">Year:</span>
+                        <span id="year">1</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-label">Income:</span>
+                        <span id="income">+$0/s</span>
+                    </div>
+                </div>
+                <h3>Recent Events</h3>
+                <div id="event-log"></div>
+            </aside>
+        </div>
+
+        <footer id="game-footer">
+            <p>Build your dream town in the beautiful Ozark Mountains! 🏔️🌲💧</p>
+        </footer>
+    </div>
+
+    <div id="tooltip" class="hidden"></div>
+
+    <div id="welcome-modal" class="modal">
+        <div class="modal-content">
+            <h2>🏔️ Welcome to Ozarks City Builder!</h2>
+            <p>Build a thriving town in the beautiful Ozark Mountains of Missouri and Arkansas.</p>
+            <h3>Getting Started:</h3>
+            <ul>
+                <li>🏠 Place <strong>cabins</strong> to attract settlers</li>
+                <li>🪵 Build <strong>sawmills</strong> near forests for lumber</li>
+                <li>🎣 Construct <strong>fishing docks</strong> on the lake</li>
+                <li>🏪 Add <strong>general stores</strong> for your economy</li>
+                <li>🛤️ Connect buildings with <strong>dirt roads</strong></li>
+            </ul>
+            <p><em>Tip: The Ozarks are famous for their lakes, forests, and country hospitality!</em></p>
+            <input type="text" id="town-name-input" placeholder="Name your town..." value="Ozark Hollow">
+            <button id="start-game">Start Building!</button>
+        </div>
+    </div>
+
+    <script src="game.js"></script>
+</body>
+</html>
