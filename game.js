@@ -922,37 +922,40 @@ function showRaceResults() {
 
     const activeBoat = gameState.garage.boats[0];
     const finalSpeed = Math.round(raceState.finalSpeed * 10) / 10;
-    const variance = raceState.finalSpeed - raceState.maxSpeed * 0.8;
+    const playerName = gameState.playerName || 'Super Dave';
 
-    // Determine placement
-    let placement, message, reward;
-    if (raceState.finalSpeed >= raceState.maxSpeed * 0.95) {
-        placement = '1st Place';
-        message = 'Perfect run! You maxed out your boat!';
-        reward = 500;
-    } else if (raceState.finalSpeed >= raceState.maxSpeed * 0.85) {
-        placement = '2nd Place';
-        message = 'Great throttle control!';
-        reward = 300;
-    } else if (raceState.finalSpeed >= raceState.maxSpeed * 0.7) {
-        placement = '3rd Place';
-        message = 'Solid finish for your first Shootout!';
-        reward = 150;
-    } else {
-        placement = 'Finished';
-        message = 'Keep practicing that throttle!';
-        reward = 50;
-    }
+    // Generate class competitors with speeds around the player
+    // Player finishes 2nd from last in their class
+    const boatClass = selectedStarterBoat === 'sundancer' ? 'Pontoon Class' : 'Ski Boat Class';
+    const classCompetitors = generateClassRankings(finalSpeed, boatClass, playerName, activeBoat.name);
+
+    // Find player position (should be 2nd from last)
+    const playerPosition = classCompetitors.findIndex(c => c.isPlayer) + 1;
+    const totalInClass = classCompetitors.length;
+
+    // Determine message based on 2nd-to-last finish
+    let message, reward;
+    message = "Hey, you beat somebody! That's what counts.";
+    reward = 75;
 
     // Update boat stats
     activeBoat.races = 1;
-    if (placement === '1st Place') activeBoat.wins = 1;
     activeBoat.bestSpeed = finalSpeed;
     activeBoat.totalEarnings = reward;
 
     // Give rewards
     gameState.resources.money += reward;
-    gameState.resources.racingRep += placement === '1st Place' ? 10 : placement === '2nd Place' ? 5 : 2;
+    gameState.resources.racingRep += 1;
+
+    // Build class rankings HTML
+    const rankingsHTML = classCompetitors.map((comp, idx) => `
+        <div class="ranking-row ${comp.isPlayer ? 'player-row' : ''}">
+            <span class="rank-num">${idx + 1}</span>
+            <span class="rank-driver">${comp.driver}</span>
+            <span class="rank-boat">${comp.boat}</span>
+            <span class="rank-speed">${comp.speed} MPH</span>
+        </div>
+    `).join('');
 
     // Create results overlay
     const overlay = document.getElementById('race-overlay');
@@ -965,17 +968,24 @@ function showRaceResults() {
                 <span class="mph">MPH</span>
             </div>
 
-            <div class="placement-badge ${placement === '1st Place' ? 'gold' : ''}">${placement}</div>
+            <div class="class-results">
+                <h3>${boatClass} Results</h3>
+                <div class="rankings-list">
+                    ${rankingsHTML}
+                </div>
+            </div>
+
+            <div class="placement-badge">${playerPosition} of ${totalInClass}</div>
             <p class="result-msg">${message}</p>
 
             <div class="rewards-box">
                 <div class="reward-row">
-                    <span>Prize Money:</span>
+                    <span>Participation Prize:</span>
                     <span class="reward-amount">+$${reward}</span>
                 </div>
                 <div class="reward-row">
                     <span>Racing Rep:</span>
-                    <span class="reward-amount">+${placement === '1st Place' ? 10 : placement === '2nd Place' ? 5 : 2}</span>
+                    <span class="reward-amount">+1</span>
                 </div>
             </div>
 
@@ -987,7 +997,69 @@ function showRaceResults() {
 
     // Update UI
     updateUI();
-    addEvent(`First Shootout: ${finalSpeed} MPH - ${placement}!`, 'racing');
+    addEvent(`First Shootout: ${finalSpeed} MPH - ${playerPosition} of ${totalInClass} in ${boatClass}!`, 'racing');
+}
+
+// Generate class rankings with player finishing 2nd from last
+function generateClassRankings(playerSpeed, boatClass, playerName, playerBoatName) {
+    // Local Ozarks boat owners who compete
+    const pontoonDrivers = [
+        { driver: 'Big Mike', boat: '1989 SunTracker Party Barge' },
+        { driver: 'Catfish Charlie', boat: '1991 Tracker Bass Buggy' },
+        { driver: 'Dock Master Dan', boat: '1994 Bennington 22' },
+        { driver: 'Two-Beer Tom', boat: '1990 Lowe 224' },
+        { driver: 'Cooler King Kenny', boat: '1988 Sylvan 20' },
+        { driver: 'Slow-Mo Joe', boat: '1985 Harris FloteBote' },
+    ];
+
+    const skiBoatDrivers = [
+        { driver: 'Hotshot Harry', boat: '1984 MasterCraft Stars & Stripes' },
+        { driver: 'Wake Wizard Willy', boat: '1986 Correct Craft Ski Nautique' },
+        { driver: 'Slalom Steve', boat: '1983 Ski Supreme' },
+        { driver: 'Rope Burn Randy', boat: '1987 Malibu Skier' },
+        { driver: 'Full Throttle Fred', boat: '1985 Supra Comp' },
+        { driver: 'Propwash Pete', boat: '1981 Ski Centurion' },
+    ];
+
+    const drivers = boatClass === 'Pontoon Class' ? pontoonDrivers : skiBoatDrivers;
+
+    // Generate speeds - player is 2nd from last
+    // Fastest competitor is about 15-20% faster than player
+    // Slowest competitor is about 5% slower than player
+    const competitors = [];
+    const numCompetitors = drivers.length;
+
+    // Generate spread of speeds
+    const fastestSpeed = Math.round((playerSpeed * 1.18 + Math.random() * 3) * 10) / 10;
+    const slowestSpeed = Math.round((playerSpeed * 0.92 - Math.random() * 2) * 10) / 10;
+
+    drivers.forEach((d, idx) => {
+        // Distribute speeds between fastest and slowest
+        // Leave gaps for player to be 2nd from last
+        let speed;
+        if (idx < numCompetitors - 1) {
+            // Faster boats
+            const ratio = idx / (numCompetitors - 2);
+            speed = Math.round((fastestSpeed - ratio * (fastestSpeed - playerSpeed - 0.5)) * 10) / 10;
+        } else {
+            // Slowest boat (last place)
+            speed = slowestSpeed;
+        }
+        competitors.push({ ...d, speed, isPlayer: false });
+    });
+
+    // Add player
+    competitors.push({
+        driver: playerName,
+        boat: playerBoatName,
+        speed: playerSpeed,
+        isPlayer: true
+    });
+
+    // Sort by speed descending
+    competitors.sort((a, b) => b.speed - a.speed);
+
+    return competitors;
 }
 
 // Close race overlay and show trailer scene
@@ -1656,6 +1728,177 @@ function drawSkiSupremePreview(ctx, w, h) {
 
 window.initBoatPreviews = initBoatPreviews;
 window.drawBoatPreview = drawBoatPreview;
+
+// ==================== 8-BIT STORYTELLER CHARACTER ====================
+
+// Draw the 8-bit storyteller character - a friendly Ozarks local
+function drawStoryteller() {
+    const canvas = document.getElementById('storyteller-canvas');
+    if (!canvas) return;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    ctx.imageSmoothingEnabled = false;
+
+    // Clear canvas
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Scale factor (each "pixel" is 4x4 actual pixels)
+    const px = 4;
+
+    // Colors
+    const skinColor = '#E8B887';
+    const hairColor = '#4A3520';
+    const shirtColor = '#1A4B6B';
+    const pantsColor = '#3D5C42';
+    const hatColor = '#C47238';
+    const beltColor = '#654321';
+    const eyeColor = '#2C1810';
+    const smileColor = '#8B4513';
+
+    // Helper function to draw a pixel block
+    function drawPx(x, y, color) {
+        ctx.fillStyle = color;
+        ctx.fillRect(x * px, y * px, px, px);
+    }
+
+    // Draw the character - Ozarks local with cap and fishing shirt
+
+    // Hat (trucker cap style)
+    drawPx(5, 0, hatColor);
+    drawPx(6, 0, hatColor);
+    drawPx(7, 0, hatColor);
+    drawPx(8, 0, hatColor);
+    drawPx(9, 0, hatColor);
+    drawPx(4, 1, hatColor);
+    drawPx(5, 1, hatColor);
+    drawPx(6, 1, hatColor);
+    drawPx(7, 1, hatColor);
+    drawPx(8, 1, hatColor);
+    drawPx(9, 1, hatColor);
+    drawPx(10, 1, hatColor);
+    // Hat brim
+    drawPx(3, 2, hatColor);
+    drawPx(4, 2, hatColor);
+    drawPx(5, 2, hatColor);
+    drawPx(6, 2, hatColor);
+    drawPx(7, 2, hatColor);
+
+    // Hair visible under hat
+    drawPx(8, 2, hairColor);
+    drawPx(9, 2, hairColor);
+    drawPx(10, 2, hairColor);
+
+    // Face
+    drawPx(5, 3, skinColor);
+    drawPx(6, 3, skinColor);
+    drawPx(7, 3, skinColor);
+    drawPx(8, 3, skinColor);
+    drawPx(9, 3, skinColor);
+    drawPx(4, 4, hairColor);  // Sideburn
+    drawPx(5, 4, skinColor);
+    drawPx(6, 4, skinColor);
+    drawPx(7, 4, skinColor);
+    drawPx(8, 4, skinColor);
+    drawPx(9, 4, skinColor);
+    drawPx(10, 4, hairColor); // Sideburn
+
+    // Eyes
+    drawPx(6, 4, eyeColor);
+    drawPx(8, 4, eyeColor);
+
+    // Nose and smile
+    drawPx(5, 5, skinColor);
+    drawPx(6, 5, skinColor);
+    drawPx(7, 5, skinColor);
+    drawPx(8, 5, skinColor);
+    drawPx(9, 5, skinColor);
+    // Smile
+    drawPx(6, 6, smileColor);
+    drawPx(7, 6, skinColor);
+    drawPx(8, 6, smileColor);
+    drawPx(5, 6, skinColor);
+    drawPx(9, 6, skinColor);
+
+    // Neck
+    drawPx(6, 7, skinColor);
+    drawPx(7, 7, skinColor);
+    drawPx(8, 7, skinColor);
+
+    // Shirt (fishing/button-up style)
+    drawPx(3, 8, shirtColor);
+    drawPx(4, 8, shirtColor);
+    drawPx(5, 8, shirtColor);
+    drawPx(6, 8, shirtColor);
+    drawPx(7, 8, '#FFFFFF');  // Collar
+    drawPx(8, 8, shirtColor);
+    drawPx(9, 8, shirtColor);
+    drawPx(10, 8, shirtColor);
+    drawPx(11, 8, shirtColor);
+
+    // Body
+    for (let y = 9; y <= 12; y++) {
+        drawPx(3, y, shirtColor);
+        drawPx(4, y, shirtColor);
+        drawPx(5, y, shirtColor);
+        drawPx(6, y, shirtColor);
+        drawPx(7, y, shirtColor);
+        drawPx(8, y, shirtColor);
+        drawPx(9, y, shirtColor);
+        drawPx(10, y, shirtColor);
+        drawPx(11, y, shirtColor);
+    }
+
+    // Arms
+    drawPx(2, 9, skinColor);
+    drawPx(2, 10, skinColor);
+    drawPx(12, 9, skinColor);
+    drawPx(12, 10, skinColor);
+    // Hands
+    drawPx(2, 11, skinColor);
+    drawPx(12, 11, skinColor);
+
+    // Belt
+    drawPx(4, 13, beltColor);
+    drawPx(5, 13, beltColor);
+    drawPx(6, 13, beltColor);
+    drawPx(7, 13, '#D4A855'); // Buckle
+    drawPx(8, 13, beltColor);
+    drawPx(9, 13, beltColor);
+    drawPx(10, 13, beltColor);
+
+    // Pants
+    for (let y = 14; y <= 17; y++) {
+        drawPx(4, y, pantsColor);
+        drawPx(5, y, pantsColor);
+        drawPx(6, y, pantsColor);
+        drawPx(7, y, y < 16 ? pantsColor : '#000');  // Gap between legs
+        drawPx(8, y, pantsColor);
+        drawPx(9, y, pantsColor);
+        drawPx(10, y, pantsColor);
+    }
+
+    // Boots
+    drawPx(3, 18, '#4A3520');
+    drawPx(4, 18, '#4A3520');
+    drawPx(5, 18, '#4A3520');
+    drawPx(6, 18, '#4A3520');
+    drawPx(8, 18, '#4A3520');
+    drawPx(9, 18, '#4A3520');
+    drawPx(10, 18, '#4A3520');
+    drawPx(11, 18, '#4A3520');
+}
+
+// Initialize storyteller on welcome screen
+function initStoryteller() {
+    requestAnimationFrame(() => {
+        drawStoryteller();
+    });
+}
+
+window.drawStoryteller = drawStoryteller;
+window.initStoryteller = initStoryteller;
 
 // ==================== GAME CONFIGURATION ====================
 const CONFIG = {
@@ -6404,11 +6647,13 @@ function init() {
     // Initialize boat preview canvases on welcome screen with delay to ensure DOM ready
     setTimeout(() => {
         initBoatPreviews();
+        initStoryteller();
     }, 100);
 
     // Retry in case first attempt failed
     setTimeout(() => {
         initBoatPreviews();
+        initStoryteller();
     }, 500);
 }
 

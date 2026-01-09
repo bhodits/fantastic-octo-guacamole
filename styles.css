@@ -960,6 +960,60 @@ aside h3 {
 }
 
 /* ==================== SHOOTOUT WELCOME ==================== */
+
+/* 8-bit Storyteller Character */
+.storyteller-container {
+    display: flex;
+    align-items: flex-start;
+    gap: 15px;
+    margin-bottom: 15px;
+    padding: 10px;
+    background: linear-gradient(145deg, rgba(65, 134, 158, 0.1) 0%, rgba(26, 75, 107, 0.1) 100%);
+    border-radius: 10px;
+}
+
+#storyteller-canvas {
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+    flex-shrink: 0;
+}
+
+.storyteller-bubble {
+    background: white;
+    border: 2px solid var(--lake-deep);
+    border-radius: 15px;
+    padding: 10px 15px;
+    position: relative;
+    flex-grow: 1;
+}
+
+.storyteller-bubble::before {
+    content: '';
+    position: absolute;
+    left: -10px;
+    top: 15px;
+    border-width: 8px;
+    border-style: solid;
+    border-color: transparent var(--lake-deep) transparent transparent;
+}
+
+.storyteller-bubble::after {
+    content: '';
+    position: absolute;
+    left: -6px;
+    top: 17px;
+    border-width: 6px;
+    border-style: solid;
+    border-color: transparent white transparent transparent;
+}
+
+.storyteller-bubble p {
+    margin: 0;
+    font-size: 0.95rem;
+    color: var(--dock-brown);
+    font-style: italic;
+}
+
 .shootout-welcome h2 {
     color: var(--lake-deep);
     font-size: 2.2rem;
@@ -1811,6 +1865,65 @@ aside h3 {
 .placement-badge.gold {
     background: linear-gradient(145deg, #D4A855 0%, #B8860B 100%);
     box-shadow: 0 0 30px rgba(212, 168, 85, 0.5);
+}
+
+/* Class Rankings */
+.class-results {
+    background: linear-gradient(145deg, rgba(26, 75, 107, 0.1) 0%, rgba(65, 134, 158, 0.1) 100%);
+    padding: 15px;
+    border-radius: 10px;
+    margin: 20px 0;
+}
+
+.class-results h3 {
+    font-family: 'Rye', serif;
+    color: var(--lake-deep);
+    font-size: 1.1rem;
+    margin-bottom: 10px;
+}
+
+.rankings-list {
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.ranking-row {
+    display: grid;
+    grid-template-columns: 30px 1fr 1.5fr 70px;
+    padding: 6px 10px;
+    font-size: 0.85rem;
+    border-bottom: 1px solid rgba(102, 73, 56, 0.1);
+    text-align: left;
+}
+
+.ranking-row:last-child {
+    border-bottom: none;
+}
+
+.ranking-row.player-row {
+    background: linear-gradient(90deg, rgba(196, 114, 58, 0.2) 0%, rgba(212, 168, 85, 0.2) 100%);
+    font-weight: 700;
+    border-radius: 5px;
+}
+
+.rank-num {
+    font-weight: 700;
+    color: var(--lake-deep);
+}
+
+.rank-driver {
+    color: var(--dock-brown);
+}
+
+.rank-boat {
+    color: var(--driftwood);
+    font-size: 0.8rem;
+}
+
+.rank-speed {
+    font-weight: 600;
+    color: var(--lake-deep);
+    text-align: right;
 }
 
 .result-msg {

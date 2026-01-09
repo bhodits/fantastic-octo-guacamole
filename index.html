@@ -124,6 +124,13 @@
 
     <div id="welcome-modal" class="modal">
         <div class="modal-content shootout-welcome">
+            <div class="storyteller-container">
+                <canvas id="storyteller-canvas" width="64" height="80"></canvas>
+                <div class="storyteller-bubble">
+                    <p id="storyteller-text">It's Shootout Weekend! Biggest day of the year at the Lake!</p>
+                </div>
+            </div>
+
             <h2>THE SHOOTOUT</h2>
             <p class="shootout-tagline">Lake of the Ozarks' Biggest Day of the Year</p>
 
@@ -140,8 +147,8 @@
                         <p class="boat-nickname">"The Party Barge"</p>
                         <div class="boat-specs">
                             <span>Evinrude 88hp Outboard</span>
-                            <span>28 MPH Top Speed</span>
                             <span>12 Passengers</span>
+                            <span>Top Speed: ???</span>
                         </div>
                         <p class="boat-description">Made in Lebanon, Missouri. Those maroon stripes have seen countless summer days and sunset cruises.</p>
                     </div>
@@ -154,8 +161,8 @@
                         <p class="boat-nickname">"Red Rocket"</p>
                         <div class="boat-specs">
                             <span>Ford 351 V8 Inboard</span>
-                            <span>45 MPH Top Speed</span>
                             <span>6 Passengers</span>
+                            <span>Top Speed: ???</span>
                         </div>
                         <p class="boat-description">A California competition ski boat. That flat hull throws a perfect slalom wake.</p>
                     </div>
@@ -164,7 +171,7 @@
 
             <div class="name-input-section">
                 <label for="town-name-input">Your Name:</label>
-                <input type="text" id="town-name-input" placeholder="Enter your name..." value="">
+                <input type="text" id="town-name-input" placeholder="Enter your name..." value="Super Dave">
             </div>
 
             <button id="start-game" onclick="startGameWithBoat()">Hit the Water!</button>
