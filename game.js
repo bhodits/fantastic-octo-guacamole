@@ -2610,23 +2610,57 @@ function initInput() {
     });
 
     function startGame() {
-        gameState.playerName = document.getElementById('town-name-input').value || 'Lake Boss';
-        document.getElementById('welcome-modal').classList.add('hidden');
-        updateUI();
+        try {
+            // Hide modal FIRST
+            const modal = document.getElementById('welcome-modal');
+            if (modal) {
+                modal.style.display = 'none';
+                modal.classList.add('hidden');
+            }
+
+            // Then set player name
+            const nameInput = document.getElementById('town-name-input');
+            gameState.playerName = (nameInput && nameInput.value) ? nameInput.value : 'Lake Boss';
+
+            // Update UI
+            updateUI();
+        } catch (err) {
+            console.error('Error starting game:', err);
+            // Still hide modal even if there's an error
+            const modal = document.getElementById('welcome-modal');
+            if (modal) modal.style.display = 'none';
+        }
     }
 
-    document.getElementById('start-game').addEventListener('click', startGame);
-    document.getElementById('start-game').addEventListener('touchend', (e) => {
-        e.preventDefault();
-        startGame();
-    });
+    const startBtn = document.getElementById('start-game');
+    if (startBtn) {
+        startBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            startGame();
+        });
+        startBtn.addEventListener('touchend', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            startGame();
+        });
+        // Also handle mousedown for Brave browser
+        startBtn.addEventListener('mousedown', function(e) {
+            e.preventDefault();
+            startGame();
+        });
+    }
 
     // Allow Enter key to start game
-    document.getElementById('town-name-input').addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') {
-            startGame();
-        }
-    });
+    const nameInput = document.getElementById('town-name-input');
+    if (nameInput) {
+        nameInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                startGame();
+            }
+        });
+    }
 }
 
 function onMouseDown(e) {
