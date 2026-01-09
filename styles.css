@@ -1962,6 +1962,115 @@ aside h3 {
     100% { transform: translate(-50%, -50%) scale(1); }
 }
 
+/* ==================== CINEMATIC EVENT SYSTEM STYLES ==================== */
+
+/* Boost Bar HUD Element */
+.hud-boost {
+    position: absolute;
+    top: 20px;
+    right: 30px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 5px;
+}
+
+.boost-label {
+    color: #FFD700;
+    font-size: 0.8rem;
+    font-family: 'Cabin', sans-serif;
+    font-weight: 700;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
+    letter-spacing: 1px;
+}
+
+.boost-bar {
+    width: 150px;
+    height: 18px;
+    background: rgba(0, 0, 0, 0.6);
+    border: 2px solid #FFD700;
+    border-radius: 9px;
+    overflow: hidden;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+}
+
+.boost-fill {
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, #00FF88 0%, #00DD66 100%);
+    border-radius: 7px;
+    transition: width 0.1s linear, background-color 0.2s ease;
+    box-shadow: inset 0 2px 4px rgba(255, 255, 255, 0.3);
+}
+
+.boost-fill.active {
+    background: linear-gradient(90deg, #FF6600 0%, #FF9900 50%, #FFCC00 100%);
+    animation: boost-flame 0.15s infinite alternate;
+}
+
+@keyframes boost-flame {
+    0% { box-shadow: inset 0 0 10px rgba(255, 150, 0, 0.8); }
+    100% { box-shadow: inset 0 0 20px rgba(255, 200, 0, 1); }
+}
+
+/* Race Stakes Banner */
+.race-stakes-banner {
+    position: absolute;
+    top: 15%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: linear-gradient(135deg, rgba(139, 0, 0, 0.95) 0%, rgba(80, 0, 0, 0.95) 100%);
+    padding: 15px 40px;
+    border-radius: 8px;
+    border: 3px solid #FFD700;
+    box-shadow:
+        0 0 30px rgba(255, 215, 0, 0.4),
+        0 10px 40px rgba(0, 0, 0, 0.5);
+    animation: stakes-pulse 2s infinite;
+    z-index: 50;
+    transition: opacity 0.5s ease;
+}
+
+.race-stakes-banner.fade-out {
+    opacity: 0;
+    pointer-events: none;
+}
+
+.stakes-text {
+    color: #FFD700;
+    font-family: 'Rye', serif;
+    font-size: 1.8rem;
+    font-weight: 700;
+    text-shadow:
+        0 2px 4px rgba(0, 0, 0, 0.8),
+        0 0 20px rgba(255, 215, 0, 0.5);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+}
+
+@keyframes stakes-pulse {
+    0%, 100% {
+        box-shadow:
+            0 0 30px rgba(255, 215, 0, 0.4),
+            0 10px 40px rgba(0, 0, 0, 0.5);
+    }
+    50% {
+        box-shadow:
+            0 0 50px rgba(255, 215, 0, 0.7),
+            0 10px 40px rgba(0, 0, 0, 0.5);
+    }
+}
+
+/* Dialogue Skip Hint */
+.dialogue-skip-hint {
+    position: absolute;
+    bottom: 20px;
+    right: 40px;
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 0.8rem;
+    font-family: 'Cabin', sans-serif;
+}
+
 /* Race Results Screen */
 .race-results-screen {
     position: absolute;

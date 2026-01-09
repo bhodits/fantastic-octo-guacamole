@@ -441,6 +441,559 @@ const VisualEffectsManager = {
     }
 };
 
+// ==================== CINEMATIC EVENT SYSTEM ====================
+// Professional-grade race experience with parallax, boost, and story elements
+const CinematicEventSystem = {
+    // === PARALLAX SCROLLING SYSTEM ===
+    // Three layers moving at different speeds for depth
+    parallaxLayers: {
+        // Layer 0: Far background (mountains, distant trees) - slowest
+        far: {
+            speed: 0.15,  // 15% of main scroll speed
+            offset: 0,
+            elements: []
+        },
+        // Layer 1: Mid-ground (state park, spectator boats) - medium
+        mid: {
+            speed: 0.5,   // 50% of main scroll speed
+            offset: 0,
+            elements: []
+        },
+        // Layer 2: Near (water, buoys, main action) - fastest (1:1)
+        near: {
+            speed: 1.0,
+            offset: 0,
+            elements: []
+        }
+    },
+
+    // === BOOST SYSTEM ===
+    boost: {
+        available: 100,      // Nitro fuel (0-100)
+        maxFuel: 100,
+        rechargeRate: 8,     // Fuel regained per second when not boosting
+        drainRate: 35,       // Fuel used per second while boosting
+        multiplier: 1.4,     // Speed multiplier when boosting
+        active: false,
+        cooldown: 0,         // Cooldown after depleting
+        cooldownDuration: 2, // Seconds before can boost again after empty
+        // Visual effects
+        flamePhase: 0,
+        exhaustParticles: []
+    },
+
+    // === PRE-RACE DIALOGUE SYSTEM ===
+    dialogue: {
+        active: false,
+        currentLine: 0,
+        charIndex: 0,
+        typewriterSpeed: 40,  // ms per character
+        lastCharTime: 0,
+        autoAdvanceDelay: 2000,
+        lines: [],
+        onComplete: null
+    },
+
+    // === CAMERA SHAKE ===
+    cameraShake: {
+        intensity: 0,
+        duration: 0,
+        frequency: 30,
+        offset: { x: 0, y: 0 }
+    },
+
+    // Initialize the cinematic system
+    init() {
+        this.generateParallaxElements();
+        this.resetBoost();
+        console.log('[Cinematic] CinematicEventSystem initialized');
+    },
+
+    // Generate static elements for parallax layers
+    generateParallaxElements() {
+        // Far layer: distant mountains and clouds
+        this.parallaxLayers.far.elements = [];
+        for (let i = 0; i < 8; i++) {
+            this.parallaxLayers.far.elements.push({
+                type: 'mountain',
+                x: i * 400,
+                height: 40 + Math.random() * 60,
+                width: 200 + Math.random() * 200,
+                color: `hsl(${200 + Math.random() * 20}, 30%, ${25 + Math.random() * 15}%)`
+            });
+        }
+        // Add clouds
+        for (let i = 0; i < 5; i++) {
+            this.parallaxLayers.far.elements.push({
+                type: 'cloud',
+                x: i * 500 + Math.random() * 200,
+                y: 30 + Math.random() * 60,
+                width: 80 + Math.random() * 60,
+                opacity: 0.4 + Math.random() * 0.3
+            });
+        }
+
+        // Mid layer: trees and structures
+        this.parallaxLayers.mid.elements = [];
+        for (let i = 0; i < 15; i++) {
+            this.parallaxLayers.mid.elements.push({
+                type: 'tree',
+                x: i * 150 + Math.random() * 50,
+                height: 30 + Math.random() * 40,
+                variant: Math.floor(Math.random() * 3)
+            });
+        }
+    },
+
+    // === UPDATE FUNCTIONS ===
+    update(deltaTime, scrollSpeed) {
+        const dt = deltaTime / 1000;
+
+        // Update parallax layer offsets
+        this.parallaxLayers.far.offset += scrollSpeed * this.parallaxLayers.far.speed * dt;
+        this.parallaxLayers.mid.offset += scrollSpeed * this.parallaxLayers.mid.speed * dt;
+        this.parallaxLayers.near.offset += scrollSpeed * this.parallaxLayers.near.speed * dt;
+
+        // Update boost system
+        this.updateBoost(dt);
+
+        // Update camera shake
+        this.updateCameraShake(dt);
+
+        // Update dialogue typewriter
+        if (this.dialogue.active) {
+            this.updateDialogue();
+        }
+    },
+
+    updateBoost(dt) {
+        // Handle cooldown
+        if (this.boost.cooldown > 0) {
+            this.boost.cooldown -= dt;
+            this.boost.active = false;
+        }
+
+        // Drain or recharge fuel
+        if (this.boost.active && this.boost.cooldown <= 0) {
+            this.boost.available -= this.boost.drainRate * dt;
+            this.boost.flamePhase += dt * 15; // Fast flame animation
+
+            // Generate exhaust particles
+            if (Math.random() < 0.5) {
+                this.boost.exhaustParticles.push({
+                    x: 0, y: 0,  // Relative to boat
+                    vx: -50 - Math.random() * 100,
+                    vy: (Math.random() - 0.5) * 40,
+                    life: 0.4 + Math.random() * 0.3,
+                    size: 8 + Math.random() * 12,
+                    color: Math.random() > 0.5 ? '#FF6600' : '#FFAA00'
+                });
+            }
+
+            if (this.boost.available <= 0) {
+                this.boost.available = 0;
+                this.boost.active = false;
+                this.boost.cooldown = this.boost.cooldownDuration;
+            }
+        } else if (!this.boost.active) {
+            // Recharge when not boosting
+            this.boost.available = Math.min(
+                this.boost.maxFuel,
+                this.boost.available + this.boost.rechargeRate * dt
+            );
+        }
+
+        // Update exhaust particles
+        this.boost.exhaustParticles = this.boost.exhaustParticles.filter(p => {
+            p.x += p.vx * dt;
+            p.y += p.vy * dt;
+            p.life -= dt;
+            p.size *= 0.95;
+            return p.life > 0;
+        });
+    },
+
+    updateCameraShake(dt) {
+        if (this.cameraShake.duration > 0) {
+            this.cameraShake.duration -= dt;
+            const t = Date.now() * this.cameraShake.frequency;
+            this.cameraShake.offset = {
+                x: Math.sin(t) * this.cameraShake.intensity,
+                y: Math.cos(t * 1.3) * this.cameraShake.intensity * 0.7
+            };
+        } else {
+            this.cameraShake.intensity = 0;
+            this.cameraShake.offset = { x: 0, y: 0 };
+        }
+    },
+
+    updateDialogue() {
+        if (!this.dialogue.active || this.dialogue.lines.length === 0) return;
+
+        const now = Date.now();
+        const line = this.dialogue.lines[this.dialogue.currentLine];
+        if (!line) return;
+
+        // Typewriter effect
+        if (this.dialogue.charIndex < line.text.length) {
+            if (now - this.dialogue.lastCharTime >= this.dialogue.typewriterSpeed) {
+                this.dialogue.charIndex++;
+                this.dialogue.lastCharTime = now;
+            }
+        }
+    },
+
+    // === BOOST CONTROLS ===
+    startBoost() {
+        if (this.boost.available > 10 && this.boost.cooldown <= 0) {
+            this.boost.active = true;
+            // Trigger screen shake when boosting
+            this.triggerShake(3, 0.1);
+        }
+    },
+
+    stopBoost() {
+        this.boost.active = false;
+    },
+
+    resetBoost() {
+        this.boost.available = this.boost.maxFuel;
+        this.boost.active = false;
+        this.boost.cooldown = 0;
+        this.boost.exhaustParticles = [];
+    },
+
+    getBoostMultiplier() {
+        return this.boost.active ? this.boost.multiplier : 1.0;
+    },
+
+    // === CAMERA SHAKE ===
+    triggerShake(intensity, duration) {
+        this.cameraShake.intensity = intensity;
+        this.cameraShake.duration = duration;
+    },
+
+    getShakeOffset() {
+        return this.cameraShake.offset;
+    },
+
+    // === DIALOGUE SYSTEM ===
+    // Start pre-race dialogue sequence
+    startDialogue(lines, onComplete = null) {
+        this.dialogue.active = true;
+        this.dialogue.lines = lines;
+        this.dialogue.currentLine = 0;
+        this.dialogue.charIndex = 0;
+        this.dialogue.lastCharTime = Date.now();
+        this.dialogue.onComplete = onComplete;
+    },
+
+    advanceDialogue() {
+        const line = this.dialogue.lines[this.dialogue.currentLine];
+        if (!line) return;
+
+        // If still typing, complete the line instantly
+        if (this.dialogue.charIndex < line.text.length) {
+            this.dialogue.charIndex = line.text.length;
+            return;
+        }
+
+        // Move to next line
+        this.dialogue.currentLine++;
+        this.dialogue.charIndex = 0;
+        this.dialogue.lastCharTime = Date.now();
+
+        // Check if dialogue complete
+        if (this.dialogue.currentLine >= this.dialogue.lines.length) {
+            this.dialogue.active = false;
+            if (this.dialogue.onComplete) {
+                this.dialogue.onComplete();
+            }
+        }
+    },
+
+    skipDialogue() {
+        this.dialogue.active = false;
+        if (this.dialogue.onComplete) {
+            this.dialogue.onComplete();
+        }
+    },
+
+    getCurrentDialogueLine() {
+        if (!this.dialogue.active) return null;
+        const line = this.dialogue.lines[this.dialogue.currentLine];
+        if (!line) return null;
+        return {
+            ...line,
+            displayText: line.text.substring(0, this.dialogue.charIndex),
+            isComplete: this.dialogue.charIndex >= line.text.length
+        };
+    },
+
+    // === RENDER FUNCTIONS ===
+    // Render parallax far layer (mountains, clouds)
+    renderFarLayer(ctx, w, h) {
+        const horizonY = h * 0.4;
+        const offset = this.parallaxLayers.far.offset;
+
+        // Draw distant mountains with parallax offset
+        this.parallaxLayers.far.elements.forEach(el => {
+            const x = ((el.x - offset) % (w + 500)) - 100;
+
+            if (el.type === 'mountain') {
+                ctx.fillStyle = el.color;
+                ctx.beginPath();
+                ctx.moveTo(x, horizonY);
+                ctx.lineTo(x + el.width * 0.3, horizonY - el.height);
+                ctx.lineTo(x + el.width * 0.7, horizonY - el.height * 0.8);
+                ctx.lineTo(x + el.width, horizonY);
+                ctx.closePath();
+                ctx.fill();
+            } else if (el.type === 'cloud') {
+                ctx.fillStyle = `rgba(255, 255, 255, ${el.opacity})`;
+                // N64-style blocky cloud
+                ctx.fillRect(x, el.y, el.width, 15);
+                ctx.fillRect(x + 10, el.y - 10, el.width - 20, 10);
+                ctx.fillRect(x + 20, el.y + 15, el.width - 40, 10);
+            }
+        });
+    },
+
+    // Render parallax mid layer (trees, structures)
+    renderMidLayer(ctx, w, h) {
+        const horizonY = h * 0.4;
+        const offset = this.parallaxLayers.mid.offset;
+
+        this.parallaxLayers.mid.elements.forEach(el => {
+            const x = ((el.x - offset) % (w + 300)) - 50;
+
+            if (el.type === 'tree') {
+                // N64 blocky tree
+                const treeColors = ['#1A4028', '#2A5A3A', '#1A3A20'];
+                ctx.fillStyle = treeColors[el.variant];
+                ctx.beginPath();
+                ctx.moveTo(x - 12, horizonY - 5);
+                ctx.lineTo(x, horizonY - 5 - el.height);
+                ctx.lineTo(x + 12, horizonY - 5);
+                ctx.closePath();
+                ctx.fill();
+
+                // Trunk
+                ctx.fillStyle = '#4A3020';
+                ctx.fillRect(x - 3, horizonY - 8, 6, 8);
+            }
+        });
+    },
+
+    // Render boost gauge UI
+    renderBoostGauge(ctx, x, y, width, height) {
+        // Background
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+        ctx.fillRect(x, y, width, height);
+
+        // Border
+        ctx.strokeStyle = '#FFD700';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(x, y, width, height);
+
+        // Fuel level
+        const fuelPercent = this.boost.available / this.boost.maxFuel;
+        const fuelColor = this.boost.active ? '#FF6600' :
+                         (this.boost.cooldown > 0 ? '#666666' :
+                         (fuelPercent > 0.3 ? '#00FF88' : '#FF4444'));
+
+        ctx.fillStyle = fuelColor;
+        ctx.fillRect(x + 2, y + 2, (width - 4) * fuelPercent, height - 4);
+
+        // "NITRO" label
+        ctx.font = 'bold 10px "Cabin", sans-serif';
+        ctx.fillStyle = '#FFFFFF';
+        ctx.textAlign = 'center';
+        ctx.fillText('NITRO', x + width / 2, y - 5);
+
+        // Boost active flame effect
+        if (this.boost.active) {
+            const flameH = 8 + Math.sin(this.boost.flamePhase) * 4;
+            ctx.fillStyle = '#FF6600';
+            ctx.beginPath();
+            ctx.moveTo(x + width + 2, y + height / 2 - 6);
+            ctx.lineTo(x + width + flameH, y + height / 2);
+            ctx.lineTo(x + width + 2, y + height / 2 + 6);
+            ctx.closePath();
+            ctx.fill();
+        }
+    },
+
+    // Render exhaust particles (call after boat)
+    renderExhaustParticles(ctx, boatX, boatY) {
+        this.boost.exhaustParticles.forEach(p => {
+            ctx.globalAlpha = p.life * 2;
+            ctx.fillStyle = p.color;
+            ctx.fillRect(boatX + p.x - p.size/2, boatY + p.y + 40, p.size, p.size);
+        });
+        ctx.globalAlpha = 1;
+    },
+
+    // Render dialogue overlay
+    renderDialogueOverlay(ctx, w, h) {
+        if (!this.dialogue.active) return;
+
+        const line = this.getCurrentDialogueLine();
+        if (!line) return;
+
+        // Dim background
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+        ctx.fillRect(0, 0, w, h);
+
+        // Dialogue box at bottom
+        const boxHeight = 160;
+        const boxY = h - boxHeight - 40;
+
+        // Box background
+        ctx.fillStyle = 'rgba(20, 40, 60, 0.95)';
+        ctx.fillRect(40, boxY, w - 80, boxHeight);
+
+        // Box border
+        ctx.strokeStyle = '#FFD700';
+        ctx.lineWidth = 3;
+        ctx.strokeRect(40, boxY, w - 80, boxHeight);
+
+        // Character name plate
+        ctx.fillStyle = line.speaker === 'player' ? '#4A9ADA' : '#DA4A4A';
+        ctx.fillRect(60, boxY - 20, 180, 30);
+        ctx.font = 'bold 18px "Cabin", sans-serif';
+        ctx.fillStyle = '#FFFFFF';
+        ctx.textAlign = 'left';
+        ctx.fillText(line.name || (line.speaker === 'player' ? 'YOU' : 'RIVAL'), 75, boxY + 2);
+
+        // Character portrait (N64 blocky style)
+        const portraitX = line.speaker === 'player' ? 80 : w - 180;
+        this.drawPortrait(ctx, portraitX, boxY + 30, line.speaker);
+
+        // Dialogue text with typewriter effect
+        ctx.font = '20px "Cabin", sans-serif';
+        ctx.fillStyle = '#FFFFFF';
+        ctx.textAlign = 'left';
+
+        // Word wrap the text
+        const textX = line.speaker === 'player' ? 200 : 100;
+        const maxWidth = w - 320;
+        const words = line.displayText.split(' ');
+        let currentLine = '';
+        let lineY = boxY + 50;
+
+        words.forEach(word => {
+            const testLine = currentLine + word + ' ';
+            const metrics = ctx.measureText(testLine);
+            if (metrics.width > maxWidth && currentLine !== '') {
+                ctx.fillText(currentLine, textX, lineY);
+                currentLine = word + ' ';
+                lineY += 28;
+            } else {
+                currentLine = testLine;
+            }
+        });
+        ctx.fillText(currentLine, textX, lineY);
+
+        // Continue prompt
+        if (line.isComplete) {
+            ctx.font = '14px "Cabin", sans-serif';
+            ctx.fillStyle = '#FFD700';
+            ctx.textAlign = 'right';
+            const blink = Math.sin(Date.now() * 0.005) > 0;
+            if (blink) {
+                ctx.fillText('Press SPACE or CLICK to continue...', w - 60, boxY + boxHeight - 15);
+            }
+        }
+    },
+
+    // Draw N64-style character portrait
+    drawPortrait(ctx, x, y, speaker) {
+        ctx.save();
+        ctx.translate(x, y);
+
+        if (speaker === 'player') {
+            // Player: friendly face, cap
+            ctx.fillStyle = '#DEB887';  // Skin
+            ctx.fillRect(0, 20, 60, 50);
+
+            // Cap
+            ctx.fillStyle = '#1E90FF';
+            ctx.fillRect(-5, 5, 70, 20);
+            ctx.fillRect(10, 0, 40, 10);
+
+            // Eyes
+            ctx.fillStyle = '#FFFFFF';
+            ctx.fillRect(10, 35, 15, 12);
+            ctx.fillRect(35, 35, 15, 12);
+            ctx.fillStyle = '#000000';
+            ctx.fillRect(15, 38, 8, 8);
+            ctx.fillRect(40, 38, 8, 8);
+
+            // Smile
+            ctx.fillStyle = '#8B4513';
+            ctx.fillRect(20, 55, 20, 5);
+        } else {
+            // Rival: mean face, sunglasses
+            ctx.fillStyle = '#D2691E';  // Tan skin
+            ctx.fillRect(0, 15, 60, 55);
+
+            // Slicked hair
+            ctx.fillStyle = '#1A1A1A';
+            ctx.fillRect(-5, 0, 70, 20);
+            ctx.fillRect(55, 15, 10, 15);
+
+            // Sunglasses
+            ctx.fillStyle = '#000000';
+            ctx.fillRect(5, 30, 50, 15);
+            ctx.fillStyle = '#333333';
+            ctx.fillRect(8, 33, 18, 9);
+            ctx.fillRect(34, 33, 18, 9);
+
+            // Smirk
+            ctx.fillStyle = '#8B0000';
+            ctx.fillRect(15, 55, 30, 5);
+            ctx.fillRect(35, 50, 10, 5);
+        }
+
+        ctx.restore();
+    }
+};
+
+// Pre-race dialogue script for "Player vs Rival for the Deed"
+const PRE_RACE_DIALOGUE = [
+    {
+        speaker: 'rival',
+        name: 'BUCK THORNTON',
+        text: "Well, well... look who showed up. That rusty heap of yours actually made it to the starting line?"
+    },
+    {
+        speaker: 'player',
+        name: 'YOU',
+        text: "My boat runs just fine, Buck. Unlike your attitude."
+    },
+    {
+        speaker: 'rival',
+        name: 'BUCK THORNTON',
+        text: "Ha! You know the stakes, right? Winner takes the deed to that prime lakefront property."
+    },
+    {
+        speaker: 'player',
+        name: 'YOU',
+        text: "I know. And when I win, I'm building the best marina the Ozarks has ever seen."
+    },
+    {
+        speaker: 'rival',
+        name: 'BUCK THORNTON',
+        text: "IF you win. My 800-horsepower beast says otherwise. See you at the finish line... or in my wake!"
+    },
+    {
+        speaker: 'player',
+        name: 'YOU',
+        text: "Talk is cheap, Buck. Let's settle this on the water."
+    }
+];
+
 // ==================== NARRATIVE EVENT MANAGER ====================
 const NarrativeEventManager = {
     // Track triggered events to prevent repeats
@@ -1469,7 +2022,10 @@ function showFirstShootoutRace() {
     const boat = STARTER_BOATS[selectedStarterBoat];
     const activeBoat = gameState.garage.boats[0];
 
-    // Create full-screen racing overlay
+    // Initialize CinematicEventSystem for parallax and boost
+    CinematicEventSystem.init();
+
+    // Create full-screen racing overlay with enhanced HUD
     const raceOverlay = document.createElement('div');
     raceOverlay.id = 'race-overlay';
     raceOverlay.innerHTML = `
@@ -1480,9 +2036,18 @@ function showFirstShootoutRace() {
                 <span class="speed-label">MPH</span>
             </div>
             <div class="hud-boat-name">${boat.nickname}</div>
-            <div class="hud-status">APPROACH - Keep it under 40!</div>
+            <div class="hud-status">THE SHOOTOUT - For the Deed!</div>
+            <div class="hud-boost">
+                <span class="boost-label">NITRO [SHIFT]</span>
+                <div class="boost-bar">
+                    <div class="boost-fill" id="boost-fill"></div>
+                </div>
+            </div>
         </div>
         <div id="race-sign"></div>
+        <div id="race-stakes" class="race-stakes-banner">
+            <span class="stakes-text">WINNER TAKES THE DEED</span>
+        </div>
     `;
     document.body.appendChild(raceOverlay);
 
@@ -1504,7 +2069,7 @@ function showFirstShootoutRace() {
     raceState.waterOffset = 0;
     raceState.wavePhase = 0;
     raceState.particles = [];
-    raceState.phase = 'approach';  // Start in approach phase
+    raceState.phase = 'dialogue';  // Start with pre-race dialogue!
     raceState.coursePosition = 0;
     raceState.startLinePos = 400;
     raceState.finishLinePos = 2400;
@@ -1515,15 +2080,24 @@ function showFirstShootoutRace() {
     raceState.penalized = false;
     raceState.startTime = 0;
     raceState.finalSpeed = 0;
+    raceState.lastFrameTime = Date.now();
 
-    // Setup controls
+    // Setup controls (includes dialogue advancement)
     setupRaceControls();
 
-    // Start approach phase - player controls speed
-    raceState.phase = 'approach';
-    updateRaceStatus('APPROACH - Stay under 40 MPH!');
+    // Start pre-race dialogue sequence
+    CinematicEventSystem.startDialogue(PRE_RACE_DIALOGUE, () => {
+        // Dialogue complete - transition to approach phase
+        raceState.phase = 'approach';
+        updateRaceStatus('APPROACH - Stay under 40 MPH!');
+        showRaceSign('READY...', '#FFD700', 1500);
 
-    // Begin rendering
+        // Hide stakes banner after dialogue
+        const stakesEl = document.getElementById('race-stakes');
+        if (stakesEl) stakesEl.classList.add('fade-out');
+    });
+
+    // Begin rendering (will show dialogue overlay first)
     renderRaceFrame();
 }
 window.showFirstShootoutRace = showFirstShootoutRace;
@@ -1553,21 +2127,59 @@ function setupRaceControls() {
         raceState.throttle = 0;
     };
 
+    const handleBoostStart = () => {
+        if (raceState.phase === 'racing') {
+            CinematicEventSystem.startBoost();
+        }
+    };
+
+    const handleBoostEnd = () => {
+        CinematicEventSystem.stopBoost();
+    };
+
     const handleSteerLeft = () => {
-        if (raceState.active) raceState.boatLane = Math.max(-1, raceState.boatLane - 0.05);
+        if (raceState.active && raceState.phase !== 'dialogue') {
+            raceState.boatLane = Math.max(-1, raceState.boatLane - 0.05);
+        }
     };
 
     const handleSteerRight = () => {
-        if (raceState.active) raceState.boatLane = Math.min(1, raceState.boatLane + 0.05);
+        if (raceState.active && raceState.phase !== 'dialogue') {
+            raceState.boatLane = Math.min(1, raceState.boatLane + 0.05);
+        }
+    };
+
+    const handleDialogueAdvance = () => {
+        if (raceState.phase === 'dialogue' && CinematicEventSystem.dialogue.active) {
+            CinematicEventSystem.advanceDialogue();
+            return true;
+        }
+        return false;
     };
 
     // Create bound handlers for cleanup
     raceControlHandlers.keydown = (e) => {
         if (!raceState.active) return;
+
+        // Space key - dialogue or throttle
         if (e.code === 'Space') {
             e.preventDefault();
-            handleThrottleStart();
+            if (!handleDialogueAdvance()) {
+                handleThrottleStart();
+            }
         }
+
+        // Shift key - BOOST!
+        if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') {
+            e.preventDefault();
+            handleBoostStart();
+        }
+
+        // Escape - skip dialogue
+        if (e.code === 'Escape' && raceState.phase === 'dialogue') {
+            CinematicEventSystem.skipDialogue();
+        }
+
         if (e.code === 'ArrowLeft' || e.code === 'KeyA') handleSteerLeft();
         if (e.code === 'ArrowRight' || e.code === 'KeyD') handleSteerRight();
     };
@@ -1576,11 +2188,32 @@ function setupRaceControls() {
         if (e.code === 'Space' && raceState.active) {
             handleThrottleEnd();
         }
+        if ((e.code === 'ShiftLeft' || e.code === 'ShiftRight') && raceState.active) {
+            handleBoostEnd();
+        }
     };
 
-    raceControlHandlers.mousedown = handleThrottleStart;
-    raceControlHandlers.mouseup = handleThrottleEnd;
-    raceControlHandlers.mouseleave = handleThrottleEnd;
+    raceControlHandlers.mousedown = (e) => {
+        // Left click - dialogue or throttle
+        if (e.button === 0) {
+            if (!handleDialogueAdvance()) {
+                handleThrottleStart();
+            }
+        }
+        // Right click - boost
+        if (e.button === 2) {
+            e.preventDefault();
+            handleBoostStart();
+        }
+    };
+    raceControlHandlers.mouseup = (e) => {
+        if (e.button === 0) handleThrottleEnd();
+        if (e.button === 2) handleBoostEnd();
+    };
+    raceControlHandlers.mouseleave = () => {
+        handleThrottleEnd();
+        handleBoostEnd();
+    };
 
     // Add keyboard listeners
     document.addEventListener('keydown', raceControlHandlers.keydown);
@@ -1669,11 +2302,29 @@ function renderRaceFrame() {
     const w = canvas.width;
     const h = canvas.height;
 
-    // Update physics
-    updateRacePhysics();
+    // Calculate delta time for smooth animations
+    const now = Date.now();
+    const deltaTime = now - (raceState.lastFrameTime || now);
+    raceState.lastFrameTime = now;
+
+    // Update CinematicEventSystem (parallax, boost, dialogue)
+    const scrollSpeed = raceState.currentSpeed * 10;
+    CinematicEventSystem.update(deltaTime, scrollSpeed);
+
+    // Update physics (only when not in dialogue)
+    if (raceState.phase !== 'dialogue') {
+        updateRacePhysics();
+    }
+
+    // Get camera shake offset
+    const shake = CinematicEventSystem.getShakeOffset();
+
+    // Apply camera shake transform
+    ctx.save();
+    ctx.translate(shake.x, shake.y);
 
     // Clear
-    ctx.clearRect(0, 0, w, h);
+    ctx.clearRect(-10, -10, w + 20, h + 20);
 
     // Draw sky gradient
     const skyGrad = ctx.createLinearGradient(0, 0, 0, h * 0.4);
@@ -1682,7 +2333,13 @@ function renderRaceFrame() {
     ctx.fillStyle = skyGrad;
     ctx.fillRect(0, 0, w, h * 0.4);
 
-    // Draw State Park (left side - trees and hills)
+    // === PARALLAX LAYER 1: FAR (mountains, clouds) ===
+    CinematicEventSystem.renderFarLayer(ctx, w, h);
+
+    // === PARALLAX LAYER 2: MID (additional trees) ===
+    CinematicEventSystem.renderMidLayer(ctx, w, h);
+
+    // Draw State Park (left side - trees and hills) - also affected by mid parallax
     drawStateParkScenery(ctx, w, h);
 
     // Draw spectator boats (right side)
@@ -1708,12 +2365,40 @@ function renderRaceFrame() {
         drawRoosterTail(ctx, w, h);
     }
 
-    // Update HUD
+    // === BOOST EFFECTS ===
+    // Render boost exhaust particles behind boat
+    if (CinematicEventSystem.boost.active || CinematicEventSystem.boost.exhaustParticles.length > 0) {
+        CinematicEventSystem.renderExhaustParticles(ctx, raceState.boatX, raceState.boatY);
+    }
+
+    // Render boost gauge on canvas (top-right corner)
+    CinematicEventSystem.renderBoostGauge(ctx, w - 180, 20, 150, 20);
+
+    // Restore camera transform
+    ctx.restore();
+
+    // === DIALOGUE OVERLAY (on top of everything, no shake) ===
+    if (raceState.phase === 'dialogue') {
+        CinematicEventSystem.renderDialogueOverlay(ctx, w, h);
+    }
+
+    // Update HUD elements
     const speedEl = document.querySelector('.speed-value');
     if (speedEl) speedEl.textContent = Math.round(raceState.currentSpeed);
 
-    // Check phase transitions
-    checkRacePhases();
+    // Update boost bar in HUD (HTML version)
+    const boostFill = document.getElementById('boost-fill');
+    if (boostFill) {
+        const percent = (CinematicEventSystem.boost.available / CinematicEventSystem.boost.maxFuel) * 100;
+        boostFill.style.width = percent + '%';
+        boostFill.style.backgroundColor = CinematicEventSystem.boost.active ? '#FF6600' :
+            (CinematicEventSystem.boost.cooldown > 0 ? '#666' : '#00FF88');
+    }
+
+    // Check phase transitions (not during dialogue)
+    if (raceState.phase !== 'dialogue') {
+        checkRacePhases();
+    }
 
     // Continue loop (stop when finish animation or finished)
     if (raceState.active && raceState.phase !== 'finished' && raceState.phase !== 'finish_animation') {
@@ -1783,20 +2468,33 @@ function updateRacePhysics() {
     // Physics runs during approach and racing phases
     if (raceState.phase !== 'approach' && raceState.phase !== 'racing') return;
 
+    // Get boost multiplier from CinematicEventSystem
+    const boostMultiplier = CinematicEventSystem.getBoostMultiplier();
+    const isBoosting = CinematicEventSystem.boost.active;
+
+    // Calculate effective max speed with boost
+    const effectiveMaxSpeed = raceState.maxSpeed * boostMultiplier;
+
     // SLOW acceleration - pontoon reaches ~13 MPH at start, takes time to build speed
-    const acceleration = raceState.maxSpeed * 0.004; // Much slower acceleration
-    const deceleration = raceState.maxSpeed * 0.003; // Slower deceleration too
+    // Boost increases acceleration rate too
+    const acceleration = raceState.maxSpeed * 0.004 * (isBoosting ? 1.5 : 1);
+    const deceleration = raceState.maxSpeed * 0.003;
 
     if (raceState.throttle > 0) {
-        // Accelerate towards max speed
+        // Accelerate towards max speed (boosted if active)
         raceState.currentSpeed += acceleration * raceState.throttle;
-        if (raceState.currentSpeed > raceState.maxSpeed) {
-            raceState.currentSpeed = raceState.maxSpeed;
+        if (raceState.currentSpeed > effectiveMaxSpeed) {
+            raceState.currentSpeed = effectiveMaxSpeed;
         }
     } else {
         // Slow down
         raceState.currentSpeed -= deceleration;
         if (raceState.currentSpeed < 0) raceState.currentSpeed = 0;
+    }
+
+    // Continuous screen shake while boosting
+    if (isBoosting && raceState.phase === 'racing') {
+        CinematicEventSystem.triggerShake(4 + Math.random() * 2, 0.05);
     }
 
     // Update course position based on speed (tuned for ~15 second race)
@@ -1810,15 +2508,16 @@ function updateRacePhysics() {
     const targetX = raceState.canvas.width / 2 + raceState.boatLane * 100;
     raceState.boatX += (targetX - raceState.boatX) * 0.1;
 
-    // Generate spray particles
-    if (raceState.currentSpeed > 10 && Math.random() < raceState.currentSpeed / 50) {
+    // Generate spray particles (more when boosting)
+    const sprayChance = isBoosting ? raceState.currentSpeed / 25 : raceState.currentSpeed / 50;
+    if (raceState.currentSpeed > 10 && Math.random() < sprayChance) {
         raceState.particles.push({
             x: raceState.boatX + (Math.random() - 0.5) * 60,
             y: raceState.boatY + 40,
-            vx: (Math.random() - 0.5) * 3,
-            vy: -Math.random() * 5 - 2,
+            vx: (Math.random() - 0.5) * (isBoosting ? 6 : 3),
+            vy: -Math.random() * (isBoosting ? 8 : 5) - 2,
             life: 1,
-            size: Math.random() * 4 + 2
+            size: Math.random() * (isBoosting ? 6 : 4) + 2
         });
     }
 
