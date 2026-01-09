@@ -85,184 +85,568 @@ function startGameWithBoat() {
 }
 window.startGameWithBoat = startGameWithBoat;
 
-// Show the first Shootout race experience
+// ==================== DRIVING SIMULATION ====================
+// Racing simulation state
+let raceState = {
+    active: false,
+    canvas: null,
+    ctx: null,
+    animationFrame: null,
+    startTime: 0,
+    currentSpeed: 0,
+    maxSpeed: 0,
+    throttle: 0,
+    boatX: 0,
+    boatY: 0,
+    waterOffset: 0,
+    wavePhase: 0,
+    particles: [],
+    countdown: 3,
+    phase: 'countdown' // 'countdown', 'racing', 'finished'
+};
+
+// Show the first Shootout race experience - now launches driving sim
 function showFirstShootoutRace() {
     const boat = STARTER_BOATS[selectedStarterBoat];
     const activeBoat = gameState.garage.boats[0];
 
-    const raceModal = document.getElementById('race-modal');
-    const raceTitle = document.getElementById('race-title');
-    const raceContent = document.getElementById('race-content');
-
-    if (!raceModal || !raceContent) return;
-
-    raceTitle.textContent = 'YOUR FIRST SHOOTOUT';
-
-    raceContent.innerHTML = `
-        <div class="first-race-intro">
-            <p class="race-story">It's Shootout Weekend at Lake of the Ozarks - the biggest powerboat racing event in the Midwest!</p>
-            <p class="race-story">You've trailered your <strong>${boat.nickname}</strong> down to Captain Ron's for the big event.</p>
-
-            <div class="your-boat-display">
-                <canvas id="race-boat-preview" width="400" height="200"></canvas>
-                <div class="boat-race-stats">
-                    <h3>${boat.name}</h3>
-                    <p>"${boat.nickname}"</p>
-                    <div class="stat-row"><span>Engine:</span> <span>${boat.engine}</span></div>
-                    <div class="stat-row"><span>Top Speed:</span> <span>${activeBoat.stats.topSpeed} MPH</span></div>
-                    <div class="stat-row"><span>Handling:</span> <span>${Math.round(activeBoat.stats.handling * 100)}%</span></div>
-                </div>
+    // Create full-screen racing overlay
+    const raceOverlay = document.createElement('div');
+    raceOverlay.id = 'race-overlay';
+    raceOverlay.innerHTML = `
+        <canvas id="race-canvas"></canvas>
+        <div id="race-hud">
+            <div class="hud-speed">
+                <span class="speed-value">0</span>
+                <span class="speed-label">MPH</span>
             </div>
-
-            <div class="race-classes">
-                <h3>Shootout Classes:</h3>
-                <div class="class-entry ${activeBoat.stats.topSpeed < 50 ? 'your-class' : ''}">
-                    <span class="class-name">Fun Run (Under 50 MPH)</span>
-                    <span class="class-desc">Family boats, pontoons, first-timers</span>
-                </div>
-                <div class="class-entry ${activeBoat.stats.topSpeed >= 50 && activeBoat.stats.topSpeed < 100 ? 'your-class' : ''}">
-                    <span class="class-name">Amateur (50-100 MPH)</span>
-                    <span class="class-desc">Modified runabouts, ski boats</span>
-                </div>
-                <div class="class-entry">
-                    <span class="class-name">Pro (100-150 MPH)</span>
-                    <span class="class-desc">Purpose-built racing hulls</span>
-                </div>
-                <div class="class-entry">
-                    <span class="class-name">Top Gun (150+ MPH)</span>
-                    <span class="class-desc">The fastest boats on the water</span>
-                </div>
-            </div>
-
-            <p class="encouragement">You're entered in the <strong>${activeBoat.stats.topSpeed < 50 ? 'Fun Run' : 'Amateur'}</strong> class. Time to make a name for yourself!</p>
-
-            <button class="race-button" onclick="runFirstRace()">Rev It Up!</button>
+            <div class="hud-boat-name">${boat.nickname}</div>
+            <div class="hud-instructions">HOLD SPACE or CLICK to throttle!</div>
         </div>
+        <div id="race-countdown">3</div>
     `;
+    document.body.appendChild(raceOverlay);
 
-    // Show modal
-    raceModal.classList.remove('hidden');
-    raceModal.style.display = 'flex';
+    // Setup canvas
+    const canvas = document.getElementById('race-canvas');
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    raceState.canvas = canvas;
+    raceState.ctx = canvas.getContext('2d');
 
-    // Draw boat preview after modal is shown
-    setTimeout(() => {
-        const previewCanvas = document.getElementById('race-boat-preview');
-        if (previewCanvas) {
-            const ctx = previewCanvas.getContext('2d');
+    // Initialize race state
+    raceState.active = true;
+    raceState.currentSpeed = 0;
+    raceState.maxSpeed = activeBoat.stats.topSpeed;
+    raceState.throttle = 0;
+    raceState.boatX = canvas.width / 2;
+    raceState.boatY = canvas.height * 0.65;
+    raceState.waterOffset = 0;
+    raceState.wavePhase = 0;
+    raceState.particles = [];
+    raceState.countdown = 3;
+    raceState.phase = 'countdown';
+    raceState.startTime = 0;
+    raceState.finalSpeed = 0;
 
-            // Draw water background
-            const waterGrad = ctx.createLinearGradient(0, 0, 0, previewCanvas.height);
-            waterGrad.addColorStop(0, '#87CEEB');
-            waterGrad.addColorStop(0.4, '#5A9A8A');
-            waterGrad.addColorStop(1, '#2A4A42');
-            ctx.fillStyle = waterGrad;
-            ctx.fillRect(0, 0, previewCanvas.width, previewCanvas.height);
+    // Setup controls
+    setupRaceControls();
 
-            // Draw the appropriate boat
-            if (selectedStarterBoat === 'sundancer') {
-                drawSundancerPontoon(ctx, 50, 20, previewCanvas.width - 100, previewCanvas.height - 40);
-            } else {
-                drawSkiSupreme(ctx, 50, 20, previewCanvas.width - 100, previewCanvas.height - 40);
-            }
-        }
-    }, 100);
+    // Start countdown
+    startRaceCountdown();
 }
 window.showFirstShootoutRace = showFirstShootoutRace;
 
-// Run the first race
-function runFirstRace() {
+// Setup race controls
+function setupRaceControls() {
+    const handleThrottleStart = () => {
+        if (raceState.phase === 'racing') {
+            raceState.throttle = 1;
+        }
+    };
+
+    const handleThrottleEnd = () => {
+        raceState.throttle = 0;
+    };
+
+    // Keyboard
+    document.addEventListener('keydown', function raceKeyDown(e) {
+        if (e.code === 'Space' && raceState.active) {
+            e.preventDefault();
+            handleThrottleStart();
+        }
+    });
+
+    document.addEventListener('keyup', function raceKeyUp(e) {
+        if (e.code === 'Space' && raceState.active) {
+            handleThrottleEnd();
+        }
+    });
+
+    // Mouse/Touch
+    const canvas = raceState.canvas;
+    canvas.addEventListener('mousedown', handleThrottleStart);
+    canvas.addEventListener('mouseup', handleThrottleEnd);
+    canvas.addEventListener('mouseleave', handleThrottleEnd);
+    canvas.addEventListener('touchstart', (e) => { e.preventDefault(); handleThrottleStart(); });
+    canvas.addEventListener('touchend', handleThrottleEnd);
+}
+
+// Start countdown sequence
+function startRaceCountdown() {
+    const countdownEl = document.getElementById('race-countdown');
+
+    const countdownInterval = setInterval(() => {
+        raceState.countdown--;
+
+        if (raceState.countdown > 0) {
+            countdownEl.textContent = raceState.countdown;
+            countdownEl.classList.add('pulse');
+            setTimeout(() => countdownEl.classList.remove('pulse'), 300);
+        } else if (raceState.countdown === 0) {
+            countdownEl.textContent = 'GO!';
+            countdownEl.style.color = '#4CAF50';
+            raceState.phase = 'racing';
+            raceState.startTime = Date.now();
+
+            // Hide instructions
+            document.querySelector('.hud-instructions').style.display = 'none';
+        } else {
+            clearInterval(countdownInterval);
+            countdownEl.style.display = 'none';
+        }
+    }, 1000);
+
+    // Start rendering
+    renderRaceFrame();
+}
+
+// Main race render loop
+function renderRaceFrame() {
+    if (!raceState.active) return;
+
+    const ctx = raceState.ctx;
+    const canvas = raceState.canvas;
+    const w = canvas.width;
+    const h = canvas.height;
+
+    // Update physics
+    updateRacePhysics();
+
+    // Clear
+    ctx.clearRect(0, 0, w, h);
+
+    // Draw sky gradient
+    const skyGrad = ctx.createLinearGradient(0, 0, 0, h * 0.4);
+    skyGrad.addColorStop(0, '#87CEEB');
+    skyGrad.addColorStop(1, '#B0E0E6');
+    ctx.fillStyle = skyGrad;
+    ctx.fillRect(0, 0, w, h * 0.4);
+
+    // Draw distant shore/trees
+    ctx.fillStyle = '#2D5A3D';
+    ctx.beginPath();
+    ctx.moveTo(0, h * 0.38);
+    for (let x = 0; x < w; x += 20) {
+        ctx.lineTo(x, h * 0.38 + Math.sin(x * 0.02) * 10 + Math.sin(x * 0.05) * 5);
+    }
+    ctx.lineTo(w, h * 0.4);
+    ctx.lineTo(0, h * 0.4);
+    ctx.fill();
+
+    // Draw water
+    drawRacingWater(ctx, w, h);
+
+    // Draw wake/spray particles
+    drawWakeParticles(ctx);
+
+    // Draw boat (from behind)
+    drawRacingBoat(ctx, w, h);
+
+    // Draw rooster tail spray
+    if (raceState.currentSpeed > 5) {
+        drawRoosterTail(ctx, w, h);
+    }
+
+    // Update HUD
+    document.querySelector('.speed-value').textContent = Math.round(raceState.currentSpeed);
+
+    // Check if race finished (3 seconds of racing)
+    if (raceState.phase === 'racing') {
+        const elapsed = (Date.now() - raceState.startTime) / 1000;
+        if (elapsed >= 3) {
+            raceState.phase = 'finished';
+            raceState.finalSpeed = raceState.currentSpeed;
+            setTimeout(showRaceResults, 500);
+        }
+    }
+
+    // Continue loop
+    if (raceState.active && raceState.phase !== 'finished') {
+        raceState.animationFrame = requestAnimationFrame(renderRaceFrame);
+    }
+}
+
+// Update race physics
+function updateRacePhysics() {
+    if (raceState.phase !== 'racing') return;
+
+    const acceleration = raceState.maxSpeed * 0.02; // Acceleration rate
+    const deceleration = raceState.maxSpeed * 0.01; // Deceleration when not throttling
+
+    if (raceState.throttle > 0) {
+        // Accelerate towards max speed
+        raceState.currentSpeed += acceleration * raceState.throttle;
+        if (raceState.currentSpeed > raceState.maxSpeed) {
+            raceState.currentSpeed = raceState.maxSpeed;
+        }
+    } else {
+        // Slow down
+        raceState.currentSpeed -= deceleration;
+        if (raceState.currentSpeed < 0) raceState.currentSpeed = 0;
+    }
+
+    // Update water scroll based on speed
+    raceState.waterOffset += raceState.currentSpeed * 0.5;
+    raceState.wavePhase += 0.1;
+
+    // Generate spray particles
+    if (raceState.currentSpeed > 10 && Math.random() < raceState.currentSpeed / 50) {
+        raceState.particles.push({
+            x: raceState.boatX + (Math.random() - 0.5) * 60,
+            y: raceState.boatY + 40,
+            vx: (Math.random() - 0.5) * 3,
+            vy: -Math.random() * 5 - 2,
+            life: 1,
+            size: Math.random() * 4 + 2
+        });
+    }
+
+    // Update particles
+    raceState.particles = raceState.particles.filter(p => {
+        p.x += p.vx;
+        p.y += p.vy;
+        p.vy += 0.2; // gravity
+        p.life -= 0.02;
+        return p.life > 0;
+    });
+}
+
+// Draw the racing water surface
+function drawRacingWater(ctx, w, h) {
+    const waterTop = h * 0.4;
+
+    // Main water gradient
+    const waterGrad = ctx.createLinearGradient(0, waterTop, 0, h);
+    waterGrad.addColorStop(0, '#4A90A4');
+    waterGrad.addColorStop(0.3, '#3D7A8C');
+    waterGrad.addColorStop(1, '#2A5A6A');
+    ctx.fillStyle = waterGrad;
+    ctx.fillRect(0, waterTop, w, h - waterTop);
+
+    // Draw wave lines for motion effect
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+    ctx.lineWidth = 2;
+
+    const speedFactor = raceState.currentSpeed / raceState.maxSpeed;
+
+    for (let i = 0; i < 15; i++) {
+        const baseY = waterTop + 50 + i * 40;
+        const offset = (raceState.waterOffset + i * 100) % (w + 200) - 100;
+
+        ctx.beginPath();
+        ctx.moveTo(-100 + offset, baseY);
+
+        for (let x = -100 + offset; x < w + 100; x += 50) {
+            const waveY = baseY + Math.sin(x * 0.02 + raceState.wavePhase + i) * (5 + speedFactor * 10);
+            ctx.lineTo(x, waveY);
+        }
+        ctx.stroke();
+    }
+
+    // Speed lines on water
+    if (raceState.currentSpeed > 20) {
+        ctx.strokeStyle = `rgba(255, 255, 255, ${speedFactor * 0.5})`;
+        ctx.lineWidth = 1;
+
+        for (let i = 0; i < 20; i++) {
+            const x = Math.random() * w;
+            const y = waterTop + 100 + Math.random() * (h - waterTop - 150);
+            const len = 20 + speedFactor * 80;
+
+            ctx.beginPath();
+            ctx.moveTo(x, y);
+            ctx.lineTo(x, y + len);
+            ctx.stroke();
+        }
+    }
+}
+
+// Draw the boat from behind
+function drawRacingBoat(ctx, w, h) {
+    const boatX = raceState.boatX;
+    const boatY = raceState.boatY;
+    const bounce = Math.sin(raceState.wavePhase * 2) * (raceState.currentSpeed / raceState.maxSpeed) * 5;
+
+    ctx.save();
+    ctx.translate(boatX, boatY + bounce);
+
+    const boatData = STARTER_BOATS[selectedStarterBoat];
+    const colors = boatData.colors;
+
+    if (selectedStarterBoat === 'sundancer') {
+        // Pontoon from behind - wide and flat
+        const pontoonWidth = 180;
+        const pontoonHeight = 60;
+
+        // Left pontoon
+        ctx.fillStyle = '#707070';
+        ctx.beginPath();
+        ctx.ellipse(-pontoonWidth/2 + 25, 30, 25, 15, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Right pontoon
+        ctx.beginPath();
+        ctx.ellipse(pontoonWidth/2 - 25, 30, 25, 15, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Deck
+        ctx.fillStyle = colors.deck;
+        ctx.fillRect(-pontoonWidth/2, -30, pontoonWidth, 50);
+
+        // Maroon stripe
+        ctx.fillStyle = colors.accent;
+        ctx.fillRect(-pontoonWidth/2, -5, pontoonWidth, 15);
+
+        // Back seats
+        ctx.fillStyle = colors.furniture;
+        ctx.fillRect(-60, -25, 120, 25);
+
+        // Bimini top
+        ctx.fillStyle = colors.biminiTop;
+        ctx.globalAlpha = 0.9;
+        ctx.beginPath();
+        ctx.moveTo(-70, -60);
+        ctx.quadraticCurveTo(0, -80, 70, -60);
+        ctx.lineTo(60, -35);
+        ctx.quadraticCurveTo(0, -50, -60, -35);
+        ctx.fill();
+        ctx.globalAlpha = 1;
+
+        // Motor
+        ctx.fillStyle = '#1A1A1A';
+        ctx.fillRect(-15, 35, 30, 40);
+
+        // Evinrude colors
+        ctx.fillStyle = '#1E90FF';
+        ctx.fillRect(-12, 40, 24, 8);
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fillRect(-12, 48, 24, 5);
+
+    } else {
+        // Ski Supreme from behind - sleek V shape
+        const boatWidth = 120;
+
+        // Hull - back view
+        ctx.fillStyle = colors.hull;
+        ctx.beginPath();
+        ctx.moveTo(-boatWidth/2, 20);
+        ctx.quadraticCurveTo(-boatWidth/2 - 10, -10, -30, -40);
+        ctx.lineTo(30, -40);
+        ctx.quadraticCurveTo(boatWidth/2 + 10, -10, boatWidth/2, 20);
+        ctx.lineTo(boatWidth/2 - 10, 35);
+        ctx.lineTo(-boatWidth/2 + 10, 35);
+        ctx.closePath();
+        ctx.fill();
+
+        // White stripe
+        ctx.fillStyle = colors.stripe;
+        ctx.fillRect(-boatWidth/2 + 5, -15, boatWidth - 10, 10);
+
+        // Deck/interior
+        ctx.fillStyle = colors.deck;
+        ctx.beginPath();
+        ctx.moveTo(-40, -35);
+        ctx.lineTo(40, -35);
+        ctx.lineTo(35, -5);
+        ctx.lineTo(-35, -5);
+        ctx.closePath();
+        ctx.fill();
+
+        // Engine cover
+        ctx.fillStyle = colors.hull;
+        ctx.beginPath();
+        ctx.ellipse(0, 5, 35, 20, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Engine vents
+        ctx.strokeStyle = '#000';
+        ctx.lineWidth = 2;
+        for (let i = -2; i <= 2; i++) {
+            ctx.beginPath();
+            ctx.moveTo(i * 8 - 5, 0);
+            ctx.lineTo(i * 8 + 5, 0);
+            ctx.stroke();
+        }
+
+        // Swim platform
+        ctx.fillStyle = '#8B4513';
+        ctx.fillRect(-30, 30, 60, 10);
+    }
+
+    ctx.restore();
+}
+
+// Draw rooster tail water spray
+function drawRoosterTail(ctx, w, h) {
+    const boatX = raceState.boatX;
+    const boatY = raceState.boatY;
+    const speedFactor = raceState.currentSpeed / raceState.maxSpeed;
+    const sprayHeight = 30 + speedFactor * 100;
+
+    ctx.save();
+    ctx.translate(boatX, boatY + 50);
+
+    // Main spray fan
+    const grad = ctx.createRadialGradient(0, 0, 0, 0, sprayHeight/2, sprayHeight);
+    grad.addColorStop(0, 'rgba(255, 255, 255, 0.9)');
+    grad.addColorStop(0.5, 'rgba(200, 230, 255, 0.6)');
+    grad.addColorStop(1, 'rgba(150, 200, 255, 0)');
+
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.moveTo(-10, 0);
+    ctx.quadraticCurveTo(-sprayHeight * 0.8, sprayHeight * 0.5, -sprayHeight * 0.6, sprayHeight);
+    ctx.lineTo(sprayHeight * 0.6, sprayHeight);
+    ctx.quadraticCurveTo(sprayHeight * 0.8, sprayHeight * 0.5, 10, 0);
+    ctx.fill();
+
+    // Spray droplets
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+    for (let i = 0; i < speedFactor * 30; i++) {
+        const angle = (Math.random() - 0.5) * Math.PI * 0.6;
+        const dist = Math.random() * sprayHeight;
+        const x = Math.sin(angle) * dist;
+        const y = Math.cos(angle) * dist * 0.8;
+        const size = Math.random() * 3 + 1;
+
+        ctx.beginPath();
+        ctx.arc(x, y, size, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    ctx.restore();
+}
+
+// Draw wake particles
+function drawWakeParticles(ctx) {
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+    raceState.particles.forEach(p => {
+        ctx.globalAlpha = p.life;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        ctx.fill();
+    });
+    ctx.globalAlpha = 1;
+}
+
+// Show race results
+function showRaceResults() {
+    raceState.active = false;
+    if (raceState.animationFrame) {
+        cancelAnimationFrame(raceState.animationFrame);
+    }
+
     const activeBoat = gameState.garage.boats[0];
-    const raceContent = document.getElementById('race-content');
+    const finalSpeed = Math.round(raceState.finalSpeed * 10) / 10;
+    const variance = raceState.finalSpeed - raceState.maxSpeed * 0.8;
 
-    if (!raceContent) return;
-
-    // Calculate race result based on boat stats
-    const baseSpeed = activeBoat.stats.topSpeed;
-    const variance = (Math.random() - 0.5) * 10;
-    const finalSpeed = Math.max(baseSpeed * 0.8, baseSpeed + variance);
-    const roundedSpeed = Math.round(finalSpeed * 10) / 10;
-
-    // Determine placement in class
+    // Determine placement
     let placement, message, reward;
-    if (variance > 3) {
+    if (raceState.finalSpeed >= raceState.maxSpeed * 0.95) {
         placement = '1st Place';
-        message = 'You took the checkered flag!';
+        message = 'Perfect run! You maxed out your boat!';
         reward = 500;
-    } else if (variance > 0) {
+    } else if (raceState.finalSpeed >= raceState.maxSpeed * 0.85) {
         placement = '2nd Place';
-        message = 'So close! Great run out there!';
+        message = 'Great throttle control!';
         reward = 300;
-    } else if (variance > -3) {
+    } else if (raceState.finalSpeed >= raceState.maxSpeed * 0.7) {
         placement = '3rd Place';
         message = 'Solid finish for your first Shootout!';
         reward = 150;
     } else {
         placement = 'Finished';
-        message = 'You completed the course safely!';
+        message = 'Keep practicing that throttle!';
         reward = 50;
     }
 
     // Update boat stats
     activeBoat.races = 1;
     if (placement === '1st Place') activeBoat.wins = 1;
-    activeBoat.bestSpeed = roundedSpeed;
+    activeBoat.bestSpeed = finalSpeed;
     activeBoat.totalEarnings = reward;
 
-    // Give player the reward
+    // Give rewards
     gameState.resources.money += reward;
     gameState.resources.racingRep += placement === '1st Place' ? 10 : placement === '2nd Place' ? 5 : 2;
 
-    raceContent.innerHTML = `
-        <div class="race-results">
-            <h3>RACE COMPLETE!</h3>
+    // Create results overlay
+    const overlay = document.getElementById('race-overlay');
+    overlay.innerHTML = `
+        <div class="race-results-screen">
+            <h2>SHOOTOUT COMPLETE!</h2>
 
-            <div class="speed-display">
-                <span class="speed-number">${roundedSpeed}</span>
-                <span class="speed-unit">MPH</span>
+            <div class="final-speed">
+                <span class="big-speed">${finalSpeed}</span>
+                <span class="mph">MPH</span>
             </div>
 
-            <div class="placement ${placement === '1st Place' ? 'winner' : ''}">${placement}</div>
-            <p class="result-message">${message}</p>
+            <div class="placement-badge ${placement === '1st Place' ? 'gold' : ''}">${placement}</div>
+            <p class="result-msg">${message}</p>
 
-            <div class="rewards">
-                <div class="reward-item">
-                    <span class="reward-label">Prize Money:</span>
-                    <span class="reward-value">+$${reward}</span>
+            <div class="rewards-box">
+                <div class="reward-row">
+                    <span>Prize Money:</span>
+                    <span class="reward-amount">+$${reward}</span>
                 </div>
-                <div class="reward-item">
-                    <span class="reward-label">Racing Rep:</span>
-                    <span class="reward-value">+${placement === '1st Place' ? 10 : placement === '2nd Place' ? 5 : 2}</span>
+                <div class="reward-row">
+                    <span>Racing Rep:</span>
+                    <span class="reward-amount">+${placement === '1st Place' ? 10 : placement === '2nd Place' ? 5 : 2}</span>
                 </div>
             </div>
 
-            <div class="next-steps">
-                <p>Build marinas and docks to earn money.</p>
-                <p>Upgrade your boat or buy faster hulls.</p>
-                <p>Come back next Shootout and go for the Top Gun class!</p>
-            </div>
+            <p class="next-tip">Build docks and marinas to earn money, then upgrade your boat for the next Shootout!</p>
 
-            <button class="race-button" onclick="closeRaceModal()">Start Building Your Empire</button>
+            <button class="continue-btn" onclick="closeRaceOverlay()">Start Building Your Empire</button>
         </div>
     `;
 
     // Update UI
     updateUI();
-
-    // Log event
-    addEvent(`First Shootout: ${roundedSpeed} MPH - ${placement}!`, 'racing');
+    addEvent(`First Shootout: ${finalSpeed} MPH - ${placement}!`, 'racing');
 }
-window.runFirstRace = runFirstRace;
 
-// Close race modal
+// Close race overlay
+function closeRaceOverlay() {
+    const overlay = document.getElementById('race-overlay');
+    if (overlay) {
+        overlay.remove();
+    }
+
+    addEvent('Time to build your lakefront empire!', 'neutral');
+    addEvent('Tip: Start with a dock to earn boat rental income', 'positive');
+}
+window.closeRaceOverlay = closeRaceOverlay;
+
+// Close race modal (legacy)
 function closeRaceModal() {
     const raceModal = document.getElementById('race-modal');
     if (raceModal) {
         raceModal.classList.add('hidden');
         raceModal.style.display = 'none';
     }
-
-    addEvent('Time to build your lakefront empire!', 'neutral');
-    addEvent('Tip: Start with a dock to earn boat rental income', 'positive');
+    closeRaceOverlay();
 }
 window.closeRaceModal = closeRaceModal;
 
@@ -315,36 +699,61 @@ window.hideWelcomeModal = hideWelcomeModal;
 function initBoatPreviews() {
     // Draw Sundancer preview
     const sundancerCanvas = document.getElementById('sundancer-preview');
-    if (sundancerCanvas) {
+    if (sundancerCanvas && sundancerCanvas.getContext) {
         const ctx = sundancerCanvas.getContext('2d');
+        if (ctx) {
+            ctx.clearRect(0, 0, sundancerCanvas.width, sundancerCanvas.height);
 
-        // Draw water background
-        const waterGrad = ctx.createLinearGradient(0, 0, 0, sundancerCanvas.height);
-        waterGrad.addColorStop(0, '#87CEEB');
-        waterGrad.addColorStop(0.4, '#5A9A8A');
-        waterGrad.addColorStop(1, '#2A4A42');
-        ctx.fillStyle = waterGrad;
-        ctx.fillRect(0, 0, sundancerCanvas.width, sundancerCanvas.height);
+            // Draw water background
+            const waterGrad = ctx.createLinearGradient(0, 0, 0, sundancerCanvas.height);
+            waterGrad.addColorStop(0, '#87CEEB');
+            waterGrad.addColorStop(0.4, '#5A9A8A');
+            waterGrad.addColorStop(1, '#2A4A42');
+            ctx.fillStyle = waterGrad;
+            ctx.fillRect(0, 0, sundancerCanvas.width, sundancerCanvas.height);
 
-        // Draw the boat
-        drawSundancerPontoon(ctx, 10, 10, sundancerCanvas.width - 20, sundancerCanvas.height - 20);
+            // Draw the boat with try/catch
+            try {
+                drawSundancerPontoon(ctx, 20, 15, sundancerCanvas.width - 40, sundancerCanvas.height - 30);
+            } catch (e) {
+                // Fallback: draw simple boat shape
+                ctx.fillStyle = '#E8DCC8';
+                ctx.fillRect(40, 50, 200, 60);
+                ctx.fillStyle = '#722F37';
+                ctx.fillRect(40, 70, 200, 15);
+            }
+        }
     }
 
     // Draw Ski Supreme preview
     const skiSupremeCanvas = document.getElementById('skisupreme-preview');
-    if (skiSupremeCanvas) {
+    if (skiSupremeCanvas && skiSupremeCanvas.getContext) {
         const ctx = skiSupremeCanvas.getContext('2d');
+        if (ctx) {
+            ctx.clearRect(0, 0, skiSupremeCanvas.width, skiSupremeCanvas.height);
 
-        // Draw water background
-        const waterGrad = ctx.createLinearGradient(0, 0, 0, skiSupremeCanvas.height);
-        waterGrad.addColorStop(0, '#87CEEB');
-        waterGrad.addColorStop(0.4, '#5A9A8A');
-        waterGrad.addColorStop(1, '#2A4A42');
-        ctx.fillStyle = waterGrad;
-        ctx.fillRect(0, 0, skiSupremeCanvas.width, skiSupremeCanvas.height);
+            // Draw water background
+            const waterGrad = ctx.createLinearGradient(0, 0, 0, skiSupremeCanvas.height);
+            waterGrad.addColorStop(0, '#87CEEB');
+            waterGrad.addColorStop(0.4, '#5A9A8A');
+            waterGrad.addColorStop(1, '#2A4A42');
+            ctx.fillStyle = waterGrad;
+            ctx.fillRect(0, 0, skiSupremeCanvas.width, skiSupremeCanvas.height);
 
-        // Draw the boat
-        drawSkiSupreme(ctx, 10, 10, skiSupremeCanvas.width - 20, skiSupremeCanvas.height - 20);
+            // Draw the boat with try/catch
+            try {
+                drawSkiSupreme(ctx, 20, 15, skiSupremeCanvas.width - 40, skiSupremeCanvas.height - 30);
+            } catch (e) {
+                // Fallback: draw simple boat shape
+                ctx.fillStyle = '#B22222';
+                ctx.beginPath();
+                ctx.moveTo(30, 80);
+                ctx.lineTo(250, 60);
+                ctx.lineTo(250, 100);
+                ctx.lineTo(30, 100);
+                ctx.fill();
+            }
+        }
     }
 }
 window.initBoatPreviews = initBoatPreviews;
@@ -4365,8 +4774,15 @@ function init() {
     render();
     startGameLoop();
 
-    // Initialize boat preview canvases on welcome screen
-    initBoatPreviews();
+    // Initialize boat preview canvases on welcome screen with delay to ensure DOM ready
+    setTimeout(() => {
+        initBoatPreviews();
+    }, 100);
+
+    // Retry in case first attempt failed
+    setTimeout(() => {
+        initBoatPreviews();
+    }, 500);
 }
 
 window.addEventListener('load', init);
