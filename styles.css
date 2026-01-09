@@ -1675,6 +1675,61 @@ aside h3 {
     animation: pulse-glow 1.5s infinite;
 }
 
+.hud-status {
+    position: absolute;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: linear-gradient(145deg, rgba(0, 0, 0, 0.85) 0%, rgba(30, 30, 30, 0.9) 100%);
+    padding: 12px 30px;
+    border-radius: 25px;
+    color: #FFD700;
+    font-size: 1.2rem;
+    font-family: 'Cabin', sans-serif;
+    font-weight: 600;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+    border: 2px solid rgba(212, 168, 85, 0.3);
+    white-space: nowrap;
+}
+
+#race-sign {
+    position: absolute;
+    top: 35%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 4rem;
+    font-weight: 700;
+    color: #FFD700;
+    font-family: 'Rye', serif;
+    text-shadow:
+        0 0 20px rgba(0, 0, 0, 0.8),
+        0 0 40px rgba(255, 215, 0, 0.5),
+        4px 4px 0 #000;
+    pointer-events: none;
+    display: none;
+    z-index: 100;
+}
+
+#race-sign.race-sign-appear {
+    display: block;
+    animation: sign-appear 0.5s ease-out;
+}
+
+@keyframes sign-appear {
+    0% {
+        transform: translate(-50%, -50%) scale(2);
+        opacity: 0;
+    }
+    50% {
+        transform: translate(-50%, -50%) scale(1.1);
+        opacity: 1;
+    }
+    100% {
+        transform: translate(-50%, -50%) scale(1);
+        opacity: 1;
+    }
+}
+
 @keyframes pulse-glow {
     0%, 100% { box-shadow: 0 0 10px rgba(212, 168, 85, 0.5); }
     50% { box-shadow: 0 0 30px rgba(212, 168, 85, 0.8); }

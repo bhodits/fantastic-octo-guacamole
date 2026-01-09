@@ -98,14 +98,23 @@ let raceState = {
     throttle: 0,
     boatX: 0,
     boatY: 0,
+    boatLane: 0,        // -1 left, 0 center, 1 right
     waterOffset: 0,
     wavePhase: 0,
     particles: [],
     countdown: 3,
-    phase: 'countdown' // 'countdown', 'racing', 'finished'
+    // Shootout phases: 'approach', 'speed_check', 'countdown', 'racing', 'finished'
+    phase: 'approach',
+    coursePosition: 0,   // Progress along the course (0-1000)
+    startLinePos: 300,   // Where start line is
+    finishLinePos: 800,  // Where finish line is
+    peakSpeed: 0,        // Highest speed recorded
+    crossedStart: false,
+    crossedFinish: false,
+    penalized: false,    // True if went over 40 before start
 };
 
-// Show the first Shootout race experience - now launches driving sim
+// Show the first Shootout race experience - real Shootout simulation!
 function showFirstShootoutRace() {
     const boat = STARTER_BOATS[selectedStarterBoat];
     const activeBoat = gameState.garage.boats[0];
@@ -121,9 +130,9 @@ function showFirstShootoutRace() {
                 <span class="speed-label">MPH</span>
             </div>
             <div class="hud-boat-name">${boat.nickname}</div>
-            <div class="hud-instructions">HOLD SPACE or CLICK to throttle!</div>
+            <div class="hud-status">APPROACH - Keep it under 40!</div>
         </div>
-        <div id="race-countdown">3</div>
+        <div id="race-sign"></div>
     `;
     document.body.appendChild(raceOverlay);
 
@@ -134,33 +143,45 @@ function showFirstShootoutRace() {
     raceState.canvas = canvas;
     raceState.ctx = canvas.getContext('2d');
 
-    // Initialize race state
+    // Initialize race state for Shootout
     raceState.active = true;
     raceState.currentSpeed = 0;
     raceState.maxSpeed = activeBoat.stats.topSpeed;
     raceState.throttle = 0;
     raceState.boatX = canvas.width / 2;
     raceState.boatY = canvas.height * 0.65;
+    raceState.boatLane = 0;
     raceState.waterOffset = 0;
     raceState.wavePhase = 0;
     raceState.particles = [];
-    raceState.countdown = 3;
-    raceState.phase = 'countdown';
+    raceState.phase = 'approach';  // Start in approach phase
+    raceState.coursePosition = 0;
+    raceState.startLinePos = 300;
+    raceState.finishLinePos = 800;
+    raceState.peakSpeed = 0;
+    raceState.crossedStart = false;
+    raceState.crossedFinish = false;
+    raceState.penalized = false;
     raceState.startTime = 0;
     raceState.finalSpeed = 0;
 
     // Setup controls
     setupRaceControls();
 
-    // Start countdown
-    startRaceCountdown();
+    // Start approach phase - player controls speed
+    raceState.phase = 'approach';
+    updateRaceStatus('APPROACH - Stay under 40 MPH!');
+
+    // Begin rendering
+    renderRaceFrame();
 }
 window.showFirstShootoutRace = showFirstShootoutRace;
 
 // Setup race controls
 function setupRaceControls() {
     const handleThrottleStart = () => {
-        if (raceState.phase === 'racing') {
+        // Can throttle during approach and racing phases
+        if (raceState.phase === 'approach' || raceState.phase === 'racing') {
             raceState.throttle = 1;
         }
     };
@@ -169,12 +190,23 @@ function setupRaceControls() {
         raceState.throttle = 0;
     };
 
+    // Steering controls (left/right)
+    const handleSteerLeft = () => {
+        if (raceState.active) raceState.boatLane = Math.max(-1, raceState.boatLane - 0.05);
+    };
+    const handleSteerRight = () => {
+        if (raceState.active) raceState.boatLane = Math.min(1, raceState.boatLane + 0.05);
+    };
+
     // Keyboard
     document.addEventListener('keydown', function raceKeyDown(e) {
-        if (e.code === 'Space' && raceState.active) {
+        if (!raceState.active) return;
+        if (e.code === 'Space') {
             e.preventDefault();
             handleThrottleStart();
         }
+        if (e.code === 'ArrowLeft' || e.code === 'KeyA') handleSteerLeft();
+        if (e.code === 'ArrowRight' || e.code === 'KeyD') handleSteerRight();
     });
 
     document.addEventListener('keyup', function raceKeyUp(e) {
@@ -192,33 +224,33 @@ function setupRaceControls() {
     canvas.addEventListener('touchend', handleThrottleEnd);
 }
 
-// Start countdown sequence
+// Update HUD status message
+function updateRaceStatus(msg) {
+    const statusEl = document.querySelector('.hud-status');
+    if (statusEl) statusEl.textContent = msg;
+}
+
+// Show big sign on screen
+function showRaceSign(text, color = '#FFD700', duration = 1500) {
+    const signEl = document.getElementById('race-sign');
+    if (signEl) {
+        signEl.textContent = text;
+        signEl.style.color = color;
+        signEl.style.display = 'block';
+        signEl.classList.add('race-sign-appear');
+        setTimeout(() => {
+            signEl.classList.remove('race-sign-appear');
+            if (text !== 'GO!') signEl.style.display = 'none';
+        }, duration);
+    }
+}
+
+// Start countdown sequence (triggered when crossing start line)
 function startRaceCountdown() {
-    const countdownEl = document.getElementById('race-countdown');
-
-    const countdownInterval = setInterval(() => {
-        raceState.countdown--;
-
-        if (raceState.countdown > 0) {
-            countdownEl.textContent = raceState.countdown;
-            countdownEl.classList.add('pulse');
-            setTimeout(() => countdownEl.classList.remove('pulse'), 300);
-        } else if (raceState.countdown === 0) {
-            countdownEl.textContent = 'GO!';
-            countdownEl.style.color = '#4CAF50';
-            raceState.phase = 'racing';
-            raceState.startTime = Date.now();
-
-            // Hide instructions
-            document.querySelector('.hud-instructions').style.display = 'none';
-        } else {
-            clearInterval(countdownInterval);
-            countdownEl.style.display = 'none';
-        }
-    }, 1000);
-
-    // Start rendering
-    renderRaceFrame();
+    raceState.phase = 'racing';
+    raceState.startTime = Date.now();
+    showRaceSign('GO!', '#4CAF50', 1000);
+    updateRaceStatus('FULL THROTTLE! Get your top speed!');
 }
 
 // Main race render loop
@@ -243,19 +275,20 @@ function renderRaceFrame() {
     ctx.fillStyle = skyGrad;
     ctx.fillRect(0, 0, w, h * 0.4);
 
-    // Draw distant shore/trees
-    ctx.fillStyle = '#2D5A3D';
-    ctx.beginPath();
-    ctx.moveTo(0, h * 0.38);
-    for (let x = 0; x < w; x += 20) {
-        ctx.lineTo(x, h * 0.38 + Math.sin(x * 0.02) * 10 + Math.sin(x * 0.05) * 5);
-    }
-    ctx.lineTo(w, h * 0.4);
-    ctx.lineTo(0, h * 0.4);
-    ctx.fill();
+    // Draw State Park (left side - trees and hills)
+    drawStateParkScenery(ctx, w, h);
+
+    // Draw spectator boats (right side)
+    drawSpectatorBoats(ctx, w, h);
 
     // Draw water
     drawRacingWater(ctx, w, h);
+
+    // Draw course buoys
+    drawCourseBuoys(ctx, w, h);
+
+    // Draw signs based on course position
+    drawCourseSigns(ctx, w, h);
 
     // Draw wake/spray particles
     drawWakeParticles(ctx);
@@ -269,17 +302,11 @@ function renderRaceFrame() {
     }
 
     // Update HUD
-    document.querySelector('.speed-value').textContent = Math.round(raceState.currentSpeed);
+    const speedEl = document.querySelector('.speed-value');
+    if (speedEl) speedEl.textContent = Math.round(raceState.currentSpeed);
 
-    // Check if race finished (3 seconds of racing)
-    if (raceState.phase === 'racing') {
-        const elapsed = (Date.now() - raceState.startTime) / 1000;
-        if (elapsed >= 3) {
-            raceState.phase = 'finished';
-            raceState.finalSpeed = raceState.currentSpeed;
-            setTimeout(showRaceResults, 500);
-        }
-    }
+    // Check phase transitions
+    checkRacePhases();
 
     // Continue loop
     if (raceState.active && raceState.phase !== 'finished') {
@@ -287,12 +314,68 @@ function renderRaceFrame() {
     }
 }
 
+// Check and handle race phase transitions
+function checkRacePhases() {
+    const pos = raceState.coursePosition;
+
+    // Approaching start line
+    if (!raceState.crossedStart && pos >= raceState.startLinePos - 100 && pos < raceState.startLinePos) {
+        // Show speed check
+        if (raceState.currentSpeed > 40) {
+            if (!raceState.penalized) {
+                raceState.penalized = true;
+                // Funny message if boat can't even reach 40
+                if (raceState.maxSpeed < 40) {
+                    showRaceSign("You're trying your best!", '#FFA500', 2000);
+                    updateRaceStatus("LOL - your boat maxes out at " + raceState.maxSpeed + " MPH!");
+                } else {
+                    showRaceSign('TOO FAST! Under 40!', '#FF4444', 1500);
+                    updateRaceStatus('PENALTY! You were over 40 before the start!');
+                }
+            }
+        } else {
+            updateRaceStatus('Good speed - stay under 40 until start line!');
+        }
+    }
+
+    // Crossing start line
+    if (!raceState.crossedStart && pos >= raceState.startLinePos) {
+        raceState.crossedStart = true;
+        startRaceCountdown();  // Shows "GO!" and starts racing phase
+    }
+
+    // During racing - track peak speed
+    if (raceState.phase === 'racing') {
+        if (raceState.currentSpeed > raceState.peakSpeed) {
+            raceState.peakSpeed = raceState.currentSpeed;
+        }
+
+        // Special message for slow starter boat
+        if (raceState.maxSpeed <= 28 && raceState.coursePosition > raceState.startLinePos + 50) {
+            if (!raceState.slowBoatJoke) {
+                raceState.slowBoatJoke = true;
+                updateRaceStatus("FLOORING IT! This is " + Math.round(raceState.currentSpeed) + " MPH baby!");
+            }
+        }
+    }
+
+    // Crossing finish line
+    if (!raceState.crossedFinish && pos >= raceState.finishLinePos) {
+        raceState.crossedFinish = true;
+        raceState.phase = 'finished';
+        raceState.finalSpeed = raceState.peakSpeed;
+        showRaceSign('FINISH!', '#FFD700', 2000);
+        setTimeout(showRaceResults, 1500);
+    }
+}
+
 // Update race physics
 function updateRacePhysics() {
-    if (raceState.phase !== 'racing') return;
+    // Physics runs during approach and racing phases
+    if (raceState.phase !== 'approach' && raceState.phase !== 'racing') return;
 
-    const acceleration = raceState.maxSpeed * 0.02; // Acceleration rate
-    const deceleration = raceState.maxSpeed * 0.01; // Deceleration when not throttling
+    const acceleration = raceState.maxSpeed * 0.015; // Acceleration rate
+    const deceleration = raceState.maxSpeed * 0.008; // Deceleration when not throttling
 
     if (raceState.throttle > 0) {
         // Accelerate towards max speed
@@ -306,9 +389,16 @@ function updateRacePhysics() {
         if (raceState.currentSpeed < 0) raceState.currentSpeed = 0;
     }
 
+    // Update course position based on speed
+    raceState.coursePosition += raceState.currentSpeed * 0.15;
+
     // Update water scroll based on speed
     raceState.waterOffset += raceState.currentSpeed * 0.5;
     raceState.wavePhase += 0.1;
+
+    // Update boat X position based on lane
+    const targetX = raceState.canvas.width / 2 + raceState.boatLane * 100;
+    raceState.boatX += (targetX - raceState.boatX) * 0.1;
 
     // Generate spray particles
     if (raceState.currentSpeed > 10 && Math.random() < raceState.currentSpeed / 50) {
@@ -330,6 +420,279 @@ function updateRacePhysics() {
         p.life -= 0.02;
         return p.life > 0;
     });
+}
+
+// Draw State Park scenery on the left side
+function drawStateParkScenery(ctx, w, h) {
+    const horizonY = h * 0.4;
+
+    // Distant hills (State Park)
+    ctx.fillStyle = '#2D5A3D';
+    ctx.beginPath();
+    ctx.moveTo(0, horizonY);
+    for (let x = 0; x < w * 0.35; x += 15) {
+        const hillY = horizonY - 20 - Math.sin(x * 0.015 + raceState.waterOffset * 0.001) * 25
+                     - Math.sin(x * 0.008) * 15;
+        ctx.lineTo(x, hillY);
+    }
+    ctx.lineTo(w * 0.35, horizonY);
+    ctx.lineTo(0, horizonY);
+    ctx.fill();
+
+    // Trees silhouette
+    ctx.fillStyle = '#1A4030';
+    for (let x = 10; x < w * 0.30; x += 25) {
+        const treeH = 30 + Math.sin(x * 0.1) * 15;
+        const baseY = horizonY - 10;
+        // Pine tree shape
+        ctx.beginPath();
+        ctx.moveTo(x, baseY);
+        ctx.lineTo(x - 12, baseY);
+        ctx.lineTo(x, baseY - treeH);
+        ctx.lineTo(x + 12, baseY);
+        ctx.closePath();
+        ctx.fill();
+    }
+
+    // "STATE PARK" sign on shore
+    if (raceState.coursePosition > 50 && raceState.coursePosition < 400) {
+        ctx.fillStyle = '#4a3020';
+        ctx.fillRect(50, horizonY - 40, 80, 8);
+        ctx.fillRect(60, horizonY - 40, 8, 35);
+        ctx.fillRect(110, horizonY - 40, 8, 35);
+        ctx.fillStyle = '#2d5a27';
+        ctx.fillRect(52, horizonY - 38, 76, 5);
+        ctx.fillStyle = '#fff';
+        ctx.font = 'bold 6px Arial';
+        ctx.fillText('STATE PARK', 58, horizonY - 34);
+    }
+}
+
+// Draw spectator boats on the right side
+function drawSpectatorBoats(ctx, w, h) {
+    const horizonY = h * 0.4;
+
+    // Right shore with docks
+    ctx.fillStyle = '#4A6A5A';
+    ctx.beginPath();
+    ctx.moveTo(w * 0.7, horizonY);
+    for (let x = w * 0.7; x < w; x += 12) {
+        ctx.lineTo(x, horizonY - 5 - Math.sin(x * 0.02) * 8);
+    }
+    ctx.lineTo(w, horizonY);
+    ctx.lineTo(w, horizonY + 10);
+    ctx.lineTo(w * 0.7, horizonY + 10);
+    ctx.fill();
+
+    // Draw spectator boats (anchored, watching the race)
+    const boatPositions = [
+        { x: w * 0.78, y: horizonY + 30, type: 'pontoon' },
+        { x: w * 0.85, y: horizonY + 50, type: 'cruiser' },
+        { x: w * 0.92, y: horizonY + 35, type: 'speedboat' },
+        { x: w * 0.75, y: horizonY + 60, type: 'pontoon' },
+        { x: w * 0.88, y: horizonY + 70, type: 'yacht' },
+    ];
+
+    boatPositions.forEach(boat => {
+        const bob = Math.sin(raceState.wavePhase + boat.x * 0.01) * 2;
+        drawSpectatorBoat(ctx, boat.x, boat.y + bob, boat.type);
+    });
+}
+
+// Draw a single spectator boat
+function drawSpectatorBoat(ctx, x, y, type) {
+    ctx.save();
+    ctx.translate(x, y);
+
+    if (type === 'pontoon') {
+        // Small pontoon
+        ctx.fillStyle = '#A0A0A0';
+        ctx.fillRect(-20, 5, 40, 6);
+        ctx.fillStyle = '#E8DCC8';
+        ctx.fillRect(-18, -5, 36, 12);
+        ctx.fillStyle = '#722F37';
+        ctx.fillRect(-18, 0, 36, 4);
+    } else if (type === 'cruiser') {
+        // Cabin cruiser
+        ctx.fillStyle = '#FFFFFF';
+        ctx.beginPath();
+        ctx.moveTo(-25, 8);
+        ctx.lineTo(-20, -5);
+        ctx.lineTo(20, -5);
+        ctx.lineTo(25, 8);
+        ctx.fill();
+        ctx.fillStyle = '#1E3A5F';
+        ctx.fillRect(-15, -12, 25, 8);
+    } else if (type === 'speedboat') {
+        // Small speedboat
+        ctx.fillStyle = '#CC3333';
+        ctx.beginPath();
+        ctx.moveTo(-20, 5);
+        ctx.lineTo(-15, -3);
+        ctx.lineTo(18, -3);
+        ctx.lineTo(20, 5);
+        ctx.fill();
+    } else if (type === 'yacht') {
+        // Larger yacht
+        ctx.fillStyle = '#FFFFFF';
+        ctx.beginPath();
+        ctx.moveTo(-35, 10);
+        ctx.lineTo(-25, -8);
+        ctx.lineTo(30, -8);
+        ctx.lineTo(35, 10);
+        ctx.fill();
+        ctx.fillStyle = '#1A3A5A';
+        ctx.fillRect(-20, -18, 35, 12);
+        // Upper deck
+        ctx.fillStyle = '#2A4A6A';
+        ctx.fillRect(-10, -25, 20, 8);
+    }
+
+    ctx.restore();
+}
+
+// Draw course buoys (yellow for start/finish)
+function drawCourseBuoys(ctx, w, h) {
+    const waterTop = h * 0.4;
+    const coursePos = raceState.coursePosition;
+
+    // Calculate relative positions of buoys
+    const startLineRel = raceState.startLinePos - coursePos;
+    const finishLineRel = raceState.finishLinePos - coursePos;
+
+    // Draw start line buoys (yellow)
+    if (startLineRel > -100 && startLineRel < 500) {
+        const startY = waterTop + 80 + (500 - startLineRel) * 0.3;
+        const scale = Math.max(0.3, 1 - (500 - startLineRel) / 600);
+
+        // Left buoy
+        drawBuoy(ctx, w * 0.25, startY, scale, '#FFD700', 'START');
+        // Right buoy
+        drawBuoy(ctx, w * 0.75, startY, scale, '#FFD700', 'START');
+
+        // Start line on water
+        if (scale > 0.5) {
+            ctx.strokeStyle = 'rgba(255, 215, 0, 0.5)';
+            ctx.lineWidth = 3 * scale;
+            ctx.setLineDash([10, 10]);
+            ctx.beginPath();
+            ctx.moveTo(w * 0.25, startY);
+            ctx.lineTo(w * 0.75, startY);
+            ctx.stroke();
+            ctx.setLineDash([]);
+        }
+    }
+
+    // Draw finish line buoys (yellow)
+    if (finishLineRel > -100 && finishLineRel < 500) {
+        const finishY = waterTop + 80 + (500 - finishLineRel) * 0.3;
+        const scale = Math.max(0.3, 1 - (500 - finishLineRel) / 600);
+
+        // Left buoy
+        drawBuoy(ctx, w * 0.25, finishY, scale, '#FFD700', 'FINISH');
+        // Right buoy
+        drawBuoy(ctx, w * 0.75, finishY, scale, '#FFD700', 'FINISH');
+
+        // Finish line on water
+        if (scale > 0.5) {
+            ctx.strokeStyle = 'rgba(255, 215, 0, 0.5)';
+            ctx.lineWidth = 3 * scale;
+            ctx.setLineDash([10, 10]);
+            ctx.beginPath();
+            ctx.moveTo(w * 0.25, finishY);
+            ctx.lineTo(w * 0.75, finishY);
+            ctx.stroke();
+            ctx.setLineDash([]);
+        }
+    }
+
+    // Course boundary buoys (red on left, green on right)
+    for (let i = 0; i < 8; i++) {
+        const buoyPos = i * 100 + 50;
+        const relPos = buoyPos - coursePos;
+
+        if (relPos > -50 && relPos < 400) {
+            const buoyY = waterTop + 100 + (400 - relPos) * 0.25;
+            const scale = Math.max(0.2, 1 - (400 - relPos) / 500);
+
+            // Left boundary (red)
+            drawBuoy(ctx, w * 0.18 + Math.sin(buoyPos * 0.02) * 10, buoyY, scale * 0.6, '#FF4444');
+            // Right boundary (green)
+            drawBuoy(ctx, w * 0.82 - Math.sin(buoyPos * 0.02) * 10, buoyY, scale * 0.6, '#44FF44');
+        }
+    }
+}
+
+// Draw a single buoy
+function drawBuoy(ctx, x, y, scale, color, label = null) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.scale(scale, scale);
+
+    // Buoy body
+    const grad = ctx.createRadialGradient(0, 0, 0, 0, 0, 15);
+    grad.addColorStop(0, color);
+    grad.addColorStop(1, '#AA8800');
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.ellipse(0, 0, 15, 20, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Highlight
+    ctx.fillStyle = 'rgba(255,255,255,0.4)';
+    ctx.beginPath();
+    ctx.ellipse(-5, -8, 5, 8, -0.3, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Top marker
+    ctx.fillStyle = '#333';
+    ctx.fillRect(-3, -25, 6, 10);
+
+    // Flag
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.moveTo(3, -25);
+    ctx.lineTo(15, -20);
+    ctx.lineTo(3, -15);
+    ctx.fill();
+
+    ctx.restore();
+}
+
+// Draw course signs
+function drawCourseSigns(ctx, w, h) {
+    const coursePos = raceState.coursePosition;
+    const horizonY = h * 0.4;
+
+    // "KEEP IT UNDER 40" sign before start
+    const signPos = raceState.startLinePos - 150;
+    const signRel = signPos - coursePos;
+
+    if (signRel > -50 && signRel < 300) {
+        const signY = horizonY + 20 + (300 - signRel) * 0.2;
+        const scale = Math.max(0.4, 1 - (300 - signRel) / 400);
+
+        ctx.save();
+        ctx.translate(w * 0.5, signY);
+        ctx.scale(scale, scale);
+
+        // Sign background
+        ctx.fillStyle = '#FFD700';
+        ctx.fillRect(-80, -25, 160, 50);
+        ctx.strokeStyle = '#000';
+        ctx.lineWidth = 3;
+        ctx.strokeRect(-80, -25, 160, 50);
+
+        // Text
+        ctx.fillStyle = '#000';
+        ctx.font = 'bold 16px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText('KEEP IT UNDER', 0, -5);
+        ctx.font = 'bold 24px Arial';
+        ctx.fillText('40 MPH', 0, 20);
+
+        ctx.restore();
+    }
 }
 
 // Draw the racing water surface
@@ -1048,66 +1411,251 @@ window.hideWelcomeModal = hideWelcomeModal;
 
 // Initialize boat preview canvases on welcome screen
 function initBoatPreviews() {
-    // Draw Sundancer preview
-    const sundancerCanvas = document.getElementById('sundancer-preview');
-    if (sundancerCanvas && sundancerCanvas.getContext) {
-        const ctx = sundancerCanvas.getContext('2d');
-        if (ctx) {
-            ctx.clearRect(0, 0, sundancerCanvas.width, sundancerCanvas.height);
+    // Use requestAnimationFrame to ensure DOM is ready
+    requestAnimationFrame(() => {
+        drawBoatPreview('sundancer');
+        drawBoatPreview('skiSupreme');
+    });
+}
 
-            // Draw water background
-            const waterGrad = ctx.createLinearGradient(0, 0, 0, sundancerCanvas.height);
-            waterGrad.addColorStop(0, '#87CEEB');
-            waterGrad.addColorStop(0.4, '#5A9A8A');
-            waterGrad.addColorStop(1, '#2A4A42');
-            ctx.fillStyle = waterGrad;
-            ctx.fillRect(0, 0, sundancerCanvas.width, sundancerCanvas.height);
+function drawBoatPreview(boatType) {
+    const canvasId = boatType === 'sundancer' ? 'sundancer-preview' : 'skisupreme-preview';
+    const canvas = document.getElementById(canvasId);
 
-            // Draw the boat with try/catch
-            try {
-                drawSundancerPontoon(ctx, 20, 15, sundancerCanvas.width - 40, sundancerCanvas.height - 30);
-            } catch (e) {
-                // Fallback: draw simple boat shape
-                ctx.fillStyle = '#E8DCC8';
-                ctx.fillRect(40, 50, 200, 60);
-                ctx.fillStyle = '#722F37';
-                ctx.fillRect(40, 70, 200, 15);
-            }
-        }
+    if (!canvas) {
+        console.warn(`Canvas ${canvasId} not found, retrying...`);
+        return;
     }
 
-    // Draw Ski Supreme preview
-    const skiSupremeCanvas = document.getElementById('skisupreme-preview');
-    if (skiSupremeCanvas && skiSupremeCanvas.getContext) {
-        const ctx = skiSupremeCanvas.getContext('2d');
-        if (ctx) {
-            ctx.clearRect(0, 0, skiSupremeCanvas.width, skiSupremeCanvas.height);
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
 
-            // Draw water background
-            const waterGrad = ctx.createLinearGradient(0, 0, 0, skiSupremeCanvas.height);
-            waterGrad.addColorStop(0, '#87CEEB');
-            waterGrad.addColorStop(0.4, '#5A9A8A');
-            waterGrad.addColorStop(1, '#2A4A42');
-            ctx.fillStyle = waterGrad;
-            ctx.fillRect(0, 0, skiSupremeCanvas.width, skiSupremeCanvas.height);
+    const w = canvas.width;
+    const h = canvas.height;
 
-            // Draw the boat with try/catch
-            try {
-                drawSkiSupreme(ctx, 20, 15, skiSupremeCanvas.width - 40, skiSupremeCanvas.height - 30);
-            } catch (e) {
-                // Fallback: draw simple boat shape
-                ctx.fillStyle = '#B22222';
-                ctx.beginPath();
-                ctx.moveTo(30, 80);
-                ctx.lineTo(250, 60);
-                ctx.lineTo(250, 100);
-                ctx.lineTo(30, 100);
-                ctx.fill();
-            }
-        }
+    // Clear and draw water background
+    ctx.clearRect(0, 0, w, h);
+
+    // Sky gradient at top
+    const skyGrad = ctx.createLinearGradient(0, 0, 0, h * 0.4);
+    skyGrad.addColorStop(0, '#87CEEB');
+    skyGrad.addColorStop(1, '#5DA4B4');
+    ctx.fillStyle = skyGrad;
+    ctx.fillRect(0, 0, w, h * 0.4);
+
+    // Water gradient
+    const waterGrad = ctx.createLinearGradient(0, h * 0.35, 0, h);
+    waterGrad.addColorStop(0, '#4A8A7A');
+    waterGrad.addColorStop(0.5, '#3A6A5A');
+    waterGrad.addColorStop(1, '#2A4A42');
+    ctx.fillStyle = waterGrad;
+    ctx.fillRect(0, h * 0.35, w, h * 0.65);
+
+    // Water ripples
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
+    ctx.lineWidth = 1;
+    for (let i = 0; i < 5; i++) {
+        const y = h * 0.5 + i * 15;
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.quadraticCurveTo(w * 0.25, y - 3, w * 0.5, y);
+        ctx.quadraticCurveTo(w * 0.75, y + 3, w, y);
+        ctx.stroke();
+    }
+
+    // Draw the appropriate boat
+    if (boatType === 'sundancer') {
+        drawSundancerPreview(ctx, w, h);
+    } else {
+        drawSkiSupremePreview(ctx, w, h);
     }
 }
+
+function drawSundancerPreview(ctx, w, h) {
+    // 1992 Sundancer 24' Pontoon - "The Party Barge"
+    const boatX = w * 0.1;
+    const boatY = h * 0.25;
+    const boatW = w * 0.8;
+    const boatH = h * 0.55;
+
+    // Shadow on water
+    ctx.fillStyle = 'rgba(0, 40, 40, 0.3)';
+    ctx.beginPath();
+    ctx.ellipse(w * 0.5, h * 0.85, boatW * 0.45, h * 0.06, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Left pontoon (aluminum)
+    const pontoonGrad = ctx.createLinearGradient(0, boatY + boatH * 0.6, 0, boatY + boatH * 0.8);
+    pontoonGrad.addColorStop(0, '#C0C0C0');
+    pontoonGrad.addColorStop(0.5, '#909090');
+    pontoonGrad.addColorStop(1, '#606060');
+    ctx.fillStyle = pontoonGrad;
+    ctx.beginPath();
+    ctx.moveTo(boatX + boatW * 0.02, boatY + boatH * 0.55);
+    ctx.lineTo(boatX + boatW * 0.95, boatY + boatH * 0.65);
+    ctx.lineTo(boatX + boatW * 0.95, boatY + boatH * 0.78);
+    ctx.lineTo(boatX, boatY + boatH * 0.78);
+    ctx.lineTo(boatX, boatY + boatH * 0.65);
+    ctx.closePath();
+    ctx.fill();
+
+    // Right pontoon (partially visible)
+    ctx.fillStyle = '#707070';
+    ctx.beginPath();
+    ctx.moveTo(boatX + boatW * 0.05, boatY + boatH * 0.75);
+    ctx.lineTo(boatX + boatW * 0.95, boatY + boatH * 0.82);
+    ctx.lineTo(boatX + boatW * 0.95, boatY + boatH * 0.92);
+    ctx.lineTo(boatX, boatY + boatH * 0.92);
+    ctx.closePath();
+    ctx.fill();
+
+    // Deck
+    const deckGrad = ctx.createLinearGradient(0, boatY, 0, boatY + boatH * 0.6);
+    deckGrad.addColorStop(0, '#F5EDE0');
+    deckGrad.addColorStop(1, '#E8DCC8');
+    ctx.fillStyle = deckGrad;
+    ctx.beginPath();
+    ctx.moveTo(boatX + boatW * 0.03, boatY + boatH * 0.55);
+    ctx.quadraticCurveTo(boatX, boatY + boatH * 0.2, boatX + boatW * 0.15, boatY + boatH * 0.1);
+    ctx.lineTo(boatX + boatW * 0.92, boatY + boatH * 0.1);
+    ctx.lineTo(boatX + boatW * 0.95, boatY + boatH * 0.55);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = '#C0B0A0';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // MAROON RACING STRIPE - the signature look
+    ctx.fillStyle = '#722F37';
+    ctx.beginPath();
+    ctx.moveTo(boatX + boatW * 0.04, boatY + boatH * 0.42);
+    ctx.lineTo(boatX + boatW * 0.02, boatY + boatH * 0.28);
+    ctx.lineTo(boatX + boatW * 0.18, boatY + boatH * 0.22);
+    ctx.lineTo(boatX + boatW * 0.90, boatY + boatH * 0.22);
+    ctx.lineTo(boatX + boatW * 0.93, boatY + boatH * 0.32);
+    ctx.lineTo(boatX + boatW * 0.93, boatY + boatH * 0.42);
+    ctx.lineTo(boatX + boatW * 0.18, boatY + boatH * 0.42);
+    ctx.closePath();
+    ctx.fill();
+
+    // Bimini top (canopy)
+    ctx.fillStyle = '#3A3A4A';
+    ctx.beginPath();
+    ctx.moveTo(boatX + boatW * 0.35, boatY);
+    ctx.quadraticCurveTo(boatX + boatW * 0.5, boatY - h * 0.05, boatX + boatW * 0.65, boatY);
+    ctx.lineTo(boatX + boatW * 0.62, boatY + boatH * 0.08);
+    ctx.lineTo(boatX + boatW * 0.38, boatY + boatH * 0.08);
+    ctx.closePath();
+    ctx.fill();
+
+    // Canopy supports
+    ctx.strokeStyle = '#505060';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(boatX + boatW * 0.38, boatY + boatH * 0.08);
+    ctx.lineTo(boatX + boatW * 0.35, boatY + boatH * 0.15);
+    ctx.moveTo(boatX + boatW * 0.62, boatY + boatH * 0.08);
+    ctx.lineTo(boatX + boatW * 0.65, boatY + boatH * 0.15);
+    ctx.stroke();
+
+    // Outboard motor (Evinrude 88hp)
+    ctx.fillStyle = '#2A2A2A';
+    ctx.fillRect(boatX + boatW * 0.88, boatY + boatH * 0.48, boatW * 0.08, boatH * 0.25);
+    ctx.fillStyle = '#1A3A6A';  // Evinrude blue
+    ctx.fillRect(boatX + boatW * 0.885, boatY + boatH * 0.50, boatW * 0.07, boatH * 0.12);
+
+    // Seats
+    ctx.fillStyle = '#E8E0D8';
+    ctx.fillRect(boatX + boatW * 0.70, boatY + boatH * 0.15, boatW * 0.15, boatH * 0.12);
+    ctx.fillRect(boatX + boatW * 0.25, boatY + boatH * 0.15, boatW * 0.15, boatH * 0.12);
+}
+
+function drawSkiSupremePreview(ctx, w, h) {
+    // 1982 Ski Supreme - "Red Rocket"
+    const boatX = w * 0.08;
+    const boatY = h * 0.30;
+    const boatW = w * 0.84;
+    const boatH = h * 0.50;
+
+    // Shadow on water
+    ctx.fillStyle = 'rgba(0, 40, 40, 0.3)';
+    ctx.beginPath();
+    ctx.ellipse(w * 0.5, h * 0.82, boatW * 0.42, h * 0.05, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Hull - fiery red with gradient
+    const hullGrad = ctx.createLinearGradient(0, boatY, 0, boatY + boatH);
+    hullGrad.addColorStop(0, '#E83030');
+    hullGrad.addColorStop(0.4, '#B22222');
+    hullGrad.addColorStop(1, '#8B1A1A');
+    ctx.fillStyle = hullGrad;
+
+    // Sleek ski boat shape
+    ctx.beginPath();
+    ctx.moveTo(boatX, boatY + boatH * 0.5);  // Bow point
+    ctx.quadraticCurveTo(boatX + boatW * 0.15, boatY + boatH * 0.1, boatX + boatW * 0.3, boatY + boatH * 0.15);
+    ctx.lineTo(boatX + boatW * 0.95, boatY + boatH * 0.20);
+    ctx.lineTo(boatX + boatW, boatY + boatH * 0.45);
+    ctx.lineTo(boatX + boatW * 0.95, boatY + boatH * 0.75);
+    ctx.lineTo(boatX + boatW * 0.3, boatY + boatH * 0.80);
+    ctx.quadraticCurveTo(boatX + boatW * 0.15, boatY + boatH * 0.85, boatX, boatY + boatH * 0.5);
+    ctx.closePath();
+    ctx.fill();
+
+    // White accent stripe
+    ctx.fillStyle = '#FFFFFF';
+    ctx.beginPath();
+    ctx.moveTo(boatX + boatW * 0.05, boatY + boatH * 0.48);
+    ctx.quadraticCurveTo(boatX + boatW * 0.15, boatY + boatH * 0.35, boatX + boatW * 0.3, boatY + boatH * 0.38);
+    ctx.lineTo(boatX + boatW * 0.90, boatY + boatH * 0.40);
+    ctx.lineTo(boatX + boatW * 0.90, boatY + boatH * 0.48);
+    ctx.lineTo(boatX + boatW * 0.3, boatY + boatH * 0.46);
+    ctx.quadraticCurveTo(boatX + boatW * 0.15, boatY + boatH * 0.43, boatX + boatW * 0.05, boatY + boatH * 0.52);
+    ctx.closePath();
+    ctx.fill();
+
+    // Interior (tan)
+    ctx.fillStyle = '#D4C4A0';
+    ctx.beginPath();
+    ctx.moveTo(boatX + boatW * 0.20, boatY + boatH * 0.25);
+    ctx.lineTo(boatX + boatW * 0.85, boatY + boatH * 0.28);
+    ctx.lineTo(boatX + boatW * 0.85, boatY + boatH * 0.60);
+    ctx.lineTo(boatX + boatW * 0.20, boatY + boatH * 0.60);
+    ctx.closePath();
+    ctx.fill();
+
+    // Windshield
+    ctx.fillStyle = 'rgba(180, 220, 240, 0.6)';
+    ctx.beginPath();
+    ctx.moveTo(boatX + boatW * 0.35, boatY + boatH * 0.15);
+    ctx.quadraticCurveTo(boatX + boatW * 0.45, boatY + boatH * 0.05, boatX + boatW * 0.55, boatY + boatH * 0.15);
+    ctx.lineTo(boatX + boatW * 0.52, boatY + boatH * 0.25);
+    ctx.lineTo(boatX + boatW * 0.38, boatY + boatH * 0.25);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = '#606060';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    // Ski tower
+    ctx.strokeStyle = '#404040';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(boatX + boatW * 0.50, boatY + boatH * 0.28);
+    ctx.lineTo(boatX + boatW * 0.45, boatY - h * 0.02);
+    ctx.lineTo(boatX + boatW * 0.55, boatY - h * 0.02);
+    ctx.lineTo(boatX + boatW * 0.50, boatY + boatH * 0.28);
+    ctx.stroke();
+
+    // Inboard engine cover (Ford 351 V8!)
+    ctx.fillStyle = '#C0B0A0';
+    ctx.fillRect(boatX + boatW * 0.60, boatY + boatH * 0.32, boatW * 0.20, boatH * 0.25);
+    ctx.fillStyle = '#2A2A2A';
+    ctx.fillRect(boatX + boatW * 0.62, boatY + boatH * 0.35, boatW * 0.16, boatH * 0.08);
+}
+
 window.initBoatPreviews = initBoatPreviews;
+window.drawBoatPreview = drawBoatPreview;
 
 // ==================== GAME CONFIGURATION ====================
 const CONFIG = {
