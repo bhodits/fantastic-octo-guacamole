@@ -2919,3 +2919,184 @@ aside h3 {
     from { opacity: 0; transform: translateX(-10px); }
     to { opacity: 1; transform: translateX(0); }
 }
+
+/* ==================== BUTTON JUICE & ANIMATIONS ==================== */
+
+/* Universal button press/bounce effect */
+button, .btn, .control-btn, .header-btn, .category-btn, .shop-tab {
+    transition: transform 0.1s cubic-bezier(0.34, 1.56, 0.64, 1),
+                box-shadow 0.15s ease,
+                background-color 0.2s ease;
+}
+
+button:active, .btn:active, .control-btn:active, .header-btn:active, 
+.category-btn:active, .shop-tab:active {
+    transform: scale(0.92);
+}
+
+/* Satisfying hover lift */
+button:hover, .btn:hover, .control-btn:hover, .header-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+button:active {
+    transform: scale(0.95) translateY(0);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+}
+
+/* Building item selection bounce */
+.building-item {
+    transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1),
+                box-shadow 0.2s ease,
+                border-color 0.2s ease;
+}
+
+.building-item:hover {
+    transform: scale(1.02);
+}
+
+.building-item:active {
+    transform: scale(0.98);
+}
+
+.building-item.selected {
+    animation: selectBounce 0.3s ease;
+}
+
+@keyframes selectBounce {
+    0% { transform: scale(1); }
+    40% { transform: scale(1.05); }
+    70% { transform: scale(0.97); }
+    100% { transform: scale(1); }
+}
+
+/* Resource counter pulse on update */
+@keyframes resourcePulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.15); }
+    100% { transform: scale(1); }
+}
+
+.resource-updated {
+    animation: resourcePulse 0.3s ease;
+}
+
+/* Money gain glow */
+@keyframes moneyGlow {
+    0% { box-shadow: 0 0 0 rgba(0, 255, 136, 0); }
+    50% { box-shadow: 0 0 15px rgba(0, 255, 136, 0.5); }
+    100% { box-shadow: 0 0 0 rgba(0, 255, 136, 0); }
+}
+
+.money-gained {
+    animation: moneyGlow 0.5s ease;
+}
+
+/* Boat card hover lift */
+.boat-card, .upgrade-card, .paint-card {
+    transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1),
+                box-shadow 0.2s ease;
+}
+
+.boat-card:hover, .upgrade-card:hover, .paint-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+}
+
+/* News ticker slide-in */
+@keyframes tickerSlideIn {
+    0% { transform: translateX(-100%); opacity: 0; }
+    100% { transform: translateX(0); opacity: 1; }
+}
+
+.news-ticker-message {
+    animation: tickerSlideIn 0.4s cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+/* Day/night transition for UI elements */
+.day-night-transition {
+    transition: background-color 2s ease,
+                color 2s ease,
+                border-color 2s ease;
+}
+
+/* Floating text for in-game popups (rendered on canvas, but styling reference) */
+.floating-text {
+    position: absolute;
+    pointer-events: none;
+    font-weight: bold;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+    animation: floatUp 1.5s ease forwards;
+}
+
+@keyframes floatUp {
+    0% { opacity: 1; transform: translateY(0) scale(1); }
+    100% { opacity: 0; transform: translateY(-60px) scale(1.2); }
+}
+
+/* Particles shimmer */
+@keyframes particleFloat {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-5px); }
+}
+
+/* Screen shake animation (applied via JS) */
+@keyframes screenShake {
+    0%, 100% { transform: translate(0, 0); }
+    10% { transform: translate(-3px, -2px); }
+    20% { transform: translate(3px, 2px); }
+    30% { transform: translate(-2px, 3px); }
+    40% { transform: translate(2px, -3px); }
+    50% { transform: translate(-3px, 0); }
+    60% { transform: translate(3px, 0); }
+    70% { transform: translate(0, 3px); }
+    80% { transform: translate(0, -3px); }
+    90% { transform: translate(-2px, -2px); }
+}
+
+.screen-shake {
+    animation: screenShake 0.3s ease;
+}
+
+/* Smooth dock button glow */
+#btn-dock {
+    position: relative;
+    overflow: hidden;
+}
+
+#btn-dock::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle, rgba(255,255,255,0.3) 0%, transparent 70%);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+#btn-dock:hover::before {
+    opacity: 1;
+    animation: dockGlow 1.5s ease infinite;
+}
+
+@keyframes dockGlow {
+    0%, 100% { transform: scale(1); opacity: 0.5; }
+    50% { transform: scale(1.1); opacity: 0.8; }
+}
+
+/* Time display smooth transitions */
+#time-display {
+    transition: background-color 1s ease, color 1s ease;
+}
+
+/* Mini-map hover zoom */
+#minimap-container {
+    transition: transform 0.3s ease;
+}
+
+#minimap-container:hover {
+    transform: scale(1.05);
+}

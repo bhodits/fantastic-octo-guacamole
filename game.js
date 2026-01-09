@@ -27,6 +27,486 @@ if (!CanvasRenderingContext2D.prototype.roundRect) {
     };
 }
 
+// ==================== TIME MANAGER (Day/Night Cycle) ====================
+const TimeManager = {
+    // Time runs faster in-game: 1 real minute = 1 game hour
+    gameHour: 10,          // Start at 10 AM
+    gameMinute: 0,
+    dayProgress: 0.42,     // 0 = midnight, 0.5 = noon, 1 = midnight
+    lastUpdate: 0,
+    timeSpeed: 1,          // Multiplier for time passage
+
+    // Color palette for different times of day
+    skyColors: {
+        night:      { top: '#0a1628', bottom: '#1a3a5c', ambient: 'rgba(10, 30, 60, 0.4)' },
+        dawn:       { top: '#ff9966', bottom: '#ff5e62', ambient: 'rgba(255, 150, 100, 0.15)' },
+        morning:    { top: '#87ceeb', bottom: '#1e5f8a', ambient: 'rgba(255, 255, 255, 0)' },
+        noon:       { top: '#5eb3e4', bottom: '#1e5f8a', ambient: 'rgba(255, 255, 200, 0.05)' },
+        afternoon:  { top: '#87ceeb', bottom: '#2980b9', ambient: 'rgba(255, 200, 150, 0.1)' },
+        sunset:     { top: '#ff7e5f', bottom: '#feb47b', ambient: 'rgba(255, 120, 50, 0.2)' },
+        dusk:       { top: '#2c3e50', bottom: '#4a69bd', ambient: 'rgba(50, 50, 100, 0.25)' },
+    },
+
+    update(deltaTime) {
+        // Advance game time (1 real second = 1 game minute at 1x speed)
+        this.gameMinute += (deltaTime / 1000) * this.timeSpeed * gameSpeedMultiplier;
+
+        while (this.gameMinute >= 60) {
+            this.gameMinute -= 60;
+            this.gameHour++;
+            if (this.gameHour >= 24) {
+                this.gameHour = 0;
+            }
+        }
+
+        // Calculate day progress (0-1)
+        this.dayProgress = (this.gameHour + this.gameMinute / 60) / 24;
+    },
+
+    getTimeOfDay() {
+        const hour = this.gameHour;
+        if (hour >= 22 || hour < 5) return 'night';
+        if (hour >= 5 && hour < 7) return 'dawn';
+        if (hour >= 7 && hour < 10) return 'morning';
+        if (hour >= 10 && hour < 14) return 'noon';
+        if (hour >= 14 && hour < 17) return 'afternoon';
+        if (hour >= 17 && hour < 20) return 'sunset';
+        return 'dusk';
+    },
+
+    getSkyGradient(ctx, height) {
+        const time = this.getTimeOfDay();
+        const colors = this.skyColors[time];
+        const gradient = ctx.createLinearGradient(0, 0, 0, height);
+        gradient.addColorStop(0, colors.top);
+        gradient.addColorStop(1, colors.bottom);
+        return gradient;
+    },
+
+    getAmbientOverlay() {
+        return this.skyColors[this.getTimeOfDay()].ambient;
+    },
+
+    isNight() {
+        const hour = this.gameHour;
+        return hour >= 20 || hour < 6;
+    },
+
+    getFormattedTime() {
+        const hour12 = this.gameHour % 12 || 12;
+        const ampm = this.gameHour >= 12 ? 'PM' : 'AM';
+        const min = Math.floor(this.gameMinute).toString().padStart(2, '0');
+        return `${hour12}:${min} ${ampm}`;
+    }
+};
+
+// ==================== VISUAL EFFECTS MANAGER ====================
+const VisualEffectsManager = {
+    // Particle pools for different effect types
+    particles: [],
+    floatingTexts: [],
+    splashes: [],
+    screenShake: { intensity: 0, duration: 0 },
+
+    // Water animation state
+    water: {
+        time: 0,
+        waves: [],
+        ripples: []
+    },
+
+    // Button juice animations
+    buttonAnimations: new Map(),
+
+    // Maximum particles for performance
+    MAX_PARTICLES: 100,
+    MAX_FLOATING_TEXTS: 20,
+
+    init() {
+        // Pre-generate wave offsets for water animation
+        for (let i = 0; i < 10; i++) {
+            this.water.waves.push({
+                offset: Math.random() * Math.PI * 2,
+                speed: 0.5 + Math.random() * 0.5,
+                amplitude: 2 + Math.random() * 3
+            });
+        }
+        console.log('[VFX] VisualEffectsManager initialized');
+    },
+
+    update(deltaTime) {
+        const dt = deltaTime / 1000;
+
+        // Update water animation
+        this.water.time += dt;
+
+        // Update particles
+        this.particles = this.particles.filter(p => {
+            p.x += p.vx * dt;
+            p.y += p.vy * dt;
+            p.vy += p.gravity * dt;
+            p.life -= dt;
+            p.alpha = Math.max(0, p.life / p.maxLife);
+            return p.life > 0;
+        });
+
+        // Update floating texts
+        this.floatingTexts = this.floatingTexts.filter(ft => {
+            ft.y -= ft.speed * dt;
+            ft.life -= dt;
+            ft.alpha = Math.min(1, ft.life / (ft.maxLife * 0.5));
+            ft.scale = 1 + (1 - ft.life / ft.maxLife) * 0.2;
+            return ft.life > 0;
+        });
+
+        // Update water ripples
+        this.water.ripples = this.water.ripples.filter(r => {
+            r.radius += r.speed * dt;
+            r.life -= dt;
+            r.alpha = Math.max(0, r.life / r.maxLife);
+            return r.life > 0;
+        });
+
+        // Update screen shake
+        if (this.screenShake.duration > 0) {
+            this.screenShake.duration -= dt;
+            if (this.screenShake.duration <= 0) {
+                this.screenShake.intensity = 0;
+            }
+        }
+    },
+
+    // ===== FLOATING TEXT (Money, Damage, etc.) =====
+    spawnFloatingText(x, y, text, color = '#00ff88', size = 18) {
+        if (this.floatingTexts.length >= this.MAX_FLOATING_TEXTS) {
+            this.floatingTexts.shift();
+        }
+
+        this.floatingTexts.push({
+            x, y,
+            text,
+            color,
+            size,
+            speed: 60,
+            life: 1.5,
+            maxLife: 1.5,
+            alpha: 1,
+            scale: 1
+        });
+    },
+
+    // Money popup helper
+    spawnMoneyText(x, y, amount) {
+        const color = amount >= 0 ? '#00ff88' : '#ff4444';
+        const prefix = amount >= 0 ? '+$' : '-$';
+        const text = prefix + Math.abs(amount).toLocaleString();
+        this.spawnFloatingText(x, y, text, color, amount >= 1000 ? 24 : 18);
+    },
+
+    // ===== PARTICLES =====
+    spawnParticles(x, y, type = 'dust', count = 10) {
+        const configs = {
+            dust: { colors: ['#c4a574', '#a08060', '#8b7355'], gravity: 50, speed: 80, life: 0.8 },
+            splash: { colors: ['#4a90d9', '#6ab7ff', '#ffffff'], gravity: 150, speed: 120, life: 0.6 },
+            sparkle: { colors: ['#ffff00', '#ffcc00', '#ffffff'], gravity: -20, speed: 40, life: 1.2 },
+            smoke: { colors: ['#666666', '#888888', '#aaaaaa'], gravity: -30, speed: 30, life: 1.5 },
+        };
+
+        const config = configs[type] || configs.dust;
+
+        for (let i = 0; i < count; i++) {
+            if (this.particles.length >= this.MAX_PARTICLES) {
+                this.particles.shift();
+            }
+
+            const angle = Math.random() * Math.PI * 2;
+            const speed = config.speed * (0.5 + Math.random() * 0.5);
+
+            this.particles.push({
+                x, y,
+                vx: Math.cos(angle) * speed,
+                vy: Math.sin(angle) * speed - 50,
+                gravity: config.gravity,
+                color: config.colors[Math.floor(Math.random() * config.colors.length)],
+                size: 3 + Math.random() * 4,
+                life: config.life * (0.8 + Math.random() * 0.4),
+                maxLife: config.life,
+                alpha: 1
+            });
+        }
+    },
+
+    // Water ripple effect
+    spawnRipple(x, y) {
+        this.water.ripples.push({
+            x, y,
+            radius: 5,
+            speed: 100,
+            life: 1,
+            maxLife: 1,
+            alpha: 1
+        });
+    },
+
+    // Screen shake
+    shake(intensity = 5, duration = 0.3) {
+        this.screenShake.intensity = intensity;
+        this.screenShake.duration = duration;
+    },
+
+    getShakeOffset() {
+        if (this.screenShake.intensity <= 0) return { x: 0, y: 0 };
+        return {
+            x: (Math.random() - 0.5) * this.screenShake.intensity * 2,
+            y: (Math.random() - 0.5) * this.screenShake.intensity * 2
+        };
+    },
+
+    // ===== WATER SHADER EFFECT =====
+    getWaterOffset(x, y) {
+        let offset = 0;
+        for (const wave of this.water.waves) {
+            offset += Math.sin(
+                (x * 0.02 + y * 0.01 + this.water.time * wave.speed + wave.offset)
+            ) * wave.amplitude;
+        }
+        return offset;
+    },
+
+    // ===== RENDER EFFECTS =====
+    renderParticles(ctx) {
+        for (const p of this.particles) {
+            ctx.save();
+            ctx.globalAlpha = p.alpha;
+            ctx.fillStyle = p.color;
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+        }
+    },
+
+    renderFloatingTexts(ctx) {
+        for (const ft of this.floatingTexts) {
+            ctx.save();
+            ctx.globalAlpha = ft.alpha;
+            ctx.font = `bold ${Math.round(ft.size * ft.scale)}px "Cabin", sans-serif`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+
+            // Shadow
+            ctx.fillStyle = 'rgba(0,0,0,0.5)';
+            ctx.fillText(ft.text, ft.x + 2, ft.y + 2);
+
+            // Main text
+            ctx.fillStyle = ft.color;
+            ctx.fillText(ft.text, ft.x, ft.y);
+            ctx.restore();
+        }
+    },
+
+    renderWaterRipples(ctx) {
+        for (const r of this.water.ripples) {
+            ctx.save();
+            ctx.globalAlpha = r.alpha * 0.5;
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(r.x, r.y, r.radius, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.restore();
+        }
+    }
+};
+
+// ==================== NARRATIVE EVENT MANAGER ====================
+const NarrativeEventManager = {
+    // Track triggered events to prevent repeats
+    triggeredEvents: new Set(),
+
+    // Check cooldown
+    lastCheckTime: 0,
+    checkInterval: 5000, // Check every 5 seconds
+
+    // News ticker queue
+    newsQueue: [],
+    currentNews: null,
+    newsDisplayTime: 0,
+
+    // Event definitions with conditions
+    events: [
+        {
+            id: 'broke_warning',
+            condition: (state) => state.resources.money < 100 && state.resources.money > 0,
+            headline: '📉 RECESSION HITS LOCAL ECONOMY',
+            message: '"Tough times at the lake," says local fisherman. "Even the catfish are cutting back."',
+            type: 'negative',
+            repeatable: true,
+            cooldown: 60000
+        },
+        {
+            id: 'bankrupt',
+            condition: (state) => state.resources.money <= 0,
+            headline: '💸 DEVELOPER GOES UNDERWATER',
+            message: 'Local boat builder seen washing dishes at Big Dick\'s Halfway Inn.',
+            type: 'negative',
+            repeatable: false
+        },
+        {
+            id: 'first_1000',
+            condition: (state) => state.resources.money >= 1000,
+            headline: '💰 LOCAL ENTREPRENEUR ON THE RISE',
+            message: '"They said I was crazy to build boats," they said. Look who\'s laughing now!',
+            type: 'positive',
+            repeatable: false
+        },
+        {
+            id: 'first_10000',
+            condition: (state) => state.resources.money >= 10000,
+            headline: '🎉 BOAT BUSINESS BOOMING!',
+            message: 'From rags to riches: Local builder becomes lake legend.',
+            type: 'positive',
+            repeatable: false
+        },
+        {
+            id: 'tourist_boom',
+            condition: (state) => state.resources.tourism >= 50,
+            headline: '🏖️ TOURIST INVASION!',
+            message: 'City folks flooding the lake! "We just love the authentic Ozark experience!"',
+            type: 'positive',
+            repeatable: false
+        },
+        {
+            id: 'night_owl',
+            condition: () => TimeManager.gameHour >= 23 || TimeManager.gameHour < 4,
+            headline: '🌙 BURNING THE MIDNIGHT OIL',
+            message: 'Witnesses report strange lights from the boat shop. "They never sleep!"',
+            type: 'neutral',
+            repeatable: true,
+            cooldown: 120000
+        },
+        {
+            id: 'high_reputation',
+            condition: (state) => state.resources.reputation >= 80,
+            headline: '⭐ FIVE-STAR LAKE DEVELOPER!',
+            message: 'Everyone\'s talking about the best boat builder this side of the dam.',
+            type: 'positive',
+            repeatable: false
+        }
+    ],
+
+    // Cooldown tracker
+    cooldowns: new Map(),
+
+    init() {
+        console.log('[Narrative] NarrativeEventManager initialized with', this.events.length, 'events');
+    },
+
+    check(gameState) {
+        const now = Date.now();
+        if (now - this.lastCheckTime < this.checkInterval) return;
+        this.lastCheckTime = now;
+
+        for (const event of this.events) {
+            // Skip if already triggered and not repeatable
+            if (this.triggeredEvents.has(event.id) && !event.repeatable) continue;
+
+            // Check cooldown for repeatable events
+            if (event.repeatable && this.cooldowns.has(event.id)) {
+                if (now - this.cooldowns.get(event.id) < (event.cooldown || 60000)) continue;
+            }
+
+            // Check condition
+            if (event.condition(gameState)) {
+                this.triggerEvent(event);
+                this.triggeredEvents.add(event.id);
+                if (event.repeatable) {
+                    this.cooldowns.set(event.id, now);
+                }
+            }
+        }
+    },
+
+    triggerEvent(event) {
+        // Add to news queue
+        this.newsQueue.push({
+            headline: event.headline,
+            message: event.message,
+            type: event.type,
+            timestamp: Date.now()
+        });
+
+        // Also add to game's event log
+        if (typeof addEvent === 'function') {
+            addEvent(event.headline, event.type);
+        }
+
+        console.log('[Narrative] Event triggered:', event.id);
+    },
+
+    // Get current news for ticker display
+    getCurrentNews() {
+        const now = Date.now();
+
+        // Check if current news has expired (8 seconds display)
+        if (this.currentNews && now - this.newsDisplayTime > 8000) {
+            this.currentNews = null;
+        }
+
+        // Get next news from queue if available
+        if (!this.currentNews && this.newsQueue.length > 0) {
+            this.currentNews = this.newsQueue.shift();
+            this.newsDisplayTime = now;
+        }
+
+        return this.currentNews;
+    }
+};
+
+// ==================== MAIN ANIMATION LOOP ====================
+let animationFrameId = null;
+let lastFrameTime = 0;
+let gameSpeedMultiplier = 1;
+
+function startAnimationLoop() {
+    if (animationFrameId) return; // Already running
+
+    lastFrameTime = performance.now();
+    VisualEffectsManager.init();
+    NarrativeEventManager.init();
+
+    function animate(currentTime) {
+        const deltaTime = currentTime - lastFrameTime;
+        lastFrameTime = currentTime;
+
+        // Cap deltaTime to prevent huge jumps after tab switch
+        const cappedDelta = Math.min(deltaTime, 100);
+
+        // Update systems
+        TimeManager.update(cappedDelta);
+        VisualEffectsManager.update(cappedDelta);
+        NarrativeEventManager.check(gameState);
+
+        // Render with effects
+        if (typeof render === 'function' && typeof gameState !== 'undefined' && gameState.grid.length > 0) {
+            render();
+        }
+
+        // Continue loop
+        animationFrameId = requestAnimationFrame(animate);
+    }
+
+    animationFrameId = requestAnimationFrame(animate);
+    console.log('[Engine] Animation loop started');
+}
+
+function stopAnimationLoop() {
+    if (animationFrameId) {
+        cancelAnimationFrame(animationFrameId);
+        animationFrameId = null;
+    }
+}
+
 // ==================== GLOBAL MODAL & BOAT SELECTION ====================
 // Track selected starter boat
 let selectedStarterBoat = 'sundancer';
@@ -4537,10 +5017,14 @@ function render() {
     }
     gameState.lastRenderTime = now;
 
-    // Sky/water background
-    const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
-    gradient.addColorStop(0, '#87ceeb');
-    gradient.addColorStop(1, '#1e5f8a');
+    // Apply screen shake offset
+    const shake = VisualEffectsManager.getShakeOffset();
+
+    ctx.save();
+    ctx.translate(shake.x, shake.y);
+
+    // Sky/water background - uses TimeManager for day/night cycle
+    const gradient = TimeManager.getSkyGradient(ctx, canvas.height);
     ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
@@ -4559,9 +5043,13 @@ function render() {
     // Draw mile markers
     drawMileMarkers();
 
-    // Draw buildings
+    // Draw buildings (with night lights)
     gameState.buildings.forEach(building => {
         drawBuilding(building);
+        // Add glow effect for lit buildings at night
+        if (TimeManager.isNight()) {
+            drawBuildingNightLights(building);
+        }
     });
 
     // Draw hover highlight
@@ -4587,13 +5075,129 @@ function render() {
     // Draw location labels (towns, parks, landmarks)
     drawLocationLabels();
 
+    // Render water ripples within world space
+    VisualEffectsManager.renderWaterRipples(ctx);
+
     ctx.restore();
+
+    // Draw ambient overlay for time of day
+    const ambientColor = TimeManager.getAmbientOverlay();
+    ctx.fillStyle = ambientColor;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     // Draw minimap
     drawMinimap();
 
+    // Render particles and floating text (screen space)
+    VisualEffectsManager.renderParticles(ctx);
+    VisualEffectsManager.renderFloatingTexts(ctx);
+
+    // Draw HUD elements
+    drawTimeDisplay();
+    drawNewsTicker();
+
+    ctx.restore(); // Restore from shake
+
     // Update mile marker display
     updateMileMarkerDisplay();
+}
+
+// Draw building lights at night
+function drawBuildingNightLights(building) {
+    const def = BUILDINGS[building.type];
+    if (!def) return;
+
+    const px = building.x * CONFIG.TILE_SIZE;
+    const py = building.y * CONFIG.TILE_SIZE;
+    const width = (def.size?.width || 1) * CONFIG.TILE_SIZE;
+    const height = (def.size?.height || 1) * CONFIG.TILE_SIZE;
+
+    // Buildings that should have lights
+    const litBuildings = ['marina', 'resort', 'restaurant', 'bar', 'gas_dock', 'boat_dealer'];
+    if (!litBuildings.includes(building.type) && !building.type.includes('dock')) return;
+
+    // Draw warm glow
+    const glowRadius = Math.max(width, height) * 0.8;
+    const gradient = ctx.createRadialGradient(
+        px + width/2, py + height/2, 0,
+        px + width/2, py + height/2, glowRadius
+    );
+    gradient.addColorStop(0, 'rgba(255, 200, 100, 0.3)');
+    gradient.addColorStop(0.5, 'rgba(255, 150, 50, 0.15)');
+    gradient.addColorStop(1, 'rgba(255, 100, 0, 0)');
+
+    ctx.fillStyle = gradient;
+    ctx.beginPath();
+    ctx.arc(px + width/2, py + height/2, glowRadius, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Draw small window lights
+    ctx.fillStyle = 'rgba(255, 220, 150, 0.8)';
+    const windowSize = 4;
+    for (let i = 0; i < 3; i++) {
+        const wx = px + 8 + (i * 12) + Math.sin(VisualEffectsManager.water.time + i) * 0.5;
+        const wy = py + 6;
+        ctx.fillRect(wx, wy, windowSize, windowSize);
+    }
+}
+
+// Draw time display in corner
+function drawTimeDisplay() {
+    const padding = 10;
+    const x = canvas.width - 120;
+    const y = padding;
+
+    // Background
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+    ctx.roundRect(x - 5, y - 5, 115, 30, 5);
+    ctx.fill();
+
+    // Time text
+    ctx.font = 'bold 16px "Cabin", sans-serif';
+    ctx.fillStyle = '#ffffff';
+    ctx.textAlign = 'left';
+    ctx.fillText(TimeManager.getFormattedTime(), x + 5, y + 16);
+
+    // Time of day icon
+    const timeOfDay = TimeManager.getTimeOfDay();
+    const icons = {
+        night: '🌙', dawn: '🌅', morning: '☀️', noon: '☀️',
+        afternoon: '⛅', sunset: '🌅', dusk: '🌆'
+    };
+    ctx.font = '18px sans-serif';
+    ctx.fillText(icons[timeOfDay] || '☀️', x + 85, y + 17);
+}
+
+// Draw news ticker at bottom
+function drawNewsTicker() {
+    const news = NarrativeEventManager.getCurrentNews();
+    if (!news) return;
+
+    const tickerHeight = 35;
+    const y = canvas.height - tickerHeight;
+
+    // Background
+    const bgColors = {
+        positive: 'rgba(0, 100, 50, 0.9)',
+        negative: 'rgba(100, 30, 30, 0.9)',
+        neutral: 'rgba(30, 50, 80, 0.9)'
+    };
+    ctx.fillStyle = bgColors[news.type] || bgColors.neutral;
+    ctx.fillRect(0, y, canvas.width, tickerHeight);
+
+    // News headline with scroll effect
+    const elapsed = Date.now() - NarrativeEventManager.newsDisplayTime;
+    const slideIn = Math.min(1, elapsed / 300);
+    const textX = 20 + (1 - slideIn) * -200;
+
+    ctx.font = 'bold 14px "Cabin", sans-serif';
+    ctx.fillStyle = '#ffffff';
+    ctx.textAlign = 'left';
+    ctx.fillText('LAKE NEWS:', textX, y + 22);
+
+    ctx.font = '14px "Cabin", sans-serif';
+    ctx.fillStyle = '#ffdd88';
+    ctx.fillText(news.headline, textX + 100, y + 22);
 }
 
 function drawTile(x, y, tile) {
@@ -4786,16 +5390,20 @@ function drawWaterDetail(px, py, terrainType, tileX, tileY) {
         return;
     }
 
-    // Animated water ripples
-    const waveOffset1 = Math.sin(time + tileX * 0.5 + tileY * 0.3) * 2;
-    const waveOffset2 = Math.cos(time * 0.7 + tileX * 0.3 + tileY * 0.5) * 2;
+    // Use VFX Manager for smooth, synced water animation
+    const waveOffset1 = VisualEffectsManager.getWaterOffset(tileX * 40, tileY * 40);
+    const waveOffset2 = VisualEffectsManager.getWaterOffset(tileX * 40 + 20, tileY * 40 + 15);
+
+    // Time-of-day affects water color/brightness
+    const isNight = TimeManager.isNight();
+    const reflectAlpha = isNight ? 0.15 : 0.25;
 
     // Light reflection ripples
     ctx.fillStyle = terrainType === 'deep_water'
-        ? 'rgba(100, 140, 130, 0.2)'
-        : 'rgba(150, 200, 180, 0.25)';
+        ? `rgba(100, 140, 130, ${reflectAlpha * 0.8})`
+        : `rgba(150, 200, 180, ${reflectAlpha})`;
 
-    // Draw curved ripple lines
+    // Draw curved ripple lines with smooth animation
     ctx.beginPath();
     ctx.moveTo(px + 5, py + 10 + waveOffset1);
     ctx.quadraticCurveTo(px + 20, py + 8 + waveOffset1, px + 35, py + 12 + waveOffset1);
@@ -4812,15 +5420,29 @@ function drawWaterDetail(px, py, terrainType, tileX, tileY) {
     ctx.closePath();
     ctx.fill();
 
-    // Occasional sparkle effect on shallow water
+    // Sparkle/shimmer effect - more at noon, moonlight at night
     if (terrainType === 'shallow' || terrainType === 'cove') {
-        const sparkle = (Date.now() / 200 + seed) % 20;
-        if (sparkle < 2) {
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+        const timeOfDay = TimeManager.getTimeOfDay();
+        const sparkleChance = (timeOfDay === 'noon' || timeOfDay === 'afternoon') ? 3 : (isNight ? 1 : 2);
+        const sparkle = (VisualEffectsManager.water.time * 5 + seed) % 20;
+
+        if (sparkle < sparkleChance) {
+            ctx.fillStyle = isNight ? 'rgba(200, 220, 255, 0.4)' : 'rgba(255, 255, 255, 0.7)';
             ctx.beginPath();
-            ctx.arc(px + (seed % 30) + 5, py + ((seed * 2) % 30) + 5, 2, 0, Math.PI * 2);
+            const sparkleX = px + (seed % 30) + 5 + Math.sin(VisualEffectsManager.water.time + seed) * 2;
+            const sparkleY = py + ((seed * 2) % 30) + 5;
+            ctx.arc(sparkleX, sparkleY, isNight ? 1.5 : 2, 0, Math.PI * 2);
             ctx.fill();
         }
+    }
+
+    // Moon reflection on water at night (on main channel only)
+    if (isNight && terrainType === 'main_channel' && tileY % 8 < 2 && tileX % 12 < 3) {
+        const moonGlow = ctx.createRadialGradient(px + 20, py + 20, 0, px + 20, py + 20, 15);
+        moonGlow.addColorStop(0, 'rgba(255, 255, 220, 0.15)');
+        moonGlow.addColorStop(1, 'rgba(255, 255, 220, 0)');
+        ctx.fillStyle = moonGlow;
+        ctx.fillRect(px, py, size, size);
     }
 }
 
@@ -6025,6 +6647,25 @@ function placeBuilding(buildingType, x, y) {
     }
 
     addEvent(`Built ${def.name}!`, 'positive');
+
+    // Spawn construction particles based on terrain type
+    const screenX = (x * CONFIG.TILE_SIZE + CONFIG.TILE_SIZE / 2) * gameState.camera.zoom + gameState.camera.x;
+    const screenY = (y * CONFIG.TILE_SIZE + CONFIG.TILE_SIZE / 2) * gameState.camera.zoom + gameState.camera.y;
+    const tile = gameState.grid[y][x];
+    const isWaterBuild = tile.terrain && TERRAIN[tile.terrain.toUpperCase()]?.isWater;
+
+    if (isWaterBuild) {
+        // Water splash for dock/marina builds
+        VisualEffectsManager.spawnParticles(screenX, screenY, 'splash', 15);
+        VisualEffectsManager.spawnRipple(screenX, screenY);
+    } else {
+        // Dust cloud for land builds
+        VisualEffectsManager.spawnParticles(screenX, screenY, 'dust', 12);
+    }
+
+    // Small screen shake for feedback
+    VisualEffectsManager.shake(3, 0.15);
+
     updateUI();
     render();
 
@@ -6166,7 +6807,8 @@ function gameTick() {
     }
 
     // Apply resources
-    gameState.resources.money += Math.floor(income - expenses);
+    const netIncome = Math.floor(income - expenses);
+    gameState.resources.money += netIncome;
     gameState.resources.boats += boatProduction;
     gameState.resources.speedBoats += speedBoatProduction;
     gameState.resources.tourism = Math.floor(Math.max(0, gameState.resources.tourism * 0.95 + tourismProduction));
@@ -6176,6 +6818,20 @@ function gameTick() {
     gameState.resources.racingRep = Math.max(0, Math.min(100,
         gameState.resources.racingRep + racingRepChange * 0.1
     ));
+
+    // Spawn floating income text for significant earnings (every few ticks for performance)
+    if (netIncome > 0 && gameState.tick % 3 === 0) {
+        // Position near the money display in the header
+        const moneyEl = document.getElementById('money');
+        if (moneyEl) {
+            const rect = moneyEl.getBoundingClientRect();
+            VisualEffectsManager.spawnMoneyText(
+                rect.left + rect.width / 2,
+                rect.bottom + 20,
+                netIncome * 3 // Show accumulated income
+            );
+        }
+    }
 
     // Random events
     if (Math.random() < 0.03) {
@@ -6187,6 +6843,9 @@ function gameTick() {
         addEvent('Weekend warriors flood the lake! ', 'party');
         gameState.resources.tourism += 20;
         gameState.resources.money += 500;
+
+        // Spawn celebratory particles near center of screen
+        VisualEffectsManager.spawnParticles(window.innerWidth / 2, 200, 'sparkle', 15);
     }
 
     document.getElementById('income').textContent = `+$${Math.floor(income - expenses)}/s`;
@@ -7124,6 +7783,9 @@ function init() {
     render();
     startGameLoop();
 
+    // Start the visual effects animation loop
+    startAnimationLoop();
+
     // Initialize boat preview canvases on welcome screen with delay to ensure DOM ready
     setTimeout(() => {
         initBoatPreviews();
@@ -7135,6 +7797,8 @@ function init() {
         initBoatPreviews();
         initStoryteller();
     }, 500);
+
+    console.log('[Game] Lake of the Ozarks Tycoon initialized!');
 }
 
 window.addEventListener('load', init);
