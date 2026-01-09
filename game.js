@@ -179,10 +179,22 @@ function showFirstShootoutRace() {
 }
 window.showFirstShootoutRace = showFirstShootoutRace;
 
-// Setup race controls
+// ==================== RACE CONTROL SYSTEM ====================
+// Store bound handlers for proper cleanup
+let raceControlHandlers = {
+    keydown: null,
+    keyup: null,
+    mousedown: null,
+    mouseup: null,
+    mouseleave: null
+};
+
+// Setup race controls with proper cleanup tracking
 function setupRaceControls() {
+    // Clean up any existing handlers first
+    cleanupRaceControls();
+
     const handleThrottleStart = () => {
-        // Can throttle during approach and racing phases
         if (raceState.phase === 'approach' || raceState.phase === 'racing') {
             raceState.throttle = 1;
         }
@@ -192,16 +204,16 @@ function setupRaceControls() {
         raceState.throttle = 0;
     };
 
-    // Steering controls (left/right)
     const handleSteerLeft = () => {
         if (raceState.active) raceState.boatLane = Math.max(-1, raceState.boatLane - 0.05);
     };
+
     const handleSteerRight = () => {
         if (raceState.active) raceState.boatLane = Math.min(1, raceState.boatLane + 0.05);
     };
 
-    // Keyboard
-    document.addEventListener('keydown', function raceKeyDown(e) {
+    // Create bound handlers for cleanup
+    raceControlHandlers.keydown = (e) => {
         if (!raceState.active) return;
         if (e.code === 'Space') {
             e.preventDefault();
@@ -209,21 +221,65 @@ function setupRaceControls() {
         }
         if (e.code === 'ArrowLeft' || e.code === 'KeyA') handleSteerLeft();
         if (e.code === 'ArrowRight' || e.code === 'KeyD') handleSteerRight();
-    });
+    };
 
-    document.addEventListener('keyup', function raceKeyUp(e) {
+    raceControlHandlers.keyup = (e) => {
         if (e.code === 'Space' && raceState.active) {
             handleThrottleEnd();
         }
-    });
+    };
 
-    // Mouse/Touch
+    raceControlHandlers.mousedown = handleThrottleStart;
+    raceControlHandlers.mouseup = handleThrottleEnd;
+    raceControlHandlers.mouseleave = handleThrottleEnd;
+
+    // Add keyboard listeners
+    document.addEventListener('keydown', raceControlHandlers.keydown);
+    document.addEventListener('keyup', raceControlHandlers.keyup);
+
+    // Add mouse listeners (Desktop-optimized - no touch handlers)
     const canvas = raceState.canvas;
-    canvas.addEventListener('mousedown', handleThrottleStart);
-    canvas.addEventListener('mouseup', handleThrottleEnd);
-    canvas.addEventListener('mouseleave', handleThrottleEnd);
-    canvas.addEventListener('touchstart', (e) => { e.preventDefault(); handleThrottleStart(); });
-    canvas.addEventListener('touchend', handleThrottleEnd);
+    if (canvas) {
+        canvas.addEventListener('mousedown', raceControlHandlers.mousedown);
+        canvas.addEventListener('mouseup', raceControlHandlers.mouseup);
+        canvas.addEventListener('mouseleave', raceControlHandlers.mouseleave);
+    }
+
+    console.log('[Race] Controls initialized');
+}
+
+// Clean up race event listeners to prevent memory leaks
+function cleanupRaceControls() {
+    if (raceControlHandlers.keydown) {
+        document.removeEventListener('keydown', raceControlHandlers.keydown);
+    }
+    if (raceControlHandlers.keyup) {
+        document.removeEventListener('keyup', raceControlHandlers.keyup);
+    }
+
+    const canvas = raceState.canvas;
+    if (canvas) {
+        if (raceControlHandlers.mousedown) {
+            canvas.removeEventListener('mousedown', raceControlHandlers.mousedown);
+        }
+        if (raceControlHandlers.mouseup) {
+            canvas.removeEventListener('mouseup', raceControlHandlers.mouseup);
+        }
+        if (raceControlHandlers.mouseleave) {
+            canvas.removeEventListener('mouseleave', raceControlHandlers.mouseleave);
+        }
+    }
+
+    // Reset handlers
+    raceControlHandlers = {
+        keydown: null,
+        keyup: null,
+        mousedown: null,
+        mouseup: null,
+        mouseleave: null
+    };
+
+    console.log('[Race] Controls cleaned up');
 }
 
 // Update HUD status message
@@ -1168,6 +1224,9 @@ function showRaceResults() {
     if (raceState.animationFrame) {
         cancelAnimationFrame(raceState.animationFrame);
     }
+
+    // CRITICAL: Clean up event listeners to prevent memory leaks
+    cleanupRaceControls();
 
     const activeBoat = gameState.garage.boats[0];
     const finalSpeed = Math.round(raceState.finalSpeed * 10) / 10;
@@ -4372,6 +4431,8 @@ let gameState = {
     workers: { total: 0, employed: 0 },
     lakeLevel: 660,
     weekendBonus: false,
+    renderDirty: true, // Flag to track if re-render is needed
+    lastRenderTime: 0, // Timestamp of last render
 
     // ===== BOAT GARAGE & RACING =====
     garage: {
@@ -4469,6 +4530,13 @@ function resizeCanvas() {
 }
 
 function render() {
+    // Throttle renders to max ~60fps to prevent excessive repaints during drag
+    const now = performance.now();
+    if (now - gameState.lastRenderTime < 16) { // ~60fps max
+        return;
+    }
+    gameState.lastRenderTime = now;
+
     // Sky/water background
     const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
     gradient.addColorStop(0, '#87ceeb');
@@ -6898,7 +6966,15 @@ function renderPaintShop(container) {
 
 function buyBoat(hullId) {
     const hull = BOAT_HULLS[hullId];
-    if (!hull || gameState.resources.money < hull.basePrice) return;
+    if (!hull) {
+        console.error('[Shop] Invalid hull ID:', hullId);
+        return;
+    }
+
+    if (gameState.resources.money < hull.basePrice) {
+        addEvent(`Not enough cash! Need $${hull.basePrice.toLocaleString()}`, 'negative');
+        return;
+    }
 
     if (gameState.garage.boats.length >= gameState.garage.maxSlots) {
         addEvent('Garage is full! Sell a boat first.', 'negative');
@@ -6955,7 +7031,15 @@ function purchaseUpgrade(type, itemId) {
             return;
     }
 
-    if (!item || gameState.resources.money < price) return;
+    if (!item) {
+        console.error('[Shop] Invalid item:', type, itemId);
+        return;
+    }
+
+    if (gameState.resources.money < price) {
+        addEvent(`Not enough cash! Need $${price.toLocaleString()}`, 'negative');
+        return;
+    }
 
     gameState.resources.money -= price;
     activeBoat[type] = itemId;
@@ -7054,3 +7138,69 @@ function init() {
 }
 
 window.addEventListener('load', init);
+
+// ==================== DESKTOP KEYBOARD SHORTCUTS ====================
+// Global keyboard shortcuts for desktop users (non-racing)
+function initGlobalKeyboardShortcuts() {
+    document.addEventListener('keydown', (e) => {
+        // Don't trigger shortcuts if user is typing in an input
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+
+        // Don't interfere with race controls when racing
+        if (raceState.active) return;
+
+        switch(e.key.toLowerCase()) {
+            case 'd':
+                // D = Open/Close Dock
+                const shopModal = document.getElementById('boat-shop-modal');
+                if (shopModal && !shopModal.classList.contains('hidden')) {
+                    closeBoatShop();
+                } else {
+                    openBoatShop();
+                }
+                e.preventDefault();
+                break;
+            case 'escape':
+                // ESC = Close any open modal
+                closeBoatShop();
+                const raceModal = document.getElementById('race-modal');
+                if (raceModal) raceModal.classList.add('hidden');
+                e.preventDefault();
+                break;
+            case '1':
+                // 1 = Normal speed
+                gameSpeedMultiplier = 1;
+                document.getElementById('btn-speed').textContent = '1x';
+                e.preventDefault();
+                break;
+            case '2':
+                // 2 = 2x speed
+                gameSpeedMultiplier = 2;
+                document.getElementById('btn-speed').textContent = '2x';
+                e.preventDefault();
+                break;
+            case '3':
+                // 3 = 4x speed
+                gameSpeedMultiplier = 4;
+                document.getElementById('btn-speed').textContent = '4x';
+                e.preventDefault();
+                break;
+            case '+':
+            case '=':
+                // + = Zoom in
+                document.getElementById('btn-zoom-in')?.click();
+                e.preventDefault();
+                break;
+            case '-':
+                // - = Zoom out
+                document.getElementById('btn-zoom-out')?.click();
+                e.preventDefault();
+                break;
+        }
+    });
+
+    console.log('[Game] Desktop keyboard shortcuts initialized: D=Dock, ESC=Close, 1/2/3=Speed, +/-=Zoom');
+}
+
+// Initialize shortcuts after page load
+window.addEventListener('load', initGlobalKeyboardShortcuts);
