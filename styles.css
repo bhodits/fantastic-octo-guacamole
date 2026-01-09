@@ -153,7 +153,229 @@ h1, h2, h3 {
 }
 
 .resource-icon {
-    font-size: 1rem;
+    width: 18px;
+    height: 18px;
+    display: inline-block;
+    position: relative;
+}
+
+/* Custom CSS Icons for Resources */
+.icon-pop::before {
+    content: '';
+    display: block;
+    width: 10px;
+    height: 10px;
+    background: var(--lake-deep);
+    border-radius: 50%;
+    position: absolute;
+    top: 0;
+    left: 4px;
+}
+.icon-pop::after {
+    content: '';
+    display: block;
+    width: 14px;
+    height: 8px;
+    background: var(--lake-deep);
+    border-radius: 50% 50% 0 0;
+    position: absolute;
+    bottom: 0;
+    left: 2px;
+}
+
+.icon-cash::before {
+    content: '$';
+    font-weight: 700;
+    font-size: 14px;
+    color: var(--forest-green);
+}
+
+.icon-boat::before {
+    content: '';
+    display: block;
+    width: 16px;
+    height: 6px;
+    background: var(--dock-brown);
+    border-radius: 0 0 8px 8px;
+    position: absolute;
+    bottom: 4px;
+    left: 1px;
+}
+.icon-boat::after {
+    content: '';
+    display: block;
+    width: 0;
+    height: 0;
+    border-left: 6px solid transparent;
+    border-right: 6px solid transparent;
+    border-bottom: 10px solid var(--lake-light);
+    position: absolute;
+    top: 0;
+    left: 3px;
+}
+
+.icon-speed::before {
+    content: '';
+    display: block;
+    width: 14px;
+    height: 14px;
+    border: 3px solid var(--clay-red);
+    border-radius: 50%;
+    border-top-color: transparent;
+    position: absolute;
+    top: 2px;
+    left: 2px;
+}
+.icon-speed::after {
+    content: '';
+    display: block;
+    width: 6px;
+    height: 2px;
+    background: var(--clay-red);
+    position: absolute;
+    top: 8px;
+    left: 6px;
+    transform: rotate(-45deg);
+}
+
+.icon-tourist::before {
+    content: '';
+    display: block;
+    width: 12px;
+    height: 12px;
+    background: var(--sunset-gold);
+    border-radius: 3px;
+    position: absolute;
+    top: 2px;
+    left: 3px;
+}
+.icon-tourist::after {
+    content: '';
+    display: block;
+    width: 6px;
+    height: 6px;
+    background: var(--cream);
+    border-radius: 50%;
+    position: absolute;
+    top: 5px;
+    left: 6px;
+}
+
+.icon-racing::before {
+    content: '';
+    display: block;
+    width: 16px;
+    height: 16px;
+    background:
+        linear-gradient(to right, var(--bark-brown) 50%, var(--cream) 50%);
+    position: absolute;
+    top: 1px;
+    left: 1px;
+}
+.icon-racing::after {
+    content: '';
+    display: block;
+    width: 16px;
+    height: 8px;
+    background:
+        linear-gradient(to right, var(--cream) 50%, var(--bark-brown) 50%);
+    position: absolute;
+    top: 9px;
+    left: 1px;
+}
+
+.icon-rep::before {
+    content: '';
+    display: block;
+    width: 0;
+    height: 0;
+    border-left: 9px solid transparent;
+    border-right: 9px solid transparent;
+    border-bottom: 16px solid var(--sunset-gold);
+    position: absolute;
+    top: 0;
+    left: 0;
+}
+.icon-rep::after {
+    content: '';
+    display: block;
+    width: 0;
+    height: 0;
+    border-left: 5px solid transparent;
+    border-right: 5px solid transparent;
+    border-top: 8px solid var(--sunset-gold);
+    position: absolute;
+    bottom: 0;
+    left: 4px;
+}
+
+/* Control Button Icons */
+.control-btn {
+    width: 40px;
+    height: 40px;
+    border: none;
+    border-radius: 50%;
+    background: var(--sand);
+    cursor: pointer;
+    position: relative;
+    transition: all 0.2s;
+    box-shadow: 0 3px 10px rgba(0,0,0,0.2);
+}
+
+.control-btn:hover {
+    transform: scale(1.1);
+    background: var(--cream);
+}
+
+.demolish-btn::before {
+    content: '';
+    display: block;
+    width: 16px;
+    height: 6px;
+    background: var(--clay-red);
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    border-radius: 2px;
+}
+.demolish-btn::after {
+    content: '';
+    display: block;
+    width: 6px;
+    height: 12px;
+    background: var(--dock-brown);
+    position: absolute;
+    bottom: 8px;
+    left: 17px;
+}
+
+.zoom-in-btn::before,
+.zoom-out-btn::before {
+    content: '';
+    display: block;
+    width: 14px;
+    height: 3px;
+    background: var(--lake-deep);
+    position: absolute;
+    top: 18px;
+    left: 13px;
+}
+.zoom-in-btn::after {
+    content: '';
+    display: block;
+    width: 3px;
+    height: 14px;
+    background: var(--lake-deep);
+    position: absolute;
+    top: 13px;
+    left: 18px;
+}
+
+.speed-btn {
+    font-family: 'Cabin', sans-serif;
+    font-weight: 700;
+    font-size: 0.8rem;
+    color: var(--lake-deep);
 }
 
 .resource span:nth-child(2) {
@@ -739,15 +961,16 @@ aside h3 {
 
 /* ==================== SHOOTOUT WELCOME ==================== */
 .shootout-welcome h2 {
-    color: var(--clay-red);
+    color: var(--lake-deep);
     font-size: 2.2rem;
     text-align: center;
+    text-shadow: 1px 1px 0 rgba(255,255,255,0.5);
 }
 
 .shootout-tagline {
     text-align: center;
     font-size: 1.1rem;
-    color: var(--sunset-gold);
+    color: var(--dock-brown);
     font-weight: 600;
     margin-bottom: 15px;
 }
@@ -1143,12 +1366,55 @@ aside h3 {
 }
 
 .boat-image {
-    font-size: 3rem;
-    margin-bottom: 10px;
+    width: 60px;
+    height: 40px;
+    margin: 0 auto 10px;
+    position: relative;
+    background: var(--lake-light);
+    border-radius: 0 0 30px 30px;
+}
+
+.boat-image::before {
+    content: '';
+    position: absolute;
+    top: -15px;
+    left: 15px;
+    width: 0;
+    height: 0;
+    border-left: 15px solid transparent;
+    border-right: 15px solid transparent;
+    border-bottom: 20px solid var(--dock-brown);
+}
+
+.boat-image::after {
+    content: '';
+    position: absolute;
+    top: 5px;
+    left: 20px;
+    width: 20px;
+    height: 10px;
+    background: var(--cream);
+    border-radius: 3px;
 }
 
 .boat-image.large {
-    font-size: 4rem;
+    width: 80px;
+    height: 55px;
+}
+
+.boat-image.large::before {
+    top: -20px;
+    left: 20px;
+    border-left: 20px solid transparent;
+    border-right: 20px solid transparent;
+    border-bottom: 25px solid var(--dock-brown);
+}
+
+.boat-image.large::after {
+    top: 8px;
+    left: 25px;
+    width: 30px;
+    height: 15px;
 }
 
 .boat-stats {

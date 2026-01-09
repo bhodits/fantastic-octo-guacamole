@@ -14,42 +14,42 @@
     <div id="game-container">
         <header id="game-header">
             <div class="header-left">
-                <h1>🏁 Lake of the Ozarks Tycoon</h1>
-                <button id="btn-garage" class="header-btn" title="Boat Garage">🚤 Garage</button>
+                <h1>Lake of the Ozarks Tycoon</h1>
+                <button id="btn-dock" class="header-btn" title="Boat Dock">Dock</button>
             </div>
             <div id="resources">
                 <div class="resource">
-                    <span class="resource-icon">👥</span>
+                    <span class="resource-icon icon-pop"></span>
                     <span id="population">0</span>
                     <span class="resource-label">Pop</span>
                 </div>
                 <div class="resource">
-                    <span class="resource-icon">💵</span>
+                    <span class="resource-icon icon-cash"></span>
                     <span id="money">5000</span>
                     <span class="resource-label">Cash</span>
                 </div>
                 <div class="resource">
-                    <span class="resource-icon">🚤</span>
+                    <span class="resource-icon icon-boat"></span>
                     <span id="boats">0</span>
                     <span class="resource-label">Boats</span>
                 </div>
                 <div class="resource racing-resource">
-                    <span class="resource-icon">🏎️</span>
+                    <span class="resource-icon icon-speed"></span>
                     <span id="speedBoats">0</span>
                     <span class="resource-label">Speed</span>
                 </div>
                 <div class="resource">
-                    <span class="resource-icon">🍺</span>
+                    <span class="resource-icon icon-tourist"></span>
                     <span id="tourism">0</span>
                     <span class="resource-label">Tourists</span>
                 </div>
                 <div class="resource racing-resource">
-                    <span class="resource-icon">🏁</span>
+                    <span class="resource-icon icon-racing"></span>
                     <span id="racingRep">0</span>
                     <span class="resource-label">Racing</span>
                 </div>
                 <div class="resource">
-                    <span class="resource-icon">⭐</span>
+                    <span class="resource-icon icon-rep"></span>
                     <span id="reputation">50</span>
                     <span class="resource-label">Rep</span>
                 </div>
@@ -60,12 +60,12 @@
             <aside id="building-panel">
                 <h2>Build</h2>
                 <div id="building-categories">
-                    <button class="category-btn active" data-category="marina">⚓ Marina</button>
-                    <button class="category-btn" data-category="lodging">🏨 Lodging</button>
-                    <button class="category-btn" data-category="entertainment">🎉 Fun</button>
-                    <button class="category-btn" data-category="dining">🍔 Food</button>
-                    <button class="category-btn racing-btn" data-category="racing">🏁 Racing</button>
-                    <button class="category-btn" data-category="infrastructure">🛣️ Roads</button>
+                    <button class="category-btn active" data-category="marina">Marina</button>
+                    <button class="category-btn" data-category="lodging">Lodging</button>
+                    <button class="category-btn" data-category="entertainment">Fun</button>
+                    <button class="category-btn" data-category="dining">Food</button>
+                    <button class="category-btn racing-btn" data-category="racing">Racing</button>
+                    <button class="category-btn" data-category="infrastructure">Roads</button>
                 </div>
                 <div id="building-list"></div>
                 <div id="building-info">
@@ -79,10 +79,10 @@
                     <span id="current-mile">Mile Marker: --</span>
                 </div>
                 <div id="game-controls">
-                    <button id="btn-demolish" title="Demolish">🔨</button>
-                    <button id="btn-zoom-in" title="Zoom In">➕</button>
-                    <button id="btn-zoom-out" title="Zoom Out">➖</button>
-                    <button id="btn-speed" title="Game Speed">⏩ 1x</button>
+                    <button id="btn-demolish" title="Demolish" class="control-btn demolish-btn"></button>
+                    <button id="btn-zoom-in" title="Zoom In" class="control-btn zoom-in-btn"></button>
+                    <button id="btn-zoom-out" title="Zoom Out" class="control-btn zoom-out-btn"></button>
+                    <button id="btn-speed" title="Game Speed" class="control-btn speed-btn">1x</button>
                 </div>
             </main>
 
@@ -116,7 +116,7 @@
         </div>
 
         <footer id="game-footer">
-            <p>Build your lakefront empire at Missouri's Lake of the Ozarks! 🚤🌊🎉</p>
+            <p>Build your lakefront empire at Missouri's Lake of the Ozarks!</p>
         </footer>
     </div>
 
@@ -124,7 +124,7 @@
 
     <div id="welcome-modal" class="modal">
         <div class="modal-content shootout-welcome">
-            <h2>🏁 THE SHOOTOUT</h2>
+            <h2>THE SHOOTOUT</h2>
             <p class="shootout-tagline">Lake of the Ozarks' Biggest Day of the Year</p>
 
             <div class="lake-facts">
@@ -135,47 +135,47 @@
                 <h3>Your First Boat: "Old Faithful"</h3>
                 <p>You've got a trusty bass boat - not fast, but it's a start. Dream big! Work your way up from <strong>45 MPH</strong> to over <strong>200 MPH</strong>.</p>
                 <div class="boat-preview">
-                    <span class="boat-speed">⚡ 45 MPH</span>
+                    <span class="boat-speed">45 MPH</span>
                     <span class="boat-class">Stock Class</span>
                 </div>
             </div>
 
             <h3>The Journey:</h3>
             <ul>
-                <li>🏁 Race the <strong>Shootout</strong> every August</li>
-                <li>🔧 <strong>Customize</strong> your boats - engines, props, hulls</li>
-                <li>💰 Win races to earn <strong>prize money</strong></li>
-                <li>🚤 Buy faster boats and build your <strong>fleet</strong></li>
-                <li>🏆 Become the <strong>Shootout Champion</strong>!</li>
+                <li>Race the <strong>Shootout</strong> every August</li>
+                <li><strong>Customize</strong> your boats - engines, props, hulls</li>
+                <li>Win races to earn <strong>prize money</strong></li>
+                <li>Buy faster boats and build your <strong>fleet</strong></li>
+                <li>Become the <strong>Shootout Champion</strong>!</li>
             </ul>
 
             <div class="shootout-info">
-                <p>🎯 <strong>GOAL:</strong> Build the fastest boat on the lake and win the Shootout Finals!</p>
+                <p><strong>GOAL:</strong> Build the fastest boat on the lake and win the Shootout Finals!</p>
             </div>
 
             <input type="text" id="town-name-input" placeholder="Your racer name..." value="Lake Boss">
-            <button id="start-game">Enter the Shootout! 🏁</button>
+            <button id="start-game" onclick="hideWelcomeModal()">Enter the Shootout!</button>
         </div>
     </div>
 
-    <!-- Boat Shop Modal -->
+    <!-- Boat Dock Modal -->
     <div id="boat-shop-modal" class="modal hidden">
         <div class="modal-content boat-shop">
             <div class="shop-header">
-                <h2>🚤 Boat Shop</h2>
-                <button class="close-btn" onclick="closeBoatShop()">✕</button>
+                <h2>Boat Dock</h2>
+                <button class="close-btn" onclick="closeBoatShop()">X</button>
             </div>
             <div class="shop-tabs">
                 <button class="shop-tab active" data-tab="buy">Buy Boats</button>
                 <button class="shop-tab" data-tab="upgrade">Upgrades</button>
-                <button class="shop-tab" data-tab="garage">My Garage</button>
+                <button class="shop-tab" data-tab="dock">My Dock</button>
                 <button class="shop-tab" data-tab="paint">Paint Shop</button>
             </div>
             <div class="shop-content" id="shop-content">
                 <!-- Dynamic content loaded here -->
             </div>
             <div class="shop-footer">
-                <span class="player-money">💰 $<span id="shop-money">5000</span></span>
+                <span class="player-money">$<span id="shop-money">5000</span></span>
             </div>
         </div>
     </div>
@@ -183,7 +183,7 @@
     <!-- Race Event Modal -->
     <div id="race-modal" class="modal hidden">
         <div class="modal-content race-event">
-            <h2 id="race-title">🏁 THE SHOOTOUT</h2>
+            <h2 id="race-title">THE SHOOTOUT</h2>
             <div id="race-content">
                 <!-- Race details loaded here -->
             </div>

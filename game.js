@@ -1,6 +1,32 @@
 // Lake of the Ozarks Tycoon - Main Game Engine
 // Build your lakefront empire at Missouri's premier party lake!
 
+// ==================== GLOBAL MODAL FUNCTIONS ====================
+// These must be global for onclick handlers in HTML
+function hideWelcomeModal() {
+    const modal = document.getElementById('welcome-modal');
+    if (modal) {
+        modal.style.display = 'none';
+        modal.style.visibility = 'hidden';
+        modal.style.pointerEvents = 'none';
+        modal.classList.add('hidden');
+
+        // Set player name
+        const nameInput = document.getElementById('town-name-input');
+        if (nameInput && nameInput.value) {
+            gameState.playerName = nameInput.value;
+        } else {
+            gameState.playerName = 'Lake Boss';
+        }
+
+        // Update UI
+        if (typeof updateUI === 'function') {
+            updateUI();
+        }
+    }
+}
+window.hideWelcomeModal = hideWelcomeModal;
+
 // ==================== GAME CONFIGURATION ====================
 const CONFIG = {
     GRID_WIDTH: 50,
@@ -1022,7 +1048,7 @@ const BUILDINGS = {
     boat_dock: {
         id: 'boat_dock',
         name: 'Boat Dock',
-        icon: '🛥️',
+        icon: '[D]',
         category: 'marina',
         description: 'Basic dock for boat storage. Every lakefront empire starts here!',
         cost: { money: 500 },
@@ -1035,7 +1061,7 @@ const BUILDINGS = {
     marina: {
         id: 'marina',
         name: 'Full Service Marina',
-        icon: '⚓',
+        icon: '[M]',
         category: 'marina',
         description: 'Gas, repairs, and slip rentals. The backbone of lake business.',
         cost: { money: 2500 },
@@ -1049,7 +1075,7 @@ const BUILDINGS = {
     boat_rental: {
         id: 'boat_rental',
         name: 'Boat Rental',
-        icon: '🚤',
+        icon: '[R]',
         category: 'marina',
         description: 'Rent pontoons and ski boats to tourists. Summer gold mine!',
         cost: { money: 3000 },
@@ -1063,7 +1089,7 @@ const BUILDINGS = {
     yacht_club: {
         id: 'yacht_club',
         name: 'Yacht Club',
-        icon: '⛵',
+        icon: '[Y]',
         category: 'marina',
         description: 'Exclusive club for the lake elite. Major reputation boost.',
         cost: { money: 15000 },
@@ -1077,7 +1103,7 @@ const BUILDINGS = {
     boat_dealer: {
         id: 'boat_dealer',
         name: 'Boat Dealership',
-        icon: '🏪',
+        icon: '[BD]',
         category: 'marina',
         description: 'Sell new boats to lake lovers. Big profits, big reputation.',
         cost: { money: 8000 },
@@ -1092,7 +1118,7 @@ const BUILDINGS = {
     lake_cabin: {
         id: 'lake_cabin',
         name: 'Lake Cabin',
-        icon: '🏠',
+        icon: '[C]',
         category: 'lodging',
         description: 'Cozy cabin rental. Attracts families and fishermen.',
         cost: { money: 800 },
@@ -1105,7 +1131,7 @@ const BUILDINGS = {
     condo: {
         id: 'condo',
         name: 'Lakefront Condo',
-        icon: '🏢',
+        icon: '[CO]',
         category: 'lodging',
         description: 'Modern condos with lake views. Popular with weekenders.',
         cost: { money: 5000 },
@@ -1119,7 +1145,7 @@ const BUILDINGS = {
     resort: {
         id: 'resort',
         name: 'Lake Resort',
-        icon: '🏨',
+        icon: '[RS]',
         category: 'lodging',
         description: 'Full-service resort with pools and amenities. Tourist magnet!',
         cost: { money: 20000 },
@@ -1134,7 +1160,7 @@ const BUILDINGS = {
     houseboat: {
         id: 'houseboat',
         name: 'Houseboat',
-        icon: '🛳️',
+        icon: '[HB]',
         category: 'lodging',
         description: 'Live on the water! The ultimate lake lifestyle.',
         cost: { money: 3500 },
@@ -1149,7 +1175,7 @@ const BUILDINGS = {
     tiki_bar: {
         id: 'tiki_bar',
         name: 'Tiki Bar',
-        icon: '🍹',
+        icon: '[TB]',
         category: 'entertainment',
         description: 'Swim-up bar vibes! Party central on the water.',
         cost: { money: 2000 },
@@ -1163,7 +1189,7 @@ const BUILDINGS = {
     party_cove: {
         id: 'party_cove',
         name: 'Party Cove',
-        icon: '🎉',
+        icon: '[PC]',
         category: 'entertainment',
         description: 'THE legendary party spot. Massive tourism but watch your reputation!',
         cost: { money: 5000 },
@@ -1176,7 +1202,7 @@ const BUILDINGS = {
     mini_golf: {
         id: 'mini_golf',
         name: 'Mini Golf',
-        icon: '⛳',
+        icon: '[MG]',
         category: 'entertainment',
         description: 'Family fun off the water. Good for rainy days.',
         cost: { money: 1500 },
@@ -1190,7 +1216,7 @@ const BUILDINGS = {
     waterpark: {
         id: 'waterpark',
         name: 'Waterpark',
-        icon: '🎢',
+        icon: '[WP]',
         category: 'entertainment',
         description: 'Big Surf style! Major attraction for families.',
         cost: { money: 25000 },
@@ -1203,7 +1229,7 @@ const BUILDINGS = {
     live_music: {
         id: 'live_music',
         name: 'Live Music Venue',
-        icon: '🎸',
+        icon: '[LM]',
         category: 'entertainment',
         description: 'Country and rock on the lake. Draws crowds every weekend.',
         cost: { money: 6000 },
@@ -1217,7 +1243,7 @@ const BUILDINGS = {
     casino_boat: {
         id: 'casino_boat',
         name: 'Casino Boat',
-        icon: '🎰',
+        icon: '[CB]',
         category: 'entertainment',
         description: 'Floating casino! High risk, high reward.',
         cost: { money: 30000 },
@@ -1233,7 +1259,7 @@ const BUILDINGS = {
     fish_shack: {
         id: 'fish_shack',
         name: 'Fish Shack',
-        icon: '🐟',
+        icon: '[FS]',
         category: 'dining',
         description: 'Fresh catfish and crappie. Lake tradition!',
         cost: { money: 600 },
@@ -1246,7 +1272,7 @@ const BUILDINGS = {
     bbq_joint: {
         id: 'bbq_joint',
         name: 'BBQ Joint',
-        icon: '🍖',
+        icon: '[BBQ]',
         category: 'dining',
         description: 'Missouri BBQ at its finest. Smells bring em in!',
         cost: { money: 1200 },
@@ -1260,7 +1286,7 @@ const BUILDINGS = {
     lakeside_grill: {
         id: 'lakeside_grill',
         name: 'Lakeside Grill',
-        icon: '🍽️',
+        icon: '[LG]',
         category: 'dining',
         description: 'Upscale dining with sunset views. Date night destination.',
         cost: { money: 4000 },
@@ -1275,7 +1301,7 @@ const BUILDINGS = {
     gas_station: {
         id: 'gas_station',
         name: 'Gas & Snacks',
-        icon: '⛽',
+        icon: '[GS]',
         category: 'dining',
         description: 'Fuel and quick bites. Every road trip needs one.',
         cost: { money: 1000 },
@@ -1290,7 +1316,7 @@ const BUILDINGS = {
     road: {
         id: 'road',
         name: 'Road',
-        icon: '🛣️',
+        icon: '[RD]',
         category: 'infrastructure',
         description: 'Connect your properties. Essential for growth.',
         cost: { money: 50 },
@@ -1301,7 +1327,7 @@ const BUILDINGS = {
     parking_lot: {
         id: 'parking_lot',
         name: 'Parking Lot',
-        icon: '🅿️',
+        icon: '[PK]',
         category: 'infrastructure',
         description: 'Where the boats come from! Visitors need parking.',
         cost: { money: 200 },
@@ -1312,7 +1338,7 @@ const BUILDINGS = {
     boat_ramp: {
         id: 'boat_ramp',
         name: 'Boat Ramp',
-        icon: '📐',
+        icon: '[BR]',
         category: 'infrastructure',
         description: 'Public launch = more boats on the water.',
         cost: { money: 800 },
@@ -1323,7 +1349,7 @@ const BUILDINGS = {
     bridge: {
         id: 'bridge',
         name: 'Bridge',
-        icon: '🌉',
+        icon: '[BG]',
         category: 'infrastructure',
         description: 'Cross the coves! Opens up new development areas.',
         cost: { money: 5000 },
@@ -1336,7 +1362,7 @@ const BUILDINGS = {
     race_dock: {
         id: 'race_dock',
         name: 'Race Dock',
-        icon: '🏁',
+        icon: '[RC]',
         category: 'racing',
         description: 'Launch point for speed boats. Essential for the Shootout!',
         cost: { money: 2000 },
@@ -1350,7 +1376,7 @@ const BUILDINGS = {
     timing_tower: {
         id: 'timing_tower',
         name: 'Timing Tower',
-        icon: '🗼',
+        icon: '[TT]',
         category: 'racing',
         description: 'Official race timing and control. Major Shootout infrastructure!',
         cost: { money: 8000 },
@@ -1365,7 +1391,7 @@ const BUILDINGS = {
     spectator_stands: {
         id: 'spectator_stands',
         name: 'Spectator Stands',
-        icon: '🏟️',
+        icon: '[SS]',
         category: 'racing',
         description: 'Bleachers for race fans. Packed during the Shootout!',
         cost: { money: 3000 },
@@ -1379,7 +1405,7 @@ const BUILDINGS = {
     speed_boat_shop: {
         id: 'speed_boat_shop',
         name: 'Speed Boat Shop',
-        icon: '🔧',
+        icon: '[SB]',
         category: 'racing',
         description: 'Performance parts and racing boat sales. Feed the need for speed!',
         cost: { money: 6000 },
@@ -1393,7 +1419,7 @@ const BUILDINGS = {
     race_fuel_station: {
         id: 'race_fuel_station',
         name: 'Race Fuel Station',
-        icon: '⛽',
+        icon: '[GS]',
         category: 'racing',
         description: 'High-octane fuel for racing boats. Required for serious racers.',
         cost: { money: 4000 },
@@ -1407,7 +1433,7 @@ const BUILDINGS = {
     vip_race_lounge: {
         id: 'vip_race_lounge',
         name: 'VIP Race Lounge',
-        icon: '🥂',
+        icon: '[VIP]',
         category: 'racing',
         description: 'Exclusive viewing for high rollers. Premium Shootout experience!',
         cost: { money: 15000 },
@@ -1436,7 +1462,7 @@ const BUILDINGS = {
     race_team_hq: {
         id: 'race_team_hq',
         name: 'Race Team HQ',
-        icon: '🏆',
+        icon: '[W]',
         category: 'racing',
         description: 'Home base for a professional racing team. Boost your Shootout cred!',
         cost: { money: 25000 },
@@ -2545,14 +2571,14 @@ function gameTick() {
 
     // Weekend party event
     if (gameState.weekendBonus && isSummer && Math.random() < 0.1 && !gameState.shootout.active) {
-        addEvent('Weekend warriors flood the lake! 🎉', 'party');
+        addEvent('Weekend warriors flood the lake! ', 'party');
         gameState.resources.tourism += 20;
         gameState.resources.money += 500;
     }
 
     document.getElementById('income').textContent = `+$${Math.floor(income - expenses)}/s`;
     document.getElementById('lake-level').textContent = gameState.shootout.active ?
-        `🏁 SHOOTOUT DAY ${gameState.shootout.day + 1}!` : `${gameState.lakeLevel} ft`;
+        `SHOOTOUT DAY ${gameState.shootout.day + 1}!` : `${gameState.lakeLevel} ft`;
 
     updateUI();
     render();
@@ -2565,7 +2591,7 @@ function startShootout() {
     gameState.shootout.totalEarnings = 0;
     gameState.shootout.bestSpeed = 0;
 
-    addEvent('🏁 THE SHOOTOUT BEGINS! 🏁', 'racing');
+    addEvent('THE SHOOTOUT BEGINS! ', 'racing');
     addEvent('Thousands of racing fans descend on the lake!', 'racing');
 
     // Massive tourism spike
@@ -2582,7 +2608,7 @@ function processShootoutDay() {
         if (dayOfShootout < 4) {
             // Each day of the Shootout
             const dayNames = ['Qualifying Day', 'Time Trials', 'Semi-Finals', 'FINALS DAY'];
-            addEvent(`🏁 Shootout ${dayNames[dayOfShootout]}!`, 'racing');
+            addEvent(`Shootout ${dayNames[dayOfShootout]}!`, 'racing');
 
             // Generate race results based on racing rep and speed boats
             const speed = 150 + Math.floor(Math.random() * 50) +
@@ -2591,7 +2617,7 @@ function processShootoutDay() {
 
             if (speed > gameState.shootout.bestSpeed) {
                 gameState.shootout.bestSpeed = speed;
-                addEvent(`New top speed: ${speed} MPH! 🚀`, 'racing');
+                addEvent(`New top speed: ${speed} MPH! `, 'racing');
             }
 
             // Daily earnings based on infrastructure
@@ -2618,7 +2644,7 @@ function endShootout() {
     const earnings = Math.floor(gameState.shootout.totalEarnings);
     const topSpeed = Math.floor(gameState.shootout.bestSpeed);
 
-    addEvent(`🏁 SHOOTOUT COMPLETE! 🏁`, 'racing');
+    addEvent(`SHOOTOUT COMPLETE! `, 'racing');
     addEvent(`Total Shootout earnings: $${earnings.toLocaleString()}`, 'positive');
     addEvent(`Top recorded speed: ${topSpeed} MPH`, 'racing');
 
@@ -2705,43 +2731,43 @@ function triggerRandomEvent() {
         },
         // Racing Events
         {
-            text: '🏁 Speed boat test run hits 180 MPH!',
+            text: 'Speed boat test run hits 180 MPH!',
             effect: () => { gameState.resources.racingRep += 8; gameState.resources.tourism += 20; },
             type: 'racing',
             requiresRacing: true
         },
         {
-            text: '🏁 Racing team chooses your marina for practice!',
+            text: 'Racing team chooses your marina for practice!',
             effect: () => { gameState.resources.money += 500; gameState.resources.racingRep += 5; gameState.resources.speedBoats += 2; },
             type: 'racing',
             requiresRacing: true
         },
         {
-            text: '🏁 Cigarette boat rally passes through!',
+            text: 'Cigarette boat rally passes through!',
             effect: () => { gameState.resources.tourism += 35; gameState.resources.racingRep += 3; },
             type: 'racing',
             requiresSummer: true
         },
         {
-            text: '🏁 Racing documentary crew filming at the lake!',
+            text: 'Racing documentary crew filming at the lake!',
             effect: () => { gameState.resources.reputation += 10; gameState.resources.racingRep += 10; gameState.resources.tourism += 25; },
             type: 'racing',
             requiresRacing: true
         },
         {
-            text: '🏁 Pro racer buys property on your stretch!',
+            text: 'Pro racer buys property on your stretch!',
             effect: () => { gameState.resources.money += 1000; gameState.resources.racingRep += 8; gameState.resources.reputation += 5; },
             type: 'racing',
             requiresRacing: true
         },
         {
-            text: '🏁 Mini boat race draws a crowd!',
+            text: 'Mini boat race draws a crowd!',
             effect: () => { gameState.resources.money += 300; gameState.resources.tourism += 15; },
             type: 'racing',
             requiresSummer: true
         },
         {
-            text: '🏁 Speed record attempt announced for your area!',
+            text: 'Speed record attempt announced for your area!',
             effect: () => { gameState.resources.tourism += 50; gameState.resources.racingRep += 12; },
             type: 'racing',
             requiresRacing: true,
@@ -2779,7 +2805,7 @@ function updateUI() {
 
     let seasonText = CONFIG.SEASONS[gameState.season];
     if (gameState.shootout.active) {
-        seasonText = '🏁 SHOOTOUT!';
+        seasonText = 'SHOOTOUT!';
     } else if (gameState.weekendBonus) {
         seasonText += ' (Weekend!)';
     }
@@ -2901,15 +2927,15 @@ function initInput() {
         const speeds = [1, 2, 3];
         const current = speeds.indexOf(gameState.gameSpeed);
         gameState.gameSpeed = speeds[(current + 1) % speeds.length];
-        document.getElementById('btn-speed').textContent = `⏩ ${gameState.gameSpeed}x`;
+        document.getElementById('btn-speed').textContent = `${gameState.gameSpeed}x`;
         clearInterval(gameLoop);
         startGameLoop();
     });
 
-    // Garage/Boat Shop button
-    const garageBtn = document.getElementById('btn-garage');
-    if (garageBtn) {
-        garageBtn.addEventListener('click', () => {
+    // Dock/Boat Shop button
+    const dockBtn = document.getElementById('btn-dock');
+    if (dockBtn) {
+        dockBtn.addEventListener('click', () => {
             openBoatShop();
         });
     }
@@ -3115,6 +3141,7 @@ function renderShopContent(tab) {
         case 'upgrade':
             renderUpgrades(content);
             break;
+        case 'dock':
         case 'garage':
             renderGarage(content);
             break;
@@ -3133,12 +3160,12 @@ function renderBuyBoats(container) {
 
         html += `
             <div class="boat-card ${!canAfford ? 'disabled' : ''}">
-                <div class="boat-image">🚤</div>
+                <div class="boat-image"></div>
                 <h3>${hull.name}</h3>
                 <div class="boat-stats">
-                    <span>⚡ ${stats.topSpeed} MPH</span>
-                    <span>🎯 ${Math.round(stats.handling * 100)}%</span>
-                    <span>🔧 ${Math.round(stats.reliability * 100)}%</span>
+                    <span>${stats.topSpeed} MPH</span>
+                    <span>${Math.round(stats.handling * 100)}%</span>
+                    <span>${Math.round(stats.reliability * 100)}%</span>
                 </div>
                 <div class="boat-price">$${hull.basePrice.toLocaleString()}</div>
                 <button class="buy-btn" onclick="buyBoat('${id}')" ${!canAfford ? 'disabled' : ''}>
@@ -3162,11 +3189,11 @@ function renderUpgrades(container) {
 
     let html = `<div class="active-boat-header">
         <h3>Upgrading: ${activeBoat.name}</h3>
-        <span class="current-speed">Current Speed: ⚡ ${activeBoat.stats.topSpeed} MPH</span>
+        <span class="current-speed">Current Speed: ${activeBoat.stats.topSpeed} MPH</span>
     </div>`;
 
     // Engines
-    html += '<div class="upgrade-section"><h4>🔧 Engines</h4><div class="upgrade-grid">';
+    html += '<div class="upgrade-section"><h4>Engines</h4><div class="upgrade-grid">';
     Object.entries(ENGINES).forEach(([id, engine]) => {
         const isOwned = activeBoat.engine === id;
         const canAfford = gameState.resources.money >= engine.price;
@@ -3174,7 +3201,7 @@ function renderUpgrades(container) {
             <div class="upgrade-card ${isOwned ? 'owned' : ''} ${!canAfford && !isOwned ? 'disabled' : ''}">
                 <h5>${engine.name}</h5>
                 <span class="stat">+${engine.speedBonus} MPH</span>
-                <span class="stat">⚖️ +${engine.weight} lbs</span>
+                <span class="stat"> +${engine.weight} lbs</span>
                 ${isOwned ?
                     '<span class="badge">Installed</span>' :
                     `<button onclick="purchaseUpgrade('engine', '${id}')" ${!canAfford ? 'disabled' : ''}>$${engine.price.toLocaleString()}</button>`
@@ -3193,7 +3220,7 @@ function renderUpgrades(container) {
             <div class="upgrade-card ${isOwned ? 'owned' : ''} ${!canAfford && !isOwned ? 'disabled' : ''}">
                 <h5>${prop.name}</h5>
                 <span class="stat">+${prop.speedBonus} MPH</span>
-                <span class="stat">🎯 ${prop.handlingMod > 0 ? '+' : ''}${Math.round(prop.handlingMod * 100)}%</span>
+                <span class="stat">${prop.handlingMod > 0 ? '+' : ''}${Math.round(prop.handlingMod * 100)}%</span>
                 ${isOwned ?
                     '<span class="badge">Installed</span>' :
                     `<button onclick="purchaseUpgrade('propeller', '${id}')" ${!canAfford ? 'disabled' : ''}>$${prop.price.toLocaleString()}</button>`
@@ -3212,7 +3239,7 @@ function renderUpgrades(container) {
             <div class="upgrade-card ${isOwned ? 'owned' : ''} ${!canAfford && !isOwned ? 'disabled' : ''}">
                 <h5>${mod.name}</h5>
                 <span class="stat">+${mod.speedBonus} MPH</span>
-                <span class="stat">🎯 ${mod.handlingMod > 0 ? '+' : ''}${Math.round(mod.handlingMod * 100)}%</span>
+                <span class="stat">${mod.handlingMod > 0 ? '+' : ''}${Math.round(mod.handlingMod * 100)}%</span>
                 ${isOwned ?
                     '<span class="badge">Installed</span>' :
                     `<button onclick="purchaseUpgrade('hullMod', '${id}')" ${!canAfford ? 'disabled' : ''}>$${mod.price.toLocaleString()}</button>`
@@ -3223,15 +3250,15 @@ function renderUpgrades(container) {
     html += '</div></div>';
 
     // Weight Mods
-    html += '<div class="upgrade-section"><h4>⚖️ Weight Reduction</h4><div class="upgrade-grid">';
+    html += '<div class="upgrade-section"><h4> Weight Reduction</h4><div class="upgrade-grid">';
     Object.entries(WEIGHT_MODS).forEach(([id, mod]) => {
         const isOwned = activeBoat.weightMod === id;
         const canAfford = gameState.resources.money >= mod.price;
         html += `
             <div class="upgrade-card ${isOwned ? 'owned' : ''} ${!canAfford && !isOwned ? 'disabled' : ''}">
                 <h5>${mod.name}</h5>
-                <span class="stat">⚡ ${mod.speedBonus > 0 ? '+' : ''}${mod.speedBonus} MPH</span>
-                <span class="stat">🔧 ${mod.reliabilityMod > 0 ? '+' : ''}${Math.round(mod.reliabilityMod * 100)}%</span>
+                <span class="stat">${mod.speedBonus > 0 ? '+' : ''}${mod.speedBonus} MPH</span>
+                <span class="stat">${mod.reliabilityMod > 0 ? '+' : ''}${Math.round(mod.reliabilityMod * 100)}%</span>
                 ${isOwned ?
                     '<span class="badge">Installed</span>' :
                     `<button onclick="purchaseUpgrade('weightMod', '${id}')" ${!canAfford ? 'disabled' : ''}>$${mod.price.toLocaleString()}</button>`
@@ -3263,15 +3290,15 @@ function renderGarage(container) {
             <div class="garage-boat ${isActive ? 'active-boat' : ''}">
                 <div class="boat-header">
                     <h3>${boat.name}</h3>
-                    ${isActive ? '<span class="active-badge">🏁 Racing</span>' : ''}
+                    ${isActive ? '<span class="active-badge">Racing</span>' : ''}
                 </div>
-                <div class="boat-image large">🚤</div>
+                <div class="boat-image large"></div>
                 <div class="boat-details">
                     <div class="stat-row"><span>Class:</span><span>${boatClass.name}</span></div>
-                    <div class="stat-row"><span>Top Speed:</span><span>⚡ ${boat.stats.topSpeed} MPH</span></div>
-                    <div class="stat-row"><span>Handling:</span><span>🎯 ${Math.round(boat.stats.handling * 100)}%</span></div>
-                    <div class="stat-row"><span>Reliability:</span><span>🔧 ${Math.round(boat.stats.reliability * 100)}%</span></div>
-                    <div class="stat-row"><span>Value:</span><span>💰 $${boatValue.toLocaleString()}</span></div>
+                    <div class="stat-row"><span>Top Speed:</span><span>${boat.stats.topSpeed} MPH</span></div>
+                    <div class="stat-row"><span>Handling:</span><span>${Math.round(boat.stats.handling * 100)}%</span></div>
+                    <div class="stat-row"><span>Reliability:</span><span>${Math.round(boat.stats.reliability * 100)}%</span></div>
+                    <div class="stat-row"><span>Value:</span><span>$${boatValue.toLocaleString()}</span></div>
                 </div>
                 <div class="boat-record">
                     <span>Races: ${boat.races}</span>
@@ -3309,7 +3336,7 @@ function renderPaintShop(container) {
         html += `
             <div class="paint-card ${isOwned ? 'owned' : ''} ${!canAfford && !isOwned ? 'disabled' : ''}">
                 <div class="paint-preview" style="background: ${paint.primary}; border: 3px solid ${paint.secondary || paint.primary};">
-                    🚤
+                    
                 </div>
                 <h4>${paint.name}</h4>
                 ${isOwned ?
@@ -3343,7 +3370,7 @@ function buyBoat(hullId) {
         gameState.garage.activeBoat = newBoat.id;
     }
 
-    addEvent(`Bought new boat: ${hull.name}! 🚤`, 'positive');
+    addEvent(`Bought new boat: ${hull.name}! `, 'positive');
     updateShopMoney();
     updateUI();
     renderShopContent('garage');
@@ -3397,7 +3424,7 @@ function purchaseUpgrade(type, itemId) {
         activeBoat.weightMod
     );
 
-    addEvent(`Installed ${item.name}! ⚡ ${activeBoat.stats.topSpeed} MPH`, 'positive');
+    addEvent(`Installed ${item.name}! ${activeBoat.stats.topSpeed} MPH`, 'positive');
     updateShopMoney();
     updateUI();
 
@@ -3472,7 +3499,7 @@ function init() {
     render();
     startGameLoop();
 
-    addEvent('Welcome to the Shootout! 🏁', 'racing');
+    addEvent('Welcome to the Shootout! ', 'racing');
     addEvent("Your boat 'Old Faithful' is ready!", 'positive');
     addEvent('Build docks and marinas to earn money', 'neutral');
     addEvent('Upgrade your boat and win THE SHOOTOUT!', 'racing');
