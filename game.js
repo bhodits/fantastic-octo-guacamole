@@ -1,5 +1,5 @@
 // Lake of the Ozarks Tycoon - Main Game Engine
-// Build your lakefront empire at Missouri's premier party lake!
+// From Broke to Boat Builder - Work hard, save money, build faster boats!
 
 // ==================== CANVAS POLYFILL ====================
 // Polyfill for roundRect - older browsers don't support it
@@ -105,9 +105,9 @@ let raceState = {
     countdown: 3,
     // Shootout phases: 'approach', 'speed_check', 'countdown', 'racing', 'finished'
     phase: 'approach',
-    coursePosition: 0,   // Progress along the course (0-1000)
-    startLinePos: 300,   // Where start line is
-    finishLinePos: 800,  // Where finish line is
+    coursePosition: 0,   // Progress along the course
+    startLinePos: 400,   // Where start line is
+    finishLinePos: 1800, // Where finish line is (longer for ~15 second race)
     peakSpeed: 0,        // Highest speed recorded
     crossedStart: false,
     crossedFinish: false,
@@ -156,8 +156,8 @@ function showFirstShootoutRace() {
     raceState.particles = [];
     raceState.phase = 'approach';  // Start in approach phase
     raceState.coursePosition = 0;
-    raceState.startLinePos = 300;
-    raceState.finishLinePos = 800;
+    raceState.startLinePos = 400;
+    raceState.finishLinePos = 1800;
     raceState.peakSpeed = 0;
     raceState.crossedStart = false;
     raceState.crossedFinish = false;
@@ -351,10 +351,10 @@ function checkRacePhases() {
         }
 
         // Special message for slow starter boat
-        if (raceState.maxSpeed <= 28 && raceState.coursePosition > raceState.startLinePos + 50) {
+        if (raceState.maxSpeed <= 25 && raceState.coursePosition > raceState.startLinePos + 50) {
             if (!raceState.slowBoatJoke) {
                 raceState.slowBoatJoke = true;
-                updateRaceStatus("FLOORING IT! This is " + Math.round(raceState.currentSpeed) + " MPH baby!");
+                updateRaceStatus("WIDE OPEN THROTTLE! " + Math.round(raceState.currentSpeed) + " MPH! She's giving all she's got!");
             }
         }
     }
@@ -389,8 +389,8 @@ function updateRacePhysics() {
         if (raceState.currentSpeed < 0) raceState.currentSpeed = 0;
     }
 
-    // Update course position based on speed
-    raceState.coursePosition += raceState.currentSpeed * 0.15;
+    // Update course position based on speed (tuned for ~15 second race)
+    raceState.coursePosition += raceState.currentSpeed * 0.07;
 
     // Update water scroll based on speed
     raceState.waterOffset += raceState.currentSpeed * 0.5;
@@ -989,9 +989,9 @@ function showRaceResults() {
                 </div>
             </div>
 
-            <p class="next-tip">Build docks and marinas to earn money, then upgrade your boat for the next Shootout!</p>
+            <p class="next-tip">Work at the marina, save your cash, buy better boats. The dream? Build your own someday!</p>
 
-            <button class="continue-btn" onclick="closeRaceOverlay()">Start Building Your Empire</button>
+            <button class="continue-btn" onclick="closeRaceOverlay()">Time to Get to Work!</button>
         </div>
     `;
 
@@ -1081,21 +1081,25 @@ function showTrailerScene() {
     const activeBoat = gameState.garage.boats[0];
     const finalSpeed = activeBoat.bestSpeed || 0;
 
+    const speedComment = finalSpeed < 25 ?
+        `${finalSpeed} MPH. The crowd is... politely not laughing.` :
+        `${finalSpeed} MPH in the ${boat.nickname}. Respectable!`;
+
     overlay.innerHTML = `
         <div id="trailer-scene">
             <canvas id="trailer-canvas"></canvas>
             <div class="trailer-narrative">
                 <div class="narrative-text" id="narrative-1">
-                    The crowd cheers as you idle back to the staging area...
+                    You idle back to the staging area, trying to look confident...
                 </div>
                 <div class="narrative-text hidden" id="narrative-2">
-                    ${finalSpeed} MPH in the ${boat.nickname}. Not bad for a first run.
+                    ${speedComment}
                 </div>
                 <div class="narrative-text hidden" id="narrative-3">
-                    Back at the trailer, you crack open a cold one and think about the future...
+                    Back at the trailer, you watch a 200 MPH cat scream past. That'll be you someday.
                 </div>
                 <div class="narrative-text hidden" id="narrative-4">
-                    This lake has potential. Time to build something special.
+                    Time to get to work. Build docks. Flip boats. Save every penny. Build something FAST.
                 </div>
             </div>
             <button class="skip-btn" onclick="skipToGame()">Skip</button>
@@ -1907,9 +1911,9 @@ const CONFIG = {
     TILE_SIZE: 40,
     TICK_RATE: 1000,
     SEASONS: ['Spring', 'Summer', 'Summer', 'Fall'], // Double summer for lake life!
-    TICKS_PER_SEASON: 25,
+    TICKS_PER_SEASON: 90, // Longer seasons = more time to build up your boat empire
     LAKE_MILE_MARKERS: 92, // The real lake has mile markers 0-92
-    SHOOTOUT_WEEK: 20, // Shootout happens late summer (tick 20 of summer)
+    SHOOTOUT_WEEK: 75, // Shootout happens late summer (tick 75 of summer)
 };
 
 // ==================== STARTER BOATS ====================
@@ -1925,10 +1929,10 @@ const STARTER_BOATS = {
         length: 24,
         engine: 'Evinrude 88hp',
         engineType: 'outboard',
-        topSpeed: 28,
+        topSpeed: 22,
         handling: 0.6,
         reliability: 0.75,
-        description: 'A classic Lake of the Ozarks pontoon made right here in Lebanon, Missouri. Those maroon stripes have seen countless summer days, cold beers, and sunset cruises. She may not be fast, but she carries memories.',
+        description: 'A classic Lake of the Ozarks pontoon made right here in Lebanon, Missouri. Your uncle gave it to you because the marina wanted $50 to haul it to the dump. Those maroon stripes have seen better days.',
         specs: {
             hull: 'Dual Aluminum Pontoons',
             capacity: '12 passengers',
