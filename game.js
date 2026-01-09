@@ -103,15 +103,16 @@ let raceState = {
     wavePhase: 0,
     particles: [],
     countdown: 3,
-    // Shootout phases: 'approach', 'speed_check', 'countdown', 'racing', 'finished'
+    // Shootout phases: 'approach', 'speed_check', 'countdown', 'racing', 'finish_animation', 'finished'
     phase: 'approach',
     coursePosition: 0,   // Progress along the course
     startLinePos: 400,   // Where start line is
-    finishLinePos: 1800, // Where finish line is (longer for ~15 second race)
+    finishLinePos: 2400, // Where finish line is (longer for ~20 second race)
     peakSpeed: 0,        // Highest speed recorded
     crossedStart: false,
     crossedFinish: false,
     penalized: false,    // True if went over 40 before start
+    finishAnimFrame: 0,  // Frame counter for finish animation
 };
 
 // Show the first Shootout race experience - real Shootout simulation!
@@ -157,7 +158,8 @@ function showFirstShootoutRace() {
     raceState.phase = 'approach';  // Start in approach phase
     raceState.coursePosition = 0;
     raceState.startLinePos = 400;
-    raceState.finishLinePos = 1800;
+    raceState.finishLinePos = 2400;
+    raceState.finishAnimFrame = 0;
     raceState.peakSpeed = 0;
     raceState.crossedStart = false;
     raceState.crossedFinish = false;
@@ -308,8 +310,8 @@ function renderRaceFrame() {
     // Check phase transitions
     checkRacePhases();
 
-    // Continue loop
-    if (raceState.active && raceState.phase !== 'finished') {
+    // Continue loop (stop when finish animation or finished)
+    if (raceState.active && raceState.phase !== 'finished' && raceState.phase !== 'finish_animation') {
         raceState.animationFrame = requestAnimationFrame(renderRaceFrame);
     }
 }
@@ -359,13 +361,15 @@ function checkRacePhases() {
         }
     }
 
-    // Crossing finish line
+    // Crossing finish line - trigger finish animation
     if (!raceState.crossedFinish && pos >= raceState.finishLinePos) {
         raceState.crossedFinish = true;
-        raceState.phase = 'finished';
+        raceState.phase = 'finish_animation';
         raceState.finalSpeed = raceState.peakSpeed;
-        showRaceSign('FINISH!', '#FFD700', 2000);
-        setTimeout(showRaceResults, 1500);
+        raceState.finishAnimFrame = 0;
+        showRaceSign('FINISH!', '#FFD700', 1500);
+        // Start the finish line crossing animation
+        startFinishLineAnimation();
     }
 }
 
@@ -911,6 +915,250 @@ function drawWakeParticles(ctx) {
         ctx.fill();
     });
     ctx.globalAlpha = 1;
+}
+
+// ==================== 12-BIT FINISH LINE ANIMATION ====================
+// Pixel art style finish line crossing with rafted spectator boats
+
+function startFinishLineAnimation() {
+    const overlay = document.getElementById('race-overlay');
+    if (!overlay) return;
+
+    // Replace race canvas with finish animation canvas
+    overlay.innerHTML = `
+        <canvas id="finish-canvas"></canvas>
+        <div id="finish-speed-reveal" class="hidden">
+            <div class="speed-flash">${Math.round(raceState.finalSpeed * 10) / 10}</div>
+            <div class="speed-mph">MPH</div>
+        </div>
+    `;
+
+    const canvas = document.getElementById('finish-canvas');
+    if (!canvas) return;
+
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    const ctx = canvas.getContext('2d');
+    ctx.imageSmoothingEnabled = false; // Pixel art style
+
+    const px = 4; // Pixel size for 12-bit look
+    let frame = 0;
+    const totalFrames = 180; // 3 seconds at 60fps
+    const boatCrossFrame = 60; // Boat crosses at 1 second
+    const speedRevealFrame = 120; // Speed shows at 2 seconds
+
+    function drawPixel(x, y, color) {
+        ctx.fillStyle = color;
+        ctx.fillRect(Math.floor(x / px) * px, Math.floor(y / px) * px, px, px);
+    }
+
+    function drawPixelRect(x, y, w, h, color) {
+        ctx.fillStyle = color;
+        for (let py = y; py < y + h; py += px) {
+            for (let pxl = x; pxl < x + w; pxl += px) {
+                ctx.fillRect(Math.floor(pxl / px) * px, Math.floor(py / px) * px, px, px);
+            }
+        }
+    }
+
+    function animateFinish() {
+        frame++;
+        const w = canvas.width;
+        const h = canvas.height;
+
+        // Sky - evening colors
+        const skyGrad = ctx.createLinearGradient(0, 0, 0, h * 0.4);
+        skyGrad.addColorStop(0, '#1a3a5c');
+        skyGrad.addColorStop(1, '#ff7e47');
+        ctx.fillStyle = skyGrad;
+        ctx.fillRect(0, 0, w, h * 0.4);
+
+        // Water
+        ctx.fillStyle = '#1a5f7a';
+        ctx.fillRect(0, h * 0.4, w, h * 0.6);
+
+        // Pixelated water waves
+        for (let x = 0; x < w; x += px * 3) {
+            const waveY = h * 0.4 + Math.sin((x + frame * 2) * 0.02) * 8;
+            drawPixelRect(x, waveY, px * 2, px, '#2d7d9a');
+        }
+
+        // Draw rafted spectator boats on far side (top of water)
+        const raftY = h * 0.42;
+        drawRaftedBoats(ctx, w, raftY, frame, px);
+
+        // Draw finish line pylons
+        const finishX = w * 0.6;
+        // Left pylon
+        drawPixelRect(finishX - 20, h * 0.35, 16, h * 0.25, '#FFD700');
+        drawPixelRect(finishX - 24, h * 0.35, 24, 12, '#FFD700');
+        // Right pylon
+        drawPixelRect(finishX + 100, h * 0.35, 16, h * 0.25, '#FFD700');
+        drawPixelRect(finishX + 96, h * 0.35, 24, 12, '#FFD700');
+
+        // Checkered banner between pylons
+        for (let bx = finishX - 4; bx < finishX + 100; bx += px * 2) {
+            const isWhite = Math.floor(bx / (px * 2)) % 2 === 0;
+            drawPixelRect(bx, h * 0.36, px * 2, px * 2, isWhite ? '#FFFFFF' : '#000000');
+            drawPixelRect(bx, h * 0.36 + px * 2, px * 2, px * 2, isWhite ? '#000000' : '#FFFFFF');
+        }
+
+        // Boat crossing animation
+        const boatProgress = Math.min(1, frame / boatCrossFrame);
+        const boatX = -100 + (finishX + 150) * easeOutCubic(boatProgress);
+        const boatY = h * 0.55;
+
+        // Draw player's boat (12-bit style)
+        drawPixelBoat(ctx, boatX, boatY, raceState.finalSpeed, px, selectedStarterBoat);
+
+        // Spray behind boat
+        if (frame < boatCrossFrame + 30) {
+            for (let i = 0; i < 8; i++) {
+                const sprayX = boatX - 30 - i * 15 - Math.random() * 10;
+                const sprayY = boatY + 10 + Math.sin(frame * 0.5 + i) * 8;
+                drawPixelRect(sprayX, sprayY, px * 2, px, '#FFFFFF');
+            }
+        }
+
+        // Flash effect when crossing
+        if (frame >= boatCrossFrame - 5 && frame <= boatCrossFrame + 10) {
+            ctx.fillStyle = `rgba(255, 255, 255, ${0.5 - Math.abs(frame - boatCrossFrame) * 0.03})`;
+            ctx.fillRect(0, 0, w, h);
+        }
+
+        // Speed reveal
+        if (frame >= speedRevealFrame) {
+            const revealEl = document.getElementById('finish-speed-reveal');
+            if (revealEl && revealEl.classList.contains('hidden')) {
+                revealEl.classList.remove('hidden');
+                revealEl.classList.add('speed-reveal-animate');
+            }
+        }
+
+        // Continue animation or transition to results
+        if (frame < totalFrames) {
+            requestAnimationFrame(animateFinish);
+        } else {
+            raceState.phase = 'finished';
+            setTimeout(showRaceResults, 500);
+        }
+    }
+
+    requestAnimationFrame(animateFinish);
+}
+
+// Easing function for smooth animation
+function easeOutCubic(t) {
+    return 1 - Math.pow(1 - t, 3);
+}
+
+// Draw rafted spectator boats along the far side
+function drawRaftedBoats(ctx, w, baseY, frame, px) {
+    const boats = [
+        { x: 50, type: 'pontoon', color: '#4a7c59' },
+        { x: 150, type: 'cruiser', color: '#2c5282' },
+        { x: 280, type: 'pontoon', color: '#9c4221' },
+        { x: 380, type: 'yacht', color: '#ffffff' },
+        { x: 520, type: 'pontoon', color: '#553c9a' },
+        { x: 650, type: 'cruiser', color: '#c53030' },
+        { x: 780, type: 'pontoon', color: '#2b6cb0' },
+        { x: 900, type: 'yacht', color: '#f6e05e' },
+        { x: 1050, type: 'cruiser', color: '#38a169' },
+        { x: 1180, type: 'pontoon', color: '#dd6b20' },
+    ];
+
+    boats.forEach((boat, idx) => {
+        if (boat.x > w) return;
+        const bobY = baseY + Math.sin(frame * 0.03 + idx) * 3;
+
+        if (boat.type === 'pontoon') {
+            // Pontoon - simple rectangle with canopy
+            ctx.fillStyle = '#888888';
+            ctx.fillRect(boat.x, bobY + 12, 60, 8); // Pontoons
+            ctx.fillStyle = boat.color;
+            ctx.fillRect(boat.x + 5, bobY, 50, 12); // Deck
+            ctx.fillStyle = '#dddddd';
+            ctx.fillRect(boat.x + 10, bobY - 15, 35, 15); // Canopy
+        } else if (boat.type === 'cruiser') {
+            // Cruiser - sleek shape
+            ctx.fillStyle = boat.color;
+            ctx.beginPath();
+            ctx.moveTo(boat.x, bobY + 10);
+            ctx.lineTo(boat.x + 50, bobY + 10);
+            ctx.lineTo(boat.x + 60, bobY + 5);
+            ctx.lineTo(boat.x + 50, bobY);
+            ctx.lineTo(boat.x + 10, bobY);
+            ctx.closePath();
+            ctx.fill();
+            ctx.fillStyle = '#333333';
+            ctx.fillRect(boat.x + 15, bobY - 8, 25, 8); // Cabin
+        } else if (boat.type === 'yacht') {
+            // Yacht - larger with multiple levels
+            ctx.fillStyle = boat.color;
+            ctx.fillRect(boat.x, bobY + 5, 80, 15);
+            ctx.fillStyle = '#1a365d';
+            ctx.fillRect(boat.x + 10, bobY - 10, 50, 15); // Cabin
+            ctx.fillRect(boat.x + 20, bobY - 20, 30, 10); // Upper deck
+        }
+
+        // People on boats (small dots)
+        ctx.fillStyle = '#ffcc80';
+        for (let p = 0; p < 2 + idx % 3; p++) {
+            ctx.beginPath();
+            ctx.arc(boat.x + 15 + p * 12, bobY - 2, 3, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    });
+}
+
+// Draw 12-bit style player boat
+function drawPixelBoat(ctx, x, y, speed, px, boatType) {
+    if (boatType === 'sundancer') {
+        // Pontoon - blocky pixel style
+        ctx.fillStyle = '#888888';
+        ctx.fillRect(x, y + 20, 80, 12); // Pontoons
+
+        ctx.fillStyle = '#E8DCC8';
+        ctx.fillRect(x + 5, y + 8, 70, 14); // Deck
+
+        ctx.fillStyle = '#722F37';
+        ctx.fillRect(x + 5, y + 10, 70, 4); // Maroon stripe
+
+        ctx.fillStyle = '#F0E8D8';
+        ctx.fillRect(x + 15, y - 8, 45, 16); // Bimini top
+
+        // Motor
+        ctx.fillStyle = '#1A1A1A';
+        ctx.fillRect(x - 5, y + 15, 12, 8);
+    } else {
+        // Ski boat - sleeker pixel style
+        ctx.fillStyle = '#CC0000';
+        ctx.beginPath();
+        ctx.moveTo(x, y + 15);
+        ctx.lineTo(x + 70, y + 15);
+        ctx.lineTo(x + 85, y + 8);
+        ctx.lineTo(x + 70, y);
+        ctx.lineTo(x + 10, y);
+        ctx.lineTo(x, y + 5);
+        ctx.closePath();
+        ctx.fill();
+
+        // White accent
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fillRect(x + 10, y + 2, 55, 4);
+
+        // Windshield
+        ctx.fillStyle = '#87CEEB';
+        ctx.fillRect(x + 25, y - 5, 20, 6);
+    }
+
+    // Speed lines based on speed
+    if (speed > 15) {
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+        for (let i = 0; i < Math.min(speed / 10, 5); i++) {
+            ctx.fillRect(x - 20 - i * 25, y + 5 + i * 4, 15, 2);
+        }
+    }
 }
 
 // Show race results
