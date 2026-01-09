@@ -1395,6 +1395,210 @@ aside h3 {
     transform: scale(1.05);
 }
 
+/* First Race Experience */
+.first-race-intro {
+    text-align: left;
+    padding: 10px;
+}
+
+.race-story {
+    font-size: 1.1rem;
+    color: var(--dock-brown);
+    margin-bottom: 15px;
+    line-height: 1.6;
+}
+
+.your-boat-display {
+    display: flex;
+    gap: 20px;
+    align-items: center;
+    background: linear-gradient(145deg, rgba(42, 74, 66, 0.1) 0%, rgba(90, 138, 122, 0.15) 100%);
+    padding: 15px;
+    border-radius: 15px;
+    margin: 20px 0;
+}
+
+.your-boat-display canvas {
+    border-radius: 10px;
+    flex-shrink: 0;
+}
+
+.boat-race-stats {
+    flex: 1;
+}
+
+.boat-race-stats h3 {
+    margin: 0 0 5px 0;
+    color: var(--lake-deep);
+    font-size: 1.1rem;
+}
+
+.boat-race-stats p {
+    margin: 0 0 10px 0;
+    font-style: italic;
+    color: var(--driftwood);
+}
+
+.stat-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 5px 0;
+    border-bottom: 1px solid rgba(139, 90, 60, 0.2);
+    font-size: 0.95rem;
+}
+
+.stat-row span:first-child {
+    color: var(--dock-brown);
+}
+
+.stat-row span:last-child {
+    font-weight: 600;
+    color: var(--lake-deep);
+}
+
+.race-classes {
+    margin: 20px 0;
+}
+
+.race-classes h3 {
+    margin-bottom: 10px;
+    color: var(--lake-deep);
+}
+
+.class-entry {
+    display: flex;
+    justify-content: space-between;
+    padding: 10px 15px;
+    margin: 5px 0;
+    background: rgba(255, 255, 255, 0.5);
+    border-radius: 8px;
+    border-left: 3px solid transparent;
+}
+
+.class-entry.your-class {
+    background: linear-gradient(90deg, rgba(212, 168, 85, 0.2) 0%, rgba(255, 255, 255, 0.5) 100%);
+    border-left-color: var(--sunset-gold);
+}
+
+.class-name {
+    font-weight: 600;
+    color: var(--lake-deep);
+}
+
+.class-desc {
+    font-size: 0.9rem;
+    color: var(--driftwood);
+}
+
+.encouragement {
+    text-align: center;
+    font-size: 1.1rem;
+    color: var(--dock-brown);
+    margin: 20px 0;
+}
+
+.race-button {
+    display: block;
+    width: 100%;
+    padding: 15px 30px;
+    margin-top: 20px;
+    background: linear-gradient(145deg, var(--clay-red) 0%, var(--dock-brown) 100%);
+    color: white;
+    border: none;
+    border-radius: 20px 30px 20px 30px;
+    font-size: 1.2rem;
+    font-family: 'Rye', serif;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.race-button:hover {
+    transform: scale(1.03);
+    box-shadow: 0 5px 20px rgba(139, 90, 60, 0.4);
+}
+
+/* Race Results */
+.race-results {
+    text-align: center;
+    padding: 20px;
+}
+
+.race-results h3 {
+    color: var(--lake-deep);
+    font-size: 1.5rem;
+    margin-bottom: 20px;
+}
+
+.speed-display {
+    margin: 20px 0;
+}
+
+.speed-number {
+    font-size: 5rem;
+    font-weight: 700;
+    color: var(--lake-deep);
+    line-height: 1;
+}
+
+.speed-unit {
+    font-size: 1.5rem;
+    color: var(--driftwood);
+    margin-left: 5px;
+}
+
+.placement {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--dock-brown);
+    margin: 15px 0;
+}
+
+.placement.winner {
+    color: var(--sunset-gold);
+    text-shadow: 0 0 20px rgba(212, 168, 85, 0.5);
+}
+
+.result-message {
+    font-size: 1.1rem;
+    color: var(--driftwood);
+    margin-bottom: 20px;
+}
+
+.rewards {
+    background: linear-gradient(145deg, rgba(212, 168, 85, 0.2) 0%, rgba(196, 114, 58, 0.1) 100%);
+    padding: 15px;
+    border-radius: 15px;
+    margin: 20px 0;
+}
+
+.reward-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 15px;
+}
+
+.reward-label {
+    color: var(--dock-brown);
+}
+
+.reward-value {
+    font-weight: 700;
+    color: var(--lake-deep);
+}
+
+.next-steps {
+    margin: 20px 0;
+    padding: 15px;
+    background: rgba(255, 255, 255, 0.5);
+    border-radius: 10px;
+}
+
+.next-steps p {
+    margin: 8px 0;
+    color: var(--driftwood);
+    font-size: 0.95rem;
+}
+
 /* Garage Boat Display */
 .garage-boat {
     padding: 15px;

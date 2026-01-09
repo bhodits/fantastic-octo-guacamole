@@ -1,6 +1,32 @@
 // Lake of the Ozarks Tycoon - Main Game Engine
 // Build your lakefront empire at Missouri's premier party lake!
 
+// ==================== CANVAS POLYFILL ====================
+// Polyfill for roundRect - older browsers don't support it
+if (!CanvasRenderingContext2D.prototype.roundRect) {
+    CanvasRenderingContext2D.prototype.roundRect = function(x, y, w, h, r) {
+        if (typeof r === 'number') {
+            r = {tl: r, tr: r, br: r, bl: r};
+        } else if (typeof r === 'object') {
+            r = {tl: r[0] || 0, tr: r[1] || r[0] || 0, br: r[2] || r[0] || 0, bl: r[3] || r[1] || r[0] || 0};
+        } else {
+            r = {tl: 0, tr: 0, br: 0, bl: 0};
+        }
+        this.beginPath();
+        this.moveTo(x + r.tl, y);
+        this.lineTo(x + w - r.tr, y);
+        this.quadraticCurveTo(x + w, y, x + w, y + r.tr);
+        this.lineTo(x + w, y + h - r.br);
+        this.quadraticCurveTo(x + w, y + h, x + w - r.br, y + h);
+        this.lineTo(x + r.bl, y + h);
+        this.quadraticCurveTo(x, y + h, x, y + h - r.bl);
+        this.lineTo(x, y + r.tl);
+        this.quadraticCurveTo(x, y, x + r.tl, y);
+        this.closePath();
+        return this;
+    };
+}
+
 // ==================== GLOBAL MODAL & BOAT SELECTION ====================
 // Track selected starter boat
 let selectedStarterBoat = 'sundancer';
@@ -33,10 +59,10 @@ function startGameWithBoat() {
 
     // Set player name
     const nameInput = document.getElementById('town-name-input');
-    if (nameInput && nameInput.value) {
-        gameState.playerName = nameInput.value;
+    if (nameInput && nameInput.value.trim()) {
+        gameState.playerName = nameInput.value.trim();
     } else {
-        gameState.playerName = 'Lake Boss';
+        gameState.playerName = 'Rookie';
     }
 
     // Create starter boat from selection
@@ -51,10 +77,194 @@ function startGameWithBoat() {
     const boat = STARTER_BOATS[selectedStarterBoat];
     addEvent(`Welcome to the Shootout, ${gameState.playerName}!`, 'racing');
     addEvent(`Your boat: ${boat.name}`, 'positive');
-    addEvent('Build docks and marinas to earn money', 'neutral');
-    addEvent('Upgrade your boat and win THE SHOOTOUT!', 'racing');
+
+    // Immediately launch the first Shootout race experience
+    setTimeout(() => {
+        showFirstShootoutRace();
+    }, 500);
 }
 window.startGameWithBoat = startGameWithBoat;
+
+// Show the first Shootout race experience
+function showFirstShootoutRace() {
+    const boat = STARTER_BOATS[selectedStarterBoat];
+    const activeBoat = gameState.garage.boats[0];
+
+    const raceModal = document.getElementById('race-modal');
+    const raceTitle = document.getElementById('race-title');
+    const raceContent = document.getElementById('race-content');
+
+    if (!raceModal || !raceContent) return;
+
+    raceTitle.textContent = 'YOUR FIRST SHOOTOUT';
+
+    raceContent.innerHTML = `
+        <div class="first-race-intro">
+            <p class="race-story">It's Shootout Weekend at Lake of the Ozarks - the biggest powerboat racing event in the Midwest!</p>
+            <p class="race-story">You've trailered your <strong>${boat.nickname}</strong> down to Captain Ron's for the big event.</p>
+
+            <div class="your-boat-display">
+                <canvas id="race-boat-preview" width="400" height="200"></canvas>
+                <div class="boat-race-stats">
+                    <h3>${boat.name}</h3>
+                    <p>"${boat.nickname}"</p>
+                    <div class="stat-row"><span>Engine:</span> <span>${boat.engine}</span></div>
+                    <div class="stat-row"><span>Top Speed:</span> <span>${activeBoat.stats.topSpeed} MPH</span></div>
+                    <div class="stat-row"><span>Handling:</span> <span>${Math.round(activeBoat.stats.handling * 100)}%</span></div>
+                </div>
+            </div>
+
+            <div class="race-classes">
+                <h3>Shootout Classes:</h3>
+                <div class="class-entry ${activeBoat.stats.topSpeed < 50 ? 'your-class' : ''}">
+                    <span class="class-name">Fun Run (Under 50 MPH)</span>
+                    <span class="class-desc">Family boats, pontoons, first-timers</span>
+                </div>
+                <div class="class-entry ${activeBoat.stats.topSpeed >= 50 && activeBoat.stats.topSpeed < 100 ? 'your-class' : ''}">
+                    <span class="class-name">Amateur (50-100 MPH)</span>
+                    <span class="class-desc">Modified runabouts, ski boats</span>
+                </div>
+                <div class="class-entry">
+                    <span class="class-name">Pro (100-150 MPH)</span>
+                    <span class="class-desc">Purpose-built racing hulls</span>
+                </div>
+                <div class="class-entry">
+                    <span class="class-name">Top Gun (150+ MPH)</span>
+                    <span class="class-desc">The fastest boats on the water</span>
+                </div>
+            </div>
+
+            <p class="encouragement">You're entered in the <strong>${activeBoat.stats.topSpeed < 50 ? 'Fun Run' : 'Amateur'}</strong> class. Time to make a name for yourself!</p>
+
+            <button class="race-button" onclick="runFirstRace()">Rev It Up!</button>
+        </div>
+    `;
+
+    // Show modal
+    raceModal.classList.remove('hidden');
+    raceModal.style.display = 'flex';
+
+    // Draw boat preview after modal is shown
+    setTimeout(() => {
+        const previewCanvas = document.getElementById('race-boat-preview');
+        if (previewCanvas) {
+            const ctx = previewCanvas.getContext('2d');
+
+            // Draw water background
+            const waterGrad = ctx.createLinearGradient(0, 0, 0, previewCanvas.height);
+            waterGrad.addColorStop(0, '#87CEEB');
+            waterGrad.addColorStop(0.4, '#5A9A8A');
+            waterGrad.addColorStop(1, '#2A4A42');
+            ctx.fillStyle = waterGrad;
+            ctx.fillRect(0, 0, previewCanvas.width, previewCanvas.height);
+
+            // Draw the appropriate boat
+            if (selectedStarterBoat === 'sundancer') {
+                drawSundancerPontoon(ctx, 50, 20, previewCanvas.width - 100, previewCanvas.height - 40);
+            } else {
+                drawSkiSupreme(ctx, 50, 20, previewCanvas.width - 100, previewCanvas.height - 40);
+            }
+        }
+    }, 100);
+}
+window.showFirstShootoutRace = showFirstShootoutRace;
+
+// Run the first race
+function runFirstRace() {
+    const activeBoat = gameState.garage.boats[0];
+    const raceContent = document.getElementById('race-content');
+
+    if (!raceContent) return;
+
+    // Calculate race result based on boat stats
+    const baseSpeed = activeBoat.stats.topSpeed;
+    const variance = (Math.random() - 0.5) * 10;
+    const finalSpeed = Math.max(baseSpeed * 0.8, baseSpeed + variance);
+    const roundedSpeed = Math.round(finalSpeed * 10) / 10;
+
+    // Determine placement in class
+    let placement, message, reward;
+    if (variance > 3) {
+        placement = '1st Place';
+        message = 'You took the checkered flag!';
+        reward = 500;
+    } else if (variance > 0) {
+        placement = '2nd Place';
+        message = 'So close! Great run out there!';
+        reward = 300;
+    } else if (variance > -3) {
+        placement = '3rd Place';
+        message = 'Solid finish for your first Shootout!';
+        reward = 150;
+    } else {
+        placement = 'Finished';
+        message = 'You completed the course safely!';
+        reward = 50;
+    }
+
+    // Update boat stats
+    activeBoat.races = 1;
+    if (placement === '1st Place') activeBoat.wins = 1;
+    activeBoat.bestSpeed = roundedSpeed;
+    activeBoat.totalEarnings = reward;
+
+    // Give player the reward
+    gameState.resources.money += reward;
+    gameState.resources.racingRep += placement === '1st Place' ? 10 : placement === '2nd Place' ? 5 : 2;
+
+    raceContent.innerHTML = `
+        <div class="race-results">
+            <h3>RACE COMPLETE!</h3>
+
+            <div class="speed-display">
+                <span class="speed-number">${roundedSpeed}</span>
+                <span class="speed-unit">MPH</span>
+            </div>
+
+            <div class="placement ${placement === '1st Place' ? 'winner' : ''}">${placement}</div>
+            <p class="result-message">${message}</p>
+
+            <div class="rewards">
+                <div class="reward-item">
+                    <span class="reward-label">Prize Money:</span>
+                    <span class="reward-value">+$${reward}</span>
+                </div>
+                <div class="reward-item">
+                    <span class="reward-label">Racing Rep:</span>
+                    <span class="reward-value">+${placement === '1st Place' ? 10 : placement === '2nd Place' ? 5 : 2}</span>
+                </div>
+            </div>
+
+            <div class="next-steps">
+                <p>Build marinas and docks to earn money.</p>
+                <p>Upgrade your boat or buy faster hulls.</p>
+                <p>Come back next Shootout and go for the Top Gun class!</p>
+            </div>
+
+            <button class="race-button" onclick="closeRaceModal()">Start Building Your Empire</button>
+        </div>
+    `;
+
+    // Update UI
+    updateUI();
+
+    // Log event
+    addEvent(`First Shootout: ${roundedSpeed} MPH - ${placement}!`, 'racing');
+}
+window.runFirstRace = runFirstRace;
+
+// Close race modal
+function closeRaceModal() {
+    const raceModal = document.getElementById('race-modal');
+    if (raceModal) {
+        raceModal.classList.add('hidden');
+        raceModal.style.display = 'none';
+    }
+
+    addEvent('Time to build your lakefront empire!', 'neutral');
+    addEvent('Tip: Start with a dock to earn boat rental income', 'positive');
+}
+window.closeRaceModal = closeRaceModal;
 
 // Create the starter boat based on player selection
 function createStarterBoatFromSelection(boatId) {
