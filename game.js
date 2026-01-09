@@ -14,19 +14,20 @@ const CONFIG = {
 };
 
 // ==================== TERRAIN TYPES ====================
+// Natural Ozark color palette
 const TERRAIN = {
-    LAND: { id: 'land', name: 'Shoreline', color: '#4a7c3f', buildable: true },
-    FOREST: { id: 'forest', name: 'Woods', color: '#2d5a27', buildable: true },
-    WATER: { id: 'water', name: 'Lake', color: '#2d7eb5', buildable: false, isWater: true },
-    DEEP_WATER: { id: 'deep_water', name: 'Deep Channel', color: '#1a5a8a', buildable: false, isWater: true },
-    RACE_LANE: { id: 'race_lane', name: 'Race Lane', color: '#0d4a7a', buildable: false, isWater: true, isRaceLane: true },
-    COVE: { id: 'cove', name: 'Cove', color: '#4090b8', buildable: false, isWater: true, isCove: true },
-    SHALLOW: { id: 'shallow', name: 'Shallow Water', color: '#5ab0d0', buildable: false, isWater: true },
-    DOCK_ZONE: { id: 'dock_zone', name: 'Dock Area', color: '#3a9ac0', buildable: true, isWater: true },
-    RACE_STAGING: { id: 'race_staging', name: 'Race Staging', color: '#2a7090', buildable: true, isWater: true, isRacing: true },
-    DAM: { id: 'dam', name: 'Bagnell Dam', color: '#666666', buildable: false },
-    STRIP: { id: 'strip', name: 'The Strip', color: '#8b7355', buildable: true, isStrip: true },
-    PARKING: { id: 'parking', name: 'Parking Lot', color: '#555555', buildable: true },
+    LAND: { id: 'land', name: 'Shoreline', color: '#6b8c5a', buildable: true },           // Grassy shore
+    FOREST: { id: 'forest', name: 'Woods', color: '#3a5a40', buildable: true },           // Oak/hickory forest
+    WATER: { id: 'water', name: 'Lake', color: '#4a7a6a', buildable: false, isWater: true },          // Blue-green lake
+    DEEP_WATER: { id: 'deep_water', name: 'Deep Channel', color: '#2a4a42', buildable: false, isWater: true },  // Deep water
+    RACE_LANE: { id: 'race_lane', name: 'Race Lane', color: '#1a3a32', buildable: false, isWater: true, isRaceLane: true },  // Marked race lane
+    COVE: { id: 'cove', name: 'Cove', color: '#5a8a7a', buildable: false, isWater: true, isCove: true },        // Sheltered cove
+    SHALLOW: { id: 'shallow', name: 'Shallow Water', color: '#7aaa9a', buildable: false, isWater: true },       // Clear shallows
+    DOCK_ZONE: { id: 'dock_zone', name: 'Dock Area', color: '#5a9080', buildable: true, isWater: true },        // Dock-ready water
+    RACE_STAGING: { id: 'race_staging', name: 'Race Staging', color: '#3a6a5a', buildable: true, isWater: true, isRacing: true },
+    DAM: { id: 'dam', name: 'Bagnell Dam', color: '#8a8a80', buildable: false },           // Limestone concrete
+    STRIP: { id: 'strip', name: 'The Strip', color: '#a89070', buildable: true, isStrip: true },  // Dusty road
+    PARKING: { id: 'parking', name: 'Parking Lot', color: '#605850', buildable: true },   // Gravel lot
 };
 
 // ==================== BUILDING DEFINITIONS ====================
@@ -1643,10 +1644,23 @@ function initInput() {
         startGameLoop();
     });
 
-    document.getElementById('start-game').addEventListener('click', () => {
+    function startGame() {
         gameState.playerName = document.getElementById('town-name-input').value || 'Lake Boss';
         document.getElementById('welcome-modal').classList.add('hidden');
         updateUI();
+    }
+
+    document.getElementById('start-game').addEventListener('click', startGame);
+    document.getElementById('start-game').addEventListener('touchend', (e) => {
+        e.preventDefault();
+        startGame();
+    });
+
+    // Allow Enter key to start game
+    document.getElementById('town-name-input').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            startGame();
+        }
     });
 }
 

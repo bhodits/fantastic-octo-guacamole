@@ -7,24 +7,34 @@
 }
 
 :root {
-    --lake-blue: #1e5f8a;
-    --lake-deep: #0d3d5c;
-    --lake-light: #4fa3d1;
-    --lake-water: #2d7eb5;
-    --sunset-orange: #e87d3e;
-    --sunset-gold: #f4b942;
-    --dock-brown: #5c4033;
-    --sand: #e8dcc4;
-    --cream: #faf8f5;
-    --party-pink: #e84393;
-    --neon-green: #00d26a;
-    --panel-bg: rgba(250, 248, 245, 0.95);
-    --shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+    /* Natural Ozark Lake Colors */
+    --lake-blue: #3d6b5e;           /* Blue-green lake water */
+    --lake-deep: #2a4a42;           /* Deep channel water */
+    --lake-light: #5a8a7a;          /* Shallow cove water */
+    --lake-water: #4a7a6a;          /* Main lake color */
+
+    /* Forest & Earth Tones */
+    --forest-green: #3a5a40;        /* Oak and hickory forest */
+    --cedar-green: #4a6350;         /* Cedar trees */
+    --limestone: #a89880;           /* Ozark bluffs */
+    --clay-red: #8b5a3c;            /* Missouri red clay */
+    --dock-brown: #6b4423;          /* Weathered dock wood */
+
+    /* Natural Accents */
+    --sunset-orange: #c4723a;       /* Muted sunset */
+    --sunset-gold: #d4a855;         /* Evening light */
+    --morning-mist: #b8c4bc;        /* Fog on the lake */
+    --sand: #d4c8b0;                /* Sandy shore */
+    --cream: #f5f2eb;               /* Natural off-white */
+    --stone-gray: #7a7a72;          /* Limestone gray */
+
+    --panel-bg: rgba(245, 242, 235, 0.95);
+    --shadow: 0 4px 6px rgba(0, 0, 0, 0.25);
 }
 
 body {
     font-family: 'Segoe UI', 'Arial', sans-serif;
-    background: linear-gradient(180deg, #87ceeb 0%, #4fa3d1 30%, #1e5f8a 100%);
+    background: linear-gradient(180deg, var(--morning-mist) 0%, var(--lake-light) 30%, var(--lake-deep) 100%);
     min-height: 100vh;
     color: #2c2c2c;
 }
@@ -368,43 +378,43 @@ aside h3 {
 }
 
 .event-item.racing {
-    color: #ff6b00;
+    color: #8b5a3c;
     font-weight: bold;
-    background: rgba(255, 107, 0, 0.1);
+    background: rgba(139, 90, 60, 0.15);
     padding: 3px 5px;
     border-radius: 3px;
 }
 
 /* Racing Resources */
 .racing-resource {
-    border-color: #ff6b00 !important;
-    background: linear-gradient(180deg, #fff 0%, #ffe8d4 100%) !important;
+    border-color: #8b5a3c !important;
+    background: linear-gradient(180deg, #fff 0%, #e8dcd0 100%) !important;
 }
 
 .racing-resource span:nth-child(2) {
-    color: #ff6b00 !important;
+    color: #8b5a3c !important;
 }
 
 /* Racing Category Button */
 .racing-btn {
-    background: linear-gradient(180deg, #ff8c00 0%, #ff6b00 100%) !important;
+    background: linear-gradient(180deg, #a06040 0%, #8b5a3c 100%) !important;
     color: white !important;
-    border-color: #cc5500 !important;
+    border-color: #6b4423 !important;
 }
 
 .racing-btn:hover {
-    background: linear-gradient(180deg, #ffa500 0%, #ff8c00 100%) !important;
+    background: linear-gradient(180deg, #b07050 0%, #a06040 100%) !important;
 }
 
 .racing-btn.active {
-    background: linear-gradient(180deg, #ff6b00 0%, #cc5500 100%) !important;
-    box-shadow: 0 0 10px rgba(255, 107, 0, 0.5);
+    background: linear-gradient(180deg, #8b5a3c 0%, #6b4423 100%) !important;
+    box-shadow: 0 0 10px rgba(139, 90, 60, 0.5);
 }
 
 /* Shootout Info Box */
 .shootout-info {
-    background: linear-gradient(180deg, #ff8c00 0%, #ff6b00 100%);
-    color: white;
+    background: linear-gradient(180deg, #6b4423 0%, #5a3a1a 100%);
+    color: #f5f2eb;
     padding: 12px;
     border-radius: 8px;
     margin: 15px 0;
@@ -522,22 +532,31 @@ aside h3 {
 
 .modal-content button {
     width: 100%;
-    padding: 15px;
-    background: linear-gradient(180deg, var(--sunset-orange) 0%, #d35400 100%);
+    padding: 18px;
+    background: linear-gradient(180deg, #5a8a7a 0%, #3d6b5e 100%);
     color: white;
-    border: none;
-    border-radius: 8px;
-    font-size: 1.1rem;
+    border: 3px solid #2a4a42;
+    border-radius: 10px;
+    font-size: 1.2rem;
     font-family: inherit;
     cursor: pointer;
     transition: all 0.2s;
     font-weight: bold;
-    text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.4);
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
 }
 
-.modal-content button:hover {
-    background: linear-gradient(180deg, #f39c12 0%, var(--sunset-orange) 100%);
+.modal-content button:hover,
+.modal-content button:focus {
+    background: linear-gradient(180deg, #6b9a8a 0%, #4a7a6a 100%);
     transform: scale(1.02);
+    outline: none;
+}
+
+.modal-content button:active {
+    transform: scale(0.98);
+    background: linear-gradient(180deg, #4a7a6a 0%, #2a4a42 100%);
 }
 
 /* Scrollbar Styling */
