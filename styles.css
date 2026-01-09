@@ -976,6 +976,8 @@ aside h3 {
     image-rendering: pixelated;
     image-rendering: crisp-edges;
     flex-shrink: 0;
+    background: linear-gradient(180deg, #87CEEB 0%, #5DA4B4 100%);
+    border-radius: 8px;
 }
 
 .storyteller-bubble {
@@ -1064,9 +1066,10 @@ aside h3 {
 
 .boat-option canvas {
     width: 100%;
-    height: 120px;
+    height: 140px;
     border-radius: 10px 18px 10px 18px;
-    background: linear-gradient(180deg, #87CEEB 0%, #4A8B7A 50%, #2A4A42 100%);
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
     display: block;
     margin-bottom: 10px;
 }
@@ -1110,6 +1113,58 @@ aside h3 {
     color: var(--bark-brown);
     line-height: 1.4;
     margin: 0;
+}
+
+/* Free boat note */
+.free-boat-note {
+    text-align: center;
+    color: var(--clay-red);
+    font-weight: 600;
+    font-size: 0.9rem;
+    margin: 5px 0 15px;
+}
+
+/* Inspection Report */
+.inspection-report {
+    background: linear-gradient(145deg, rgba(255, 250, 240, 0.9) 0%, rgba(245, 235, 220, 0.9) 100%);
+    border: 2px dashed var(--dock-brown);
+    border-radius: 8px;
+    padding: 10px;
+    margin-top: 10px;
+    text-align: left;
+}
+
+.report-title {
+    display: block;
+    font-family: 'Cabin', sans-serif;
+    font-weight: 700;
+    font-size: 0.75rem;
+    color: var(--clay-red);
+    margin-bottom: 5px;
+    letter-spacing: 1px;
+}
+
+.inspection-report ul {
+    margin: 0;
+    padding-left: 18px;
+    font-size: 0.75rem;
+    color: var(--bark-brown);
+}
+
+.inspection-report li {
+    margin: 3px 0;
+    line-height: 1.3;
+}
+
+.report-value {
+    margin: 8px 0 0 0;
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: var(--lake-deep);
+    text-align: center;
+    background: rgba(26, 75, 107, 0.1);
+    padding: 4px;
+    border-radius: 4px;
 }
 
 .name-input-section {

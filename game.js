@@ -1737,6 +1737,11 @@ window.hideWelcomeModal = hideWelcomeModal;
 function initBoatPreviews() {
     // Use requestAnimationFrame to ensure DOM is ready
     requestAnimationFrame(() => {
+        console.log('Initializing boat previews...');
+        const sundancerCanvas = document.getElementById('sundancer-preview');
+        const skiCanvas = document.getElementById('skisupreme-preview');
+        console.log('Sundancer canvas:', sundancerCanvas);
+        console.log('Ski Supreme canvas:', skiCanvas);
         drawBoatPreview('sundancer');
         drawBoatPreview('skiSupreme');
     });
@@ -1747,7 +1752,7 @@ function drawBoatPreview(boatType) {
     const canvas = document.getElementById(canvasId);
 
     if (!canvas) {
-        console.warn(`Canvas ${canvasId} not found, retrying...`);
+        console.warn(`Canvas ${canvasId} not found`);
         return;
     }
 
@@ -1756,43 +1761,170 @@ function drawBoatPreview(boatType) {
 
     const w = canvas.width;
     const h = canvas.height;
+    const px = 4; // Pixel size for 12-bit look
 
-    // Clear and draw water background
+    ctx.imageSmoothingEnabled = false;
+
+    // Clear canvas
     ctx.clearRect(0, 0, w, h);
 
-    // Sky gradient at top
-    const skyGrad = ctx.createLinearGradient(0, 0, 0, h * 0.4);
-    skyGrad.addColorStop(0, '#87CEEB');
-    skyGrad.addColorStop(1, '#5DA4B4');
-    ctx.fillStyle = skyGrad;
-    ctx.fillRect(0, 0, w, h * 0.4);
+    // Draw pixelated water background
+    drawPixelWater(ctx, w, h, px);
 
-    // Water gradient
-    const waterGrad = ctx.createLinearGradient(0, h * 0.35, 0, h);
-    waterGrad.addColorStop(0, '#4A8A7A');
-    waterGrad.addColorStop(0.5, '#3A6A5A');
-    waterGrad.addColorStop(1, '#2A4A42');
-    ctx.fillStyle = waterGrad;
-    ctx.fillRect(0, h * 0.35, w, h * 0.65);
-
-    // Water ripples
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
-    ctx.lineWidth = 1;
-    for (let i = 0; i < 5; i++) {
-        const y = h * 0.5 + i * 15;
-        ctx.beginPath();
-        ctx.moveTo(0, y);
-        ctx.quadraticCurveTo(w * 0.25, y - 3, w * 0.5, y);
-        ctx.quadraticCurveTo(w * 0.75, y + 3, w, y);
-        ctx.stroke();
-    }
-
-    // Draw the appropriate boat
+    // Draw the appropriate boat in 12-bit pixel art style
     if (boatType === 'sundancer') {
-        drawSundancerPreview(ctx, w, h);
+        drawPixelPontoon(ctx, w, h, px);
     } else {
-        drawSkiSupremePreview(ctx, w, h);
+        drawPixelSkiBoat(ctx, w, h, px);
     }
+
+    console.log(`Drew ${boatType} preview`);
+}
+
+// Draw pixelated water background
+function drawPixelWater(ctx, w, h, px) {
+    // Sky - pixelated gradient effect
+    const skyColors = ['#5DA4C4', '#6DB4D4', '#7DC4E4', '#8DD4F4'];
+    for (let y = 0; y < h * 0.4; y += px) {
+        const colorIdx = Math.floor((y / (h * 0.4)) * skyColors.length);
+        ctx.fillStyle = skyColors[Math.min(colorIdx, skyColors.length - 1)];
+        ctx.fillRect(0, y, w, px);
+    }
+
+    // Water - darker pixelated blue-green
+    const waterColors = ['#2A6B7A', '#1A5B6A', '#1A4B5A', '#0A3B4A'];
+    for (let y = h * 0.4; y < h; y += px) {
+        const progress = (y - h * 0.4) / (h * 0.6);
+        const colorIdx = Math.floor(progress * waterColors.length);
+        ctx.fillStyle = waterColors[Math.min(colorIdx, waterColors.length - 1)];
+        ctx.fillRect(0, y, w, px);
+    }
+
+    // Pixel water ripples/waves
+    ctx.fillStyle = '#3A7B8A';
+    for (let x = 0; x < w; x += px * 4) {
+        const waveY = h * 0.42 + Math.sin(x * 0.03) * 4;
+        ctx.fillRect(x, waveY, px * 2, px);
+    }
+    for (let x = px * 2; x < w; x += px * 5) {
+        const waveY = h * 0.55 + Math.cos(x * 0.04) * 3;
+        ctx.fillRect(x, waveY, px * 3, px);
+    }
+}
+
+// Draw 12-bit pixel art pontoon boat
+function drawPixelPontoon(ctx, w, h, px) {
+    const centerX = w / 2;
+    const boatY = h * 0.35;
+
+    // Helper to draw pixel blocks
+    function rect(x, y, width, height, color) {
+        ctx.fillStyle = color;
+        ctx.fillRect(x, y, width, height);
+    }
+
+    // Shadow on water
+    rect(centerX - 90, h * 0.75, 180, px * 2, 'rgba(0,0,0,0.3)');
+
+    // Left pontoon (aluminum) - prominent
+    rect(centerX - 100, boatY + 60, 200, 20, '#A0A0A0');
+    rect(centerX - 100, boatY + 60, 200, 8, '#C0C0C0');  // Highlight
+    rect(centerX - 105, boatY + 55, 15, 25, '#909090');  // Nose cap
+
+    // Right pontoon (partially visible behind)
+    rect(centerX - 85, boatY + 80, 170, 16, '#707070');
+    rect(centerX - 90, boatY + 78, 12, 18, '#606060');  // Nose cap
+
+    // Deck - tan/cream colored
+    rect(centerX - 90, boatY + 15, 180, 50, '#E8DCC8');
+    rect(centerX - 90, boatY + 15, 180, 8, '#F5EDE0');  // Top highlight
+
+    // Maroon/burgundy stripe - THE signature look
+    rect(centerX - 90, boatY + 30, 180, 12, '#722F37');
+    rect(centerX - 90, boatY + 30, 180, 4, '#8B3A42');  // Stripe highlight
+
+    // Bimini top (canvas canopy)
+    rect(centerX - 70, boatY - 25, 140, 35, '#E8DCC0');
+    rect(centerX - 70, boatY - 25, 140, 8, '#F0E8D8');  // Top highlight
+    // Bimini poles
+    rect(centerX - 65, boatY + 5, 4, 20, '#C0C0C0');
+    rect(centerX + 60, boatY + 5, 4, 20, '#C0C0C0');
+
+    // Wraparound seating (tan)
+    rect(centerX - 80, boatY + 20, 30, 25, '#D4C4A8');
+    rect(centerX + 50, boatY + 20, 30, 25, '#D4C4A8');
+
+    // Front railing
+    rect(centerX - 85, boatY + 12, 170, 3, '#D0D0D0');
+
+    // Evinrude outboard motor
+    rect(centerX + 85, boatY + 35, 20, 35, '#1A1A1A');
+    rect(centerX + 90, boatY + 30, 12, 8, '#2A2A2A');  // Motor head
+    rect(centerX + 88, boatY + 70, 8, 15, '#333333');  // Lower unit
+
+    // Small wake behind motor
+    rect(centerX + 100, boatY + 65, px * 3, px, '#FFFFFF');
+    rect(centerX + 108, boatY + 68, px * 2, px, 'rgba(255,255,255,0.7)');
+}
+
+// Draw 12-bit pixel art ski boat
+function drawPixelSkiBoat(ctx, w, h, px) {
+    const centerX = w / 2;
+    const boatY = h * 0.4;
+
+    function rect(x, y, width, height, color) {
+        ctx.fillStyle = color;
+        ctx.fillRect(x, y, width, height);
+    }
+
+    // Shadow on water
+    rect(centerX - 80, h * 0.75, 160, px * 2, 'rgba(0,0,0,0.3)');
+
+    // Main hull - RED fiberglass
+    // Hull body
+    rect(centerX - 75, boatY + 15, 160, 35, '#CC0000');
+    rect(centerX - 75, boatY + 15, 160, 10, '#DD2222');  // Top highlight
+
+    // Bow (pointed front)
+    ctx.fillStyle = '#CC0000';
+    ctx.beginPath();
+    ctx.moveTo(centerX + 85, boatY + 15);
+    ctx.lineTo(centerX + 110, boatY + 30);
+    ctx.lineTo(centerX + 85, boatY + 50);
+    ctx.closePath();
+    ctx.fill();
+
+    // White racing stripe
+    rect(centerX - 75, boatY + 28, 160, 8, '#FFFFFF');
+    rect(centerX - 75, boatY + 28, 160, 3, '#F8F8F8');  // Stripe highlight
+
+    // Stern (back)
+    rect(centerX - 80, boatY + 20, 10, 25, '#AA0000');
+
+    // Windshield
+    rect(centerX, boatY, 40, 18, '#87CEEB');
+    rect(centerX, boatY, 40, 6, '#A0DEF8');  // Glass highlight
+    rect(centerX - 2, boatY - 2, 44, 4, '#C0C0C0');  // Chrome frame
+
+    // Interior (visible cockpit)
+    rect(centerX - 60, boatY + 5, 55, 20, '#2A2A2A');
+    rect(centerX + 42, boatY + 5, 35, 20, '#2A2A2A');
+
+    // Seats
+    rect(centerX - 50, boatY + 8, 35, 12, '#1A1A1A');
+    rect(centerX + 48, boatY + 8, 25, 12, '#1A1A1A');
+
+    // Ski tow pylon
+    rect(centerX + 25, boatY - 15, 8, 20, '#C0C0C0');
+    rect(centerX + 22, boatY - 18, 14, 6, '#D0D0D0');
+
+    // Inboard engine cover (rear deck)
+    rect(centerX - 70, boatY + 5, 15, 15, '#BB0000');
+
+    // Wake spray
+    rect(centerX - 85, boatY + 40, px * 4, px * 2, '#FFFFFF');
+    rect(centerX - 95, boatY + 45, px * 3, px, 'rgba(255,255,255,0.8)');
+    rect(centerX - 100, boatY + 50, px * 2, px, 'rgba(255,255,255,0.5)');
 }
 
 function drawSundancerPreview(ctx, w, h) {
@@ -2144,8 +2276,12 @@ function drawStoryteller() {
 
 // Initialize storyteller on welcome screen
 function initStoryteller() {
+    console.log('Initializing storyteller...');
+    const canvas = document.getElementById('storyteller-canvas');
+    console.log('Storyteller canvas:', canvas);
     requestAnimationFrame(() => {
         drawStoryteller();
+        console.log('Storyteller drawn');
     });
 }
 
