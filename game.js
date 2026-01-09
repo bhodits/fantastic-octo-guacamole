@@ -508,6 +508,182 @@ function stopAnimationLoop() {
 }
 
 // ╔════════════════════════════════════════════════════════════════════════════╗
+// ║                         GRID SYSTEM CLASS                                  ║
+// ║  Professional tile-based map management for the Tycoon mode.               ║
+// ║  Handles 2D array, rendering, and ensures instant visibility.              ║
+// ╚════════════════════════════════════════════════════════════════════════════╝
+
+const GridSystem = {
+    // Grid dimensions (from CONFIG)
+    width: 50,
+    height: 35,
+    tileSize: 40,
+
+    // Grid data storage
+    tiles: [],
+    isInitialized: false,
+    isVisible: false,
+
+    // Terrain type definitions for rendering
+    terrainColors: {
+        land: '#6b8c5a',
+        forest: '#3a5a40',
+        water: '#4a7a6a',
+        deep_water: '#2a4a42',
+        race_lane: '#1a3a32',
+        cove: '#5a8a7a',
+        shallow: '#7aaa9a',
+        dock_zone: '#5a9080',
+        race_staging: '#3a6a5a',
+        dam: '#8a8a80',
+        strip: '#a89070',
+        parking: '#605850',
+        town: '#c4a882',
+        town_center: '#b89872',
+        state_park: '#2d5a27',
+        park_beach: '#d4c4a0',
+        park_trail: '#8b7355',
+        paint_shop: '#c0a080',
+        prop_shop: '#808090'
+    },
+
+    // Initialize the grid system
+    init(config) {
+        this.width = config?.GRID_WIDTH || 50;
+        this.height = config?.GRID_HEIGHT || 35;
+        this.tileSize = config?.TILE_SIZE || 40;
+
+        console.log(`[GridSystem] Initializing ${this.width}x${this.height} grid (${this.width * this.height} tiles)`);
+
+        // Create empty 2D array
+        this.tiles = [];
+        for (let y = 0; y < this.height; y++) {
+            this.tiles[y] = [];
+            for (let x = 0; x < this.width; x++) {
+                this.tiles[y][x] = {
+                    terrain: 'land',
+                    building: null,
+                    x: x,
+                    y: y
+                };
+            }
+        }
+
+        this.isInitialized = true;
+        console.log('[GridSystem] Grid initialized successfully');
+        return this;
+    },
+
+    // Set a tile's terrain type
+    setTerrain(x, y, terrain) {
+        if (this.isValidTile(x, y)) {
+            this.tiles[y][x].terrain = terrain;
+        }
+    },
+
+    // Get a tile
+    getTile(x, y) {
+        if (this.isValidTile(x, y)) {
+            return this.tiles[y][x];
+        }
+        return null;
+    },
+
+    // Check if coordinates are valid
+    isValidTile(x, y) {
+        return x >= 0 && x < this.width && y >= 0 && y < this.height;
+    },
+
+    // Get terrain color for a tile type
+    getTerrainColor(terrain) {
+        return this.terrainColors[terrain] || this.terrainColors.land;
+    },
+
+    // Check if terrain is water-based
+    isWaterTerrain(terrain) {
+        return ['water', 'deep_water', 'race_lane', 'cove', 'shallow', 'dock_zone', 'race_staging'].includes(terrain);
+    },
+
+    // Render the entire grid to a canvas context (basic immediate render)
+    renderImmediate(ctx, camera) {
+        if (!this.isInitialized || !ctx) {
+            console.warn('[GridSystem] Cannot render - not initialized or no context');
+            return;
+        }
+
+        const offsetX = camera?.x || 0;
+        const offsetY = camera?.y || 0;
+        const zoom = camera?.zoom || 1;
+
+        ctx.save();
+        ctx.translate(offsetX, offsetY);
+        ctx.scale(zoom, zoom);
+
+        // Draw each tile
+        for (let y = 0; y < this.height; y++) {
+            for (let x = 0; x < this.width; x++) {
+                const tile = this.tiles[y][x];
+                const px = x * this.tileSize;
+                const py = y * this.tileSize;
+
+                // Get color for terrain
+                ctx.fillStyle = this.getTerrainColor(tile.terrain);
+                ctx.fillRect(px, py, this.tileSize, this.tileSize);
+
+                // Add subtle grid lines for visibility
+                ctx.strokeStyle = 'rgba(0, 0, 0, 0.1)';
+                ctx.lineWidth = 0.5;
+                ctx.strokeRect(px, py, this.tileSize, this.tileSize);
+            }
+        }
+
+        ctx.restore();
+        this.isVisible = true;
+    },
+
+    // Get grid statistics
+    getStats() {
+        let terrainCounts = {};
+        for (let y = 0; y < this.height; y++) {
+            for (let x = 0; x < this.width; x++) {
+                const terrain = this.tiles[y][x].terrain;
+                terrainCounts[terrain] = (terrainCounts[terrain] || 0) + 1;
+            }
+        }
+        return {
+            totalTiles: this.width * this.height,
+            dimensions: `${this.width}x${this.height}`,
+            terrainCounts
+        };
+    },
+
+    // Debug: Force render a test pattern to verify canvas is working
+    renderDebugPattern(ctx, canvasWidth, canvasHeight) {
+        console.log('[GridSystem] Rendering debug pattern...');
+
+        // Clear with bright background
+        ctx.fillStyle = '#FF00FF'; // Magenta - very obvious
+        ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+
+        // Draw checkerboard
+        for (let y = 0; y < 10; y++) {
+            for (let x = 0; x < 10; x++) {
+                ctx.fillStyle = (x + y) % 2 === 0 ? '#00FF00' : '#0000FF';
+                ctx.fillRect(x * 50, y * 50, 50, 50);
+            }
+        }
+
+        // Draw text
+        ctx.fillStyle = '#FFFFFF';
+        ctx.font = 'bold 24px Arial';
+        ctx.fillText('GRID SYSTEM ACTIVE', 20, 100);
+        ctx.fillText(`Canvas: ${canvasWidth}x${canvasHeight}`, 20, 140);
+
+        console.log('[GridSystem] Debug pattern rendered');
+    }
+};
+
+// ╔════════════════════════════════════════════════════════════════════════════╗
 // ║                    SIMULATION ENGINE ARCHITECTURE                          ║
 // ║  Professional game architecture with centralized config, state management, ║
 // ║  action dispatching, and persistence layer.                                ║
@@ -3302,19 +3478,85 @@ function drawParkingLights(ctx, w, h, frame) {
     });
 }
 
-// Skip trailer scene and go to game
+// Skip trailer scene and go to game - ENHANCED TRANSITION
 function skipToGame() {
+    console.log('[Transition] skipToGame() called - transitioning to Tycoon mode');
+
+    // 1. Remove race overlay completely
     const overlay = document.getElementById('race-overlay');
     if (overlay) {
         overlay.remove();
+        console.log('[Transition] Race overlay removed');
     }
 
-    // Re-render the map
-    resizeCanvas();
-    render();
+    // 2. Clean up any leftover race state
+    if (raceState) {
+        raceState.active = false;
+    }
+    if (trailerState) {
+        trailerState.active = false;
+    }
 
+    // 3. Ensure the game canvas is visible and properly sized
+    const gameCanvas = document.getElementById('game-canvas');
+    const gameArea = document.getElementById('game-area');
+
+    if (gameCanvas && gameArea) {
+        // Force canvas to be visible
+        gameCanvas.style.display = 'block';
+        gameCanvas.style.visibility = 'visible';
+        gameCanvas.style.opacity = '1';
+
+        // Ensure proper dimensions
+        gameCanvas.width = gameArea.clientWidth;
+        gameCanvas.height = gameArea.clientHeight;
+
+        console.log(`[Transition] Canvas sized to ${gameCanvas.width}x${gameCanvas.height}`);
+    }
+
+    // 4. Reset camera to center on the map
+    if (gameState && gameState.camera) {
+        const mapWidth = CONFIG.GRID_WIDTH * CONFIG.TILE_SIZE;
+        const mapHeight = CONFIG.GRID_HEIGHT * CONFIG.TILE_SIZE;
+        gameState.camera.x = (canvas.width - mapWidth * gameState.camera.zoom) / 2;
+        gameState.camera.y = (canvas.height - mapHeight * gameState.camera.zoom) / 2;
+        console.log(`[Transition] Camera reset to (${gameState.camera.x}, ${gameState.camera.y})`);
+    }
+
+    // 5. Force immediate render of the grid
+    resizeCanvas();
+
+    // 6. Sync GridSystem with gameState.grid
+    if (gameState.grid && gameState.grid.length > 0) {
+        GridSystem.tiles = gameState.grid;
+        GridSystem.isInitialized = true;
+        console.log(`[Transition] GridSystem synced with ${gameState.grid.length} rows`);
+    }
+
+    // 7. Force multiple renders to ensure visibility
+    render();
+    requestAnimationFrame(() => {
+        render();
+        console.log('[Transition] Secondary render completed');
+    });
+
+    // 8. Log grid stats for debugging
+    if (gameState.grid && gameState.grid.length > 0) {
+        const stats = GridSystem.getStats();
+        console.log('[Transition] Grid Stats:', stats);
+    }
+
+    // 9. Show welcome messages
     addEvent('Time to build your lakefront paradise!', 'neutral');
     addEvent('Tip: Start with a dock to earn boat rental income', 'positive');
+
+    // 10. Ensure animation loop is running
+    if (!animationFrameId) {
+        console.log('[Transition] Restarting animation loop');
+        startAnimationLoop();
+    }
+
+    console.log('[Transition] Tycoon mode transition complete!');
 }
 window.skipToGame = skipToGame;
 
@@ -6111,6 +6353,17 @@ function resizeCanvas() {
 }
 
 function render() {
+    // Safety check - ensure we have canvas and grid
+    if (!ctx || !canvas) {
+        console.warn('[Render] No canvas context available');
+        return;
+    }
+
+    if (!gameState.grid || gameState.grid.length === 0) {
+        console.warn('[Render] Grid not initialized yet');
+        return;
+    }
+
     // Throttle renders to max ~60fps to prevent excessive repaints during drag
     const now = performance.now();
     if (now - gameState.lastRenderTime < 16) { // ~60fps max
@@ -6133,7 +6386,7 @@ function render() {
     ctx.translate(gameState.camera.x, gameState.camera.y);
     ctx.scale(gameState.camera.zoom, gameState.camera.zoom);
 
-    // Draw terrain
+    // Draw terrain - iterate through the grid
     for (let y = 0; y < CONFIG.GRID_HEIGHT; y++) {
         for (let x = 0; x < CONFIG.GRID_WIDTH; x++) {
             const tile = gameState.grid[y][x];
@@ -8877,17 +9130,42 @@ function initializeStarterBoat() {
 
 // ==================== INITIALIZATION ====================
 function init() {
+    console.log('[Game] Initializing Lake of the Ozarks Tycoon...');
+
+    // 1. Initialize canvas first
     initCanvas();
+    console.log('[Game] Canvas initialized');
+
+    // 2. Initialize GridSystem with CONFIG
+    GridSystem.init(CONFIG);
+    console.log('[Game] GridSystem initialized');
+
+    // 3. Generate the Lake of the Ozarks map
     generateMap();
+    console.log(`[Game] Map generated: ${CONFIG.GRID_WIDTH}x${CONFIG.GRID_HEIGHT} tiles`);
+
+    // 4. Sync GridSystem with gameState.grid
+    GridSystem.tiles = gameState.grid;
+    GridSystem.isInitialized = true;
+
+    // 5. Initialize input handlers
     initInput();
+    console.log('[Game] Input handlers initialized');
+
+    // 6. Update UI and perform initial render
     updateUI();
     render();
+    console.log('[Game] Initial render complete');
+
+    // 7. Start the game simulation loop
     startGameLoop();
+    console.log('[Game] Game loop started');
 
-    // Start the visual effects animation loop
+    // 8. Start the visual effects animation loop
     startAnimationLoop();
+    console.log('[Game] Animation loop started');
 
-    // Initialize boat preview canvases on welcome screen with delay to ensure DOM ready
+    // 9. Initialize boat preview canvases on welcome screen
     setTimeout(() => {
         initBoatPreviews();
         initStoryteller();
@@ -8899,7 +9177,11 @@ function init() {
         initStoryteller();
     }, 500);
 
-    console.log('[Game] Lake of the Ozarks Tycoon initialized!');
+    // 10. Log grid statistics for verification
+    const gridStats = GridSystem.getStats();
+    console.log('[Game] Grid Statistics:', gridStats);
+
+    console.log('[Game] ✓ Lake of the Ozarks Tycoon fully initialized!');
 }
 
 window.addEventListener('load', init);
