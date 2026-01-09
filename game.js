@@ -16,18 +16,728 @@ const CONFIG = {
 // ==================== TERRAIN TYPES ====================
 // Natural Ozark color palette
 const TERRAIN = {
-    LAND: { id: 'land', name: 'Shoreline', color: '#6b8c5a', buildable: true },           // Grassy shore
-    FOREST: { id: 'forest', name: 'Woods', color: '#3a5a40', buildable: true },           // Oak/hickory forest
-    WATER: { id: 'water', name: 'Lake', color: '#4a7a6a', buildable: false, isWater: true },          // Blue-green lake
-    DEEP_WATER: { id: 'deep_water', name: 'Deep Channel', color: '#2a4a42', buildable: false, isWater: true },  // Deep water
-    RACE_LANE: { id: 'race_lane', name: 'Race Lane', color: '#1a3a32', buildable: false, isWater: true, isRaceLane: true },  // Marked race lane
-    COVE: { id: 'cove', name: 'Cove', color: '#5a8a7a', buildable: false, isWater: true, isCove: true },        // Sheltered cove
-    SHALLOW: { id: 'shallow', name: 'Shallow Water', color: '#7aaa9a', buildable: false, isWater: true },       // Clear shallows
-    DOCK_ZONE: { id: 'dock_zone', name: 'Dock Area', color: '#5a9080', buildable: true, isWater: true },        // Dock-ready water
+    LAND: { id: 'land', name: 'Shoreline', color: '#6b8c5a', buildable: true },
+    FOREST: { id: 'forest', name: 'Woods', color: '#3a5a40', buildable: true },
+    WATER: { id: 'water', name: 'Lake', color: '#4a7a6a', buildable: false, isWater: true },
+    DEEP_WATER: { id: 'deep_water', name: 'Deep Channel', color: '#2a4a42', buildable: false, isWater: true },
+    RACE_LANE: { id: 'race_lane', name: 'Race Lane', color: '#1a3a32', buildable: false, isWater: true, isRaceLane: true },
+    COVE: { id: 'cove', name: 'Cove', color: '#5a8a7a', buildable: false, isWater: true, isCove: true },
+    SHALLOW: { id: 'shallow', name: 'Shallow Water', color: '#7aaa9a', buildable: false, isWater: true },
+    DOCK_ZONE: { id: 'dock_zone', name: 'Dock Area', color: '#5a9080', buildable: true, isWater: true },
     RACE_STAGING: { id: 'race_staging', name: 'Race Staging', color: '#3a6a5a', buildable: true, isWater: true, isRacing: true },
-    DAM: { id: 'dam', name: 'Bagnell Dam', color: '#8a8a80', buildable: false },           // Limestone concrete
-    STRIP: { id: 'strip', name: 'The Strip', color: '#a89070', buildable: true, isStrip: true },  // Dusty road
-    PARKING: { id: 'parking', name: 'Parking Lot', color: '#605850', buildable: true },   // Gravel lot
+    DAM: { id: 'dam', name: 'Bagnell Dam', color: '#8a8a80', buildable: false },
+    STRIP: { id: 'strip', name: 'The Strip', color: '#a89070', buildable: true, isStrip: true },
+    PARKING: { id: 'parking', name: 'Parking Lot', color: '#605850', buildable: true },
+};
+
+// ==================== CUSTOM ICON DRAWING SYSTEM ====================
+// Hand-drawn icons for a more authentic Ozark feel
+const ICONS = {
+    // Draw a pontoon/deck boat
+    boat_dock: (ctx, cx, cy, size) => {
+        const s = size * 0.4;
+        // Dock planks
+        ctx.fillStyle = '#8B7355';
+        ctx.fillRect(cx - s, cy - s*0.3, s*2, s*0.6);
+        // Dock posts
+        ctx.fillStyle = '#5D4E37';
+        ctx.fillRect(cx - s*0.8, cy + s*0.2, s*0.15, s*0.4);
+        ctx.fillRect(cx + s*0.65, cy + s*0.2, s*0.15, s*0.4);
+        // Boat
+        ctx.fillStyle = '#E8E0D5';
+        ctx.beginPath();
+        ctx.moveTo(cx - s*0.5, cy - s*0.1);
+        ctx.lineTo(cx + s*0.6, cy - s*0.1);
+        ctx.lineTo(cx + s*0.4, cy - s*0.4);
+        ctx.lineTo(cx - s*0.4, cy - s*0.4);
+        ctx.closePath();
+        ctx.fill();
+        ctx.strokeStyle = '#6B5B4F';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+    },
+
+    // Full service marina with fuel pump
+    marina: (ctx, cx, cy, size) => {
+        const s = size * 0.4;
+        // Main dock
+        ctx.fillStyle = '#7A6B5A';
+        ctx.fillRect(cx - s, cy - s*0.2, s*2, s*0.8);
+        // Fuel pump
+        ctx.fillStyle = '#CC4444';
+        ctx.fillRect(cx - s*0.2, cy - s*0.6, s*0.4, s*0.5);
+        ctx.fillStyle = '#333';
+        ctx.fillRect(cx - s*0.1, cy - s*0.8, s*0.2, s*0.2);
+        // Hose
+        ctx.strokeStyle = '#222';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(cx + s*0.1, cy - s*0.4);
+        ctx.quadraticCurveTo(cx + s*0.5, cy - s*0.5, cx + s*0.4, cy - s*0.2);
+        ctx.stroke();
+        // Anchor symbol
+        ctx.fillStyle = '#4A6B8A';
+        ctx.beginPath();
+        ctx.arc(cx, cy + s*0.4, s*0.2, 0, Math.PI * 2);
+        ctx.fill();
+    },
+
+    // Boat rental with multiple boats
+    boat_rental: (ctx, cx, cy, size) => {
+        const s = size * 0.35;
+        // Draw 3 small boats
+        for (let i = 0; i < 3; i++) {
+            const bx = cx - s + i * s;
+            const by = cy - s*0.3 + (i % 2) * s*0.4;
+            ctx.fillStyle = ['#E74C3C', '#3498DB', '#F1C40F'][i];
+            ctx.beginPath();
+            ctx.ellipse(bx, by, s*0.4, s*0.2, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = '#333';
+            ctx.lineWidth = 1;
+            ctx.stroke();
+        }
+        // Sign
+        ctx.fillStyle = '#2C3E50';
+        ctx.fillRect(cx - s*0.6, cy + s*0.3, s*1.2, s*0.4);
+        ctx.fillStyle = '#ECF0F1';
+        ctx.font = `${s*0.25}px Arial`;
+        ctx.textAlign = 'center';
+        ctx.fillText('RENT', cx, cy + s*0.58);
+    },
+
+    // Yacht club with sailboat
+    yacht_club: (ctx, cx, cy, size) => {
+        const s = size * 0.4;
+        // Building
+        ctx.fillStyle = '#F5F5F0';
+        ctx.fillRect(cx - s*0.8, cy - s*0.2, s*1.6, s*0.8);
+        // Roof
+        ctx.fillStyle = '#2C5F7C';
+        ctx.beginPath();
+        ctx.moveTo(cx - s, cy - s*0.2);
+        ctx.lineTo(cx, cy - s*0.7);
+        ctx.lineTo(cx + s, cy - s*0.2);
+        ctx.closePath();
+        ctx.fill();
+        // Sailboat flag
+        ctx.fillStyle = '#E74C3C';
+        ctx.beginPath();
+        ctx.moveTo(cx + s*0.5, cy - s*0.5);
+        ctx.lineTo(cx + s*0.8, cy - s*0.4);
+        ctx.lineTo(cx + s*0.5, cy - s*0.3);
+        ctx.closePath();
+        ctx.fill();
+    },
+
+    // Boat dealership
+    boat_dealer: (ctx, cx, cy, size) => {
+        const s = size * 0.4;
+        // Showroom building
+        ctx.fillStyle = '#ECF0F1';
+        ctx.fillRect(cx - s, cy - s*0.3, s*2, s*0.9);
+        // Windows
+        ctx.fillStyle = '#85C1E9';
+        ctx.fillRect(cx - s*0.8, cy - s*0.1, s*0.5, s*0.4);
+        ctx.fillRect(cx + s*0.3, cy - s*0.1, s*0.5, s*0.4);
+        // Sign
+        ctx.fillStyle = '#1A5276';
+        ctx.fillRect(cx - s*0.7, cy - s*0.6, s*1.4, s*0.25);
+        // Display boat silhouette
+        ctx.fillStyle = '#2C3E50';
+        ctx.beginPath();
+        ctx.moveTo(cx - s*0.4, cy + s*0.1);
+        ctx.lineTo(cx + s*0.5, cy + s*0.1);
+        ctx.lineTo(cx + s*0.3, cy - s*0.05);
+        ctx.lineTo(cx - s*0.3, cy - s*0.05);
+        ctx.closePath();
+        ctx.fill();
+    },
+
+    // Lakefront resort
+    resort: (ctx, cx, cy, size) => {
+        const s = size * 0.4;
+        // Main building
+        ctx.fillStyle = '#D4A574';
+        ctx.fillRect(cx - s*0.9, cy - s*0.4, s*1.8, s);
+        // Roof
+        ctx.fillStyle = '#6B4423';
+        ctx.beginPath();
+        ctx.moveTo(cx - s, cy - s*0.4);
+        ctx.lineTo(cx, cy - s*0.9);
+        ctx.lineTo(cx + s, cy - s*0.4);
+        ctx.closePath();
+        ctx.fill();
+        // Windows
+        ctx.fillStyle = '#F7DC6F';
+        for (let i = 0; i < 3; i++) {
+            ctx.fillRect(cx - s*0.7 + i*s*0.5, cy - s*0.2, s*0.25, s*0.3);
+        }
+        // Door
+        ctx.fillStyle = '#5D4E37';
+        ctx.fillRect(cx - s*0.1, cy + s*0.1, s*0.2, s*0.4);
+    },
+
+    // Lake condo
+    condo: (ctx, cx, cy, size) => {
+        const s = size * 0.4;
+        // Tall building
+        ctx.fillStyle = '#BDC3C7';
+        ctx.fillRect(cx - s*0.5, cy - s*0.8, s, s*1.4);
+        // Windows grid
+        ctx.fillStyle = '#5DADE2';
+        for (let row = 0; row < 4; row++) {
+            for (let col = 0; col < 2; col++) {
+                ctx.fillRect(cx - s*0.35 + col*s*0.4, cy - s*0.65 + row*s*0.35, s*0.2, s*0.2);
+            }
+        }
+        // Balconies
+        ctx.strokeStyle = '#7F8C8D';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(cx - s*0.45, cy - s*0.3, s*0.9, s*0.15);
+        ctx.strokeRect(cx - s*0.45, cy + s*0.2, s*0.9, s*0.15);
+    },
+
+    // Cabin rentals
+    cabin: (ctx, cx, cy, size) => {
+        const s = size * 0.4;
+        // Log cabin body
+        ctx.fillStyle = '#8B6914';
+        ctx.fillRect(cx - s*0.7, cy - s*0.2, s*1.4, s*0.7);
+        // Log texture lines
+        ctx.strokeStyle = '#5D4E37';
+        ctx.lineWidth = 1;
+        for (let i = 0; i < 4; i++) {
+            ctx.beginPath();
+            ctx.moveTo(cx - s*0.7, cy - s*0.1 + i*s*0.18);
+            ctx.lineTo(cx + s*0.7, cy - s*0.1 + i*s*0.18);
+            ctx.stroke();
+        }
+        // Roof
+        ctx.fillStyle = '#4A4A4A';
+        ctx.beginPath();
+        ctx.moveTo(cx - s*0.85, cy - s*0.2);
+        ctx.lineTo(cx, cy - s*0.7);
+        ctx.lineTo(cx + s*0.85, cy - s*0.2);
+        ctx.closePath();
+        ctx.fill();
+        // Chimney
+        ctx.fillStyle = '#7B7B7B';
+        ctx.fillRect(cx + s*0.3, cy - s*0.8, s*0.2, s*0.35);
+    },
+
+    // RV park
+    rv_park: (ctx, cx, cy, size) => {
+        const s = size * 0.35;
+        // RV body
+        ctx.fillStyle = '#ECF0F1';
+        ctx.fillRect(cx - s*0.8, cy - s*0.3, s*1.6, s*0.7);
+        // Windows
+        ctx.fillStyle = '#3498DB';
+        ctx.fillRect(cx - s*0.6, cy - s*0.15, s*0.3, s*0.25);
+        ctx.fillRect(cx + s*0.1, cy - s*0.15, s*0.4, s*0.25);
+        // Wheels
+        ctx.fillStyle = '#2C3E50';
+        ctx.beginPath();
+        ctx.arc(cx - s*0.4, cy + s*0.4, s*0.15, 0, Math.PI * 2);
+        ctx.arc(cx + s*0.4, cy + s*0.4, s*0.15, 0, Math.PI * 2);
+        ctx.fill();
+        // Awning
+        ctx.fillStyle = '#E74C3C';
+        ctx.beginPath();
+        ctx.moveTo(cx - s*0.8, cy - s*0.3);
+        ctx.lineTo(cx - s*1.1, cy + s*0.1);
+        ctx.lineTo(cx - s*0.8, cy + s*0.1);
+        ctx.closePath();
+        ctx.fill();
+    },
+
+    // Tiki bar
+    tiki_bar: (ctx, cx, cy, size) => {
+        const s = size * 0.4;
+        // Thatched roof
+        ctx.fillStyle = '#C4A35A';
+        ctx.beginPath();
+        ctx.moveTo(cx - s, cy - s*0.3);
+        ctx.lineTo(cx, cy - s*0.8);
+        ctx.lineTo(cx + s, cy - s*0.3);
+        ctx.closePath();
+        ctx.fill();
+        // Thatch texture
+        ctx.strokeStyle = '#8B7355';
+        ctx.lineWidth = 1;
+        for (let i = 0; i < 5; i++) {
+            ctx.beginPath();
+            ctx.moveTo(cx - s*0.8 + i*s*0.4, cy - s*0.2);
+            ctx.lineTo(cx - s*0.4 + i*s*0.2, cy - s*0.6);
+            ctx.stroke();
+        }
+        // Bar counter
+        ctx.fillStyle = '#5D4E37';
+        ctx.fillRect(cx - s*0.7, cy - s*0.1, s*1.4, s*0.4);
+        // Stools
+        ctx.fillStyle = '#8B4513';
+        ctx.beginPath();
+        ctx.arc(cx - s*0.4, cy + s*0.5, s*0.12, 0, Math.PI * 2);
+        ctx.arc(cx + s*0.4, cy + s*0.5, s*0.12, 0, Math.PI * 2);
+        ctx.fill();
+    },
+
+    // Lakeside restaurant
+    restaurant: (ctx, cx, cy, size) => {
+        const s = size * 0.4;
+        // Building
+        ctx.fillStyle = '#E8D4B8';
+        ctx.fillRect(cx - s*0.8, cy - s*0.3, s*1.6, s*0.9);
+        // Roof
+        ctx.fillStyle = '#922B21';
+        ctx.fillRect(cx - s*0.9, cy - s*0.45, s*1.8, s*0.2);
+        // Door
+        ctx.fillStyle = '#5D4E37';
+        ctx.fillRect(cx - s*0.15, cy + s*0.15, s*0.3, s*0.45);
+        // Windows
+        ctx.fillStyle = '#F9E79F';
+        ctx.fillRect(cx - s*0.6, cy - s*0.1, s*0.3, s*0.3);
+        ctx.fillRect(cx + s*0.3, cy - s*0.1, s*0.3, s*0.3);
+        // Sign
+        ctx.fillStyle = '#1A5276';
+        ctx.beginPath();
+        ctx.arc(cx + s*0.6, cy - s*0.6, s*0.2, 0, Math.PI * 2);
+        ctx.fill();
+    },
+
+    // Party cove float
+    party_cove: (ctx, cx, cy, size) => {
+        const s = size * 0.4;
+        // Large float/platform
+        ctx.fillStyle = '#F39C12';
+        ctx.beginPath();
+        ctx.ellipse(cx, cy, s*0.9, s*0.5, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#D68910';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        // Party people (simple shapes)
+        ctx.fillStyle = '#E74C3C';
+        ctx.beginPath();
+        ctx.arc(cx - s*0.3, cy - s*0.1, s*0.15, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#3498DB';
+        ctx.beginPath();
+        ctx.arc(cx + s*0.2, cy + s*0.1, s*0.15, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#2ECC71';
+        ctx.beginPath();
+        ctx.arc(cx, cy - s*0.25, s*0.12, 0, Math.PI * 2);
+        ctx.fill();
+        // Music notes
+        ctx.fillStyle = '#333';
+        ctx.font = `${s*0.4}px Arial`;
+        ctx.fillText('♪', cx + s*0.5, cy - s*0.3);
+    },
+
+    // Mini golf
+    mini_golf: (ctx, cx, cy, size) => {
+        const s = size * 0.4;
+        // Green
+        ctx.fillStyle = '#27AE60';
+        ctx.beginPath();
+        ctx.ellipse(cx, cy, s*0.8, s*0.5, 0, 0, Math.PI * 2);
+        ctx.fill();
+        // Hole
+        ctx.fillStyle = '#1A1A1A';
+        ctx.beginPath();
+        ctx.arc(cx + s*0.3, cy, s*0.1, 0, Math.PI * 2);
+        ctx.fill();
+        // Flag
+        ctx.strokeStyle = '#ECF0F1';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(cx + s*0.3, cy);
+        ctx.lineTo(cx + s*0.3, cy - s*0.6);
+        ctx.stroke();
+        ctx.fillStyle = '#E74C3C';
+        ctx.beginPath();
+        ctx.moveTo(cx + s*0.3, cy - s*0.6);
+        ctx.lineTo(cx + s*0.6, cy - s*0.45);
+        ctx.lineTo(cx + s*0.3, cy - s*0.3);
+        ctx.closePath();
+        ctx.fill();
+        // Sand trap
+        ctx.fillStyle = '#F5DEB3';
+        ctx.beginPath();
+        ctx.ellipse(cx - s*0.4, cy + s*0.2, s*0.2, s*0.1, 0, 0, Math.PI * 2);
+        ctx.fill();
+    },
+
+    // Arcade
+    arcade: (ctx, cx, cy, size) => {
+        const s = size * 0.4;
+        // Building
+        ctx.fillStyle = '#2C3E50';
+        ctx.fillRect(cx - s*0.8, cy - s*0.4, s*1.6, s);
+        // Neon sign glow
+        ctx.fillStyle = '#FF6B9D';
+        ctx.fillRect(cx - s*0.6, cy - s*0.6, s*1.2, s*0.25);
+        // Door
+        ctx.fillStyle = '#1A1A1A';
+        ctx.fillRect(cx - s*0.2, cy + s*0.1, s*0.4, s*0.5);
+        // Game screen
+        ctx.fillStyle = '#00FF00';
+        ctx.fillRect(cx - s*0.55, cy - s*0.2, s*0.3, s*0.35);
+        ctx.fillStyle = '#FF00FF';
+        ctx.fillRect(cx + s*0.25, cy - s*0.2, s*0.3, s*0.35);
+    },
+
+    // Water park
+    water_park: (ctx, cx, cy, size) => {
+        const s = size * 0.4;
+        // Slide tower
+        ctx.fillStyle = '#3498DB';
+        ctx.fillRect(cx - s*0.3, cy - s*0.8, s*0.6, s*0.5);
+        // Slide
+        ctx.strokeStyle = '#E74C3C';
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.moveTo(cx, cy - s*0.3);
+        ctx.quadraticCurveTo(cx + s*0.6, cy, cx + s*0.8, cy + s*0.5);
+        ctx.stroke();
+        // Pool
+        ctx.fillStyle = '#85C1E9';
+        ctx.beginPath();
+        ctx.ellipse(cx, cy + s*0.3, s*0.7, s*0.3, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#2980B9';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+    },
+
+    // Gas station
+    gas_station: (ctx, cx, cy, size) => {
+        const s = size * 0.4;
+        // Canopy
+        ctx.fillStyle = '#ECF0F1';
+        ctx.fillRect(cx - s*0.9, cy - s*0.6, s*1.8, s*0.15);
+        // Canopy supports
+        ctx.fillStyle = '#BDC3C7';
+        ctx.fillRect(cx - s*0.8, cy - s*0.45, s*0.1, s*0.6);
+        ctx.fillRect(cx + s*0.7, cy - s*0.45, s*0.1, s*0.6);
+        // Pumps
+        ctx.fillStyle = '#E74C3C';
+        ctx.fillRect(cx - s*0.4, cy - s*0.3, s*0.25, s*0.45);
+        ctx.fillRect(cx + s*0.15, cy - s*0.3, s*0.25, s*0.45);
+        // Store
+        ctx.fillStyle = '#85929E';
+        ctx.fillRect(cx - s*0.5, cy + s*0.2, s, s*0.4);
+    },
+
+    // Bait shop
+    bait_shop: (ctx, cx, cy, size) => {
+        const s = size * 0.4;
+        // Small shack
+        ctx.fillStyle = '#A04000';
+        ctx.fillRect(cx - s*0.6, cy - s*0.2, s*1.2, s*0.7);
+        // Roof
+        ctx.fillStyle = '#5D4E37';
+        ctx.beginPath();
+        ctx.moveTo(cx - s*0.75, cy - s*0.2);
+        ctx.lineTo(cx, cy - s*0.6);
+        ctx.lineTo(cx + s*0.75, cy - s*0.2);
+        ctx.closePath();
+        ctx.fill();
+        // Sign
+        ctx.fillStyle = '#F4D03F';
+        ctx.fillRect(cx - s*0.4, cy - s*0.05, s*0.8, s*0.25);
+        ctx.fillStyle = '#1A1A1A';
+        ctx.font = `${s*0.2}px Arial`;
+        ctx.textAlign = 'center';
+        ctx.fillText('BAIT', cx, cy + s*0.12);
+        // Bucket
+        ctx.fillStyle = '#5DADE2';
+        ctx.fillRect(cx + s*0.5, cy + s*0.25, s*0.2, s*0.2);
+    },
+
+    // Souvenir shop
+    souvenir_shop: (ctx, cx, cy, size) => {
+        const s = size * 0.4;
+        // Building
+        ctx.fillStyle = '#F1948A';
+        ctx.fillRect(cx - s*0.7, cy - s*0.3, s*1.4, s*0.9);
+        // Awning
+        ctx.fillStyle = '#E74C3C';
+        ctx.beginPath();
+        ctx.moveTo(cx - s*0.7, cy - s*0.3);
+        ctx.lineTo(cx - s*0.85, cy);
+        ctx.lineTo(cx + s*0.85, cy);
+        ctx.lineTo(cx + s*0.7, cy - s*0.3);
+        ctx.closePath();
+        ctx.fill();
+        // Stripes on awning
+        ctx.fillStyle = '#FFFFFF';
+        for (let i = 0; i < 4; i++) {
+            ctx.fillRect(cx - s*0.6 + i*s*0.35, cy - s*0.25, s*0.1, s*0.3);
+        }
+        // Window
+        ctx.fillStyle = '#85C1E9';
+        ctx.fillRect(cx - s*0.35, cy + s*0.1, s*0.7, s*0.35);
+    },
+
+    // Parking structure
+    parking_structure: (ctx, cx, cy, size) => {
+        const s = size * 0.4;
+        // Multi-level structure
+        ctx.fillStyle = '#7F8C8D';
+        ctx.fillRect(cx - s*0.8, cy - s*0.5, s*1.6, s*1.1);
+        // Levels
+        ctx.strokeStyle = '#566573';
+        ctx.lineWidth = 2;
+        for (let i = 0; i < 3; i++) {
+            ctx.beginPath();
+            ctx.moveTo(cx - s*0.8, cy - s*0.3 + i*s*0.35);
+            ctx.lineTo(cx + s*0.8, cy - s*0.3 + i*s*0.35);
+            ctx.stroke();
+        }
+        // Entrance
+        ctx.fillStyle = '#1A1A1A';
+        ctx.fillRect(cx - s*0.3, cy + s*0.25, s*0.6, s*0.35);
+        // P sign
+        ctx.fillStyle = '#3498DB';
+        ctx.beginPath();
+        ctx.arc(cx, cy - s*0.1, s*0.2, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#FFF';
+        ctx.font = `bold ${s*0.25}px Arial`;
+        ctx.textAlign = 'center';
+        ctx.fillText('P', cx, cy - s*0.03);
+    },
+
+    // Road
+    road: (ctx, cx, cy, size) => {
+        const s = size * 0.45;
+        // Asphalt
+        ctx.fillStyle = '#4A4A4A';
+        ctx.fillRect(cx - s, cy - s*0.4, s*2, s*0.8);
+        // Center line
+        ctx.strokeStyle = '#F1C40F';
+        ctx.lineWidth = 2;
+        ctx.setLineDash([s*0.2, s*0.15]);
+        ctx.beginPath();
+        ctx.moveTo(cx - s, cy);
+        ctx.lineTo(cx + s, cy);
+        ctx.stroke();
+        ctx.setLineDash([]);
+    },
+
+    // === RACING BUILDINGS ===
+    race_dock: (ctx, cx, cy, size) => {
+        const s = size * 0.4;
+        // Heavy duty dock
+        ctx.fillStyle = '#5D4E37';
+        ctx.fillRect(cx - s*0.9, cy - s*0.2, s*1.8, s*0.6);
+        // Metal reinforcement
+        ctx.strokeStyle = '#7B7B7B';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(cx - s*0.85, cy - s*0.15, s*1.7, s*0.5);
+        // Speed boat
+        ctx.fillStyle = '#C0392B';
+        ctx.beginPath();
+        ctx.moveTo(cx - s*0.5, cy - s*0.3);
+        ctx.lineTo(cx + s*0.6, cy - s*0.3);
+        ctx.lineTo(cx + s*0.7, cy - s*0.5);
+        ctx.lineTo(cx - s*0.3, cy - s*0.5);
+        ctx.closePath();
+        ctx.fill();
+        // Racing stripe
+        ctx.fillStyle = '#F1C40F';
+        ctx.fillRect(cx - s*0.4, cy - s*0.45, s*0.8, s*0.08);
+    },
+
+    timing_tower: (ctx, cx, cy, size) => {
+        const s = size * 0.4;
+        // Tower structure
+        ctx.fillStyle = '#2C3E50';
+        ctx.fillRect(cx - s*0.4, cy - s*0.8, s*0.8, s*1.4);
+        // Windows
+        ctx.fillStyle = '#85C1E9';
+        ctx.fillRect(cx - s*0.3, cy - s*0.65, s*0.6, s*0.35);
+        // Clock/timer display
+        ctx.fillStyle = '#E74C3C';
+        ctx.fillRect(cx - s*0.25, cy - s*0.2, s*0.5, s*0.25);
+        ctx.fillStyle = '#FFF';
+        ctx.font = `${s*0.2}px Arial`;
+        ctx.textAlign = 'center';
+        ctx.fillText('00:00', cx, cy - s*0.02);
+        // Antenna
+        ctx.strokeStyle = '#7B7B7B';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(cx, cy - s*0.8);
+        ctx.lineTo(cx, cy - s*1.1);
+        ctx.stroke();
+    },
+
+    spectator_stands: (ctx, cx, cy, size) => {
+        const s = size * 0.4;
+        // Bleacher rows
+        for (let i = 0; i < 4; i++) {
+            ctx.fillStyle = i % 2 === 0 ? '#BDC3C7' : '#95A5A6';
+            ctx.fillRect(cx - s*0.8, cy - s*0.4 + i*s*0.3, s*1.6, s*0.25);
+        }
+        // Support structure
+        ctx.fillStyle = '#7B7B7B';
+        ctx.beginPath();
+        ctx.moveTo(cx - s*0.9, cy + s*0.5);
+        ctx.lineTo(cx - s*0.7, cy - s*0.5);
+        ctx.lineTo(cx + s*0.7, cy - s*0.5);
+        ctx.lineTo(cx + s*0.9, cy + s*0.5);
+        ctx.closePath();
+        ctx.fill();
+        // People (colored dots)
+        const colors = ['#E74C3C', '#3498DB', '#F1C40F', '#2ECC71', '#9B59B6'];
+        for (let i = 0; i < 8; i++) {
+            ctx.fillStyle = colors[i % colors.length];
+            ctx.beginPath();
+            ctx.arc(cx - s*0.6 + (i % 4)*s*0.4, cy - s*0.25 + Math.floor(i/4)*s*0.3, s*0.08, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    },
+
+    speed_boat_shop: (ctx, cx, cy, size) => {
+        const s = size * 0.4;
+        // Building
+        ctx.fillStyle = '#2C3E50';
+        ctx.fillRect(cx - s*0.8, cy - s*0.3, s*1.6, s*0.9);
+        // Large window/showroom
+        ctx.fillStyle = '#85C1E9';
+        ctx.fillRect(cx - s*0.65, cy - s*0.15, s*1.3, s*0.5);
+        // Display boat
+        ctx.fillStyle = '#E74C3C';
+        ctx.beginPath();
+        ctx.moveTo(cx - s*0.4, cy + s*0.15);
+        ctx.lineTo(cx + s*0.5, cy + s*0.15);
+        ctx.lineTo(cx + s*0.6, cy);
+        ctx.lineTo(cx - s*0.3, cy);
+        ctx.closePath();
+        ctx.fill();
+        // Racing stripes
+        ctx.fillStyle = '#F1C40F';
+        ctx.fillRect(cx - s*0.3, cy + s*0.03, s*0.6, s*0.05);
+        // Sign
+        ctx.fillStyle = '#C0392B';
+        ctx.fillRect(cx - s*0.5, cy - s*0.55, s, s*0.2);
+    },
+
+    race_fuel_station: (ctx, cx, cy, size) => {
+        const s = size * 0.4;
+        // Canopy
+        ctx.fillStyle = '#C0392B';
+        ctx.fillRect(cx - s*0.9, cy - s*0.5, s*1.8, s*0.15);
+        // Pillars
+        ctx.fillStyle = '#7B7B7B';
+        ctx.fillRect(cx - s*0.8, cy - s*0.35, s*0.15, s*0.7);
+        ctx.fillRect(cx + s*0.65, cy - s*0.35, s*0.15, s*0.7);
+        // Racing fuel pumps
+        ctx.fillStyle = '#F1C40F';
+        ctx.fillRect(cx - s*0.35, cy - s*0.25, s*0.3, s*0.5);
+        ctx.fillRect(cx + s*0.05, cy - s*0.25, s*0.3, s*0.5);
+        // High octane label
+        ctx.fillStyle = '#E74C3C';
+        ctx.fillRect(cx - s*0.3, cy - s*0.15, s*0.2, s*0.15);
+        ctx.fillRect(cx + s*0.1, cy - s*0.15, s*0.2, s*0.15);
+    },
+
+    vip_race_lounge: (ctx, cx, cy, size) => {
+        const s = size * 0.4;
+        // Luxury building
+        ctx.fillStyle = '#1A1A1A';
+        ctx.fillRect(cx - s*0.8, cy - s*0.4, s*1.6, s);
+        // Gold trim
+        ctx.strokeStyle = '#F1C40F';
+        ctx.lineWidth = 3;
+        ctx.strokeRect(cx - s*0.75, cy - s*0.35, s*1.5, s*0.9);
+        // Large tinted windows
+        ctx.fillStyle = '#2C3E50';
+        ctx.fillRect(cx - s*0.6, cy - s*0.2, s*1.2, s*0.4);
+        // VIP text
+        ctx.fillStyle = '#F1C40F';
+        ctx.font = `bold ${s*0.25}px Arial`;
+        ctx.textAlign = 'center';
+        ctx.fillText('VIP', cx, cy + s*0.45);
+        // Stars
+        ctx.font = `${s*0.2}px Arial`;
+        ctx.fillText('★★★', cx, cy - s*0.55);
+    },
+
+    helicopter_pad: (ctx, cx, cy, size) => {
+        const s = size * 0.4;
+        // Pad surface
+        ctx.fillStyle = '#4A4A4A';
+        ctx.beginPath();
+        ctx.arc(cx, cy, s*0.9, 0, Math.PI * 2);
+        ctx.fill();
+        // H marking
+        ctx.strokeStyle = '#F1C40F';
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.moveTo(cx - s*0.4, cy - s*0.5);
+        ctx.lineTo(cx - s*0.4, cy + s*0.5);
+        ctx.moveTo(cx + s*0.4, cy - s*0.5);
+        ctx.lineTo(cx + s*0.4, cy + s*0.5);
+        ctx.moveTo(cx - s*0.4, cy);
+        ctx.lineTo(cx + s*0.4, cy);
+        ctx.stroke();
+        // Circle marking
+        ctx.strokeStyle = '#FFFFFF';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(cx, cy, s*0.7, 0, Math.PI * 2);
+        ctx.stroke();
+    },
+
+    race_team_hq: (ctx, cx, cy, size) => {
+        const s = size * 0.4;
+        // Main building
+        ctx.fillStyle = '#2C3E50';
+        ctx.fillRect(cx - s*0.8, cy - s*0.5, s*1.6, s*1.1);
+        // Garage doors
+        ctx.fillStyle = '#7B7B7B';
+        ctx.fillRect(cx - s*0.65, cy, s*0.5, s*0.5);
+        ctx.fillRect(cx + s*0.15, cy, s*0.5, s*0.5);
+        // Racing logo
+        ctx.fillStyle = '#E74C3C';
+        ctx.beginPath();
+        ctx.arc(cx, cy - s*0.25, s*0.25, 0, Math.PI * 2);
+        ctx.fill();
+        // Checkered pattern
+        ctx.fillStyle = '#FFF';
+        ctx.fillRect(cx - s*0.15, cy - s*0.35, s*0.1, s*0.1);
+        ctx.fillRect(cx + s*0.05, cy - s*0.25, s*0.1, s*0.1);
+        ctx.fillRect(cx - s*0.15, cy - s*0.15, s*0.1, s*0.1);
+        // Flag
+        ctx.fillStyle = '#000';
+        ctx.beginPath();
+        ctx.moveTo(cx + s*0.6, cy - s*0.5);
+        ctx.lineTo(cx + s*0.6, cy - s*0.85);
+        ctx.lineTo(cx + s*0.85, cy - s*0.7);
+        ctx.lineTo(cx + s*0.6, cy - s*0.55);
+        ctx.closePath();
+        ctx.fill();
+    },
+
+    // Default fallback icon
+    default: (ctx, cx, cy, size) => {
+        const s = size * 0.35;
+        ctx.fillStyle = '#95A5A6';
+        ctx.fillRect(cx - s, cy - s, s*2, s*2);
+        ctx.strokeStyle = '#7F8C8D';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(cx - s, cy - s, s*2, s*2);
+        ctx.fillStyle = '#FFF';
+        ctx.font = `${s}px Arial`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('?', cx, cy);
+    }
 };
 
 // ==================== BUILDING DEFINITIONS ====================
@@ -598,106 +1308,354 @@ function drawTile(x, y, tile) {
     const terrain = TERRAIN[tile.terrain.toUpperCase()];
     const px = x * CONFIG.TILE_SIZE;
     const py = y * CONFIG.TILE_SIZE;
+    const size = CONFIG.TILE_SIZE;
 
-    ctx.fillStyle = terrain.color;
-    ctx.fillRect(px, py, CONFIG.TILE_SIZE, CONFIG.TILE_SIZE);
+    // Create gradient for more natural look
+    if (terrain.isWater) {
+        const gradient = ctx.createLinearGradient(px, py, px + size, py + size);
+        gradient.addColorStop(0, terrain.color);
+        gradient.addColorStop(0.5, lightenColor(terrain.color, 10));
+        gradient.addColorStop(1, terrain.color);
+        ctx.fillStyle = gradient;
+    } else if (tile.terrain === 'land') {
+        // Grass texture with variation
+        ctx.fillStyle = terrain.color;
+        ctx.fillRect(px, py, size, size);
+        drawGrassDetail(px, py, x, y);
+        return;
+    } else {
+        ctx.fillStyle = terrain.color;
+    }
+    ctx.fillRect(px, py, size, size);
 
     // Add terrain details
     if (tile.terrain === 'forest') {
-        drawTreeDetail(px, py);
+        drawTreeDetail(px, py, x, y);
     } else if (terrain.isWater) {
-        drawWaterDetail(px, py, tile.terrain);
+        drawWaterDetail(px, py, tile.terrain, x, y);
     } else if (tile.terrain === 'dam') {
         drawDamDetail(px, py);
     } else if (tile.terrain === 'strip') {
         drawStripDetail(px, py);
+    } else if (tile.terrain === 'parking') {
+        drawParkingDetail(px, py);
     }
-
-    // Subtle grid
-    ctx.strokeStyle = 'rgba(0,0,0,0.05)';
-    ctx.strokeRect(px, py, CONFIG.TILE_SIZE, CONFIG.TILE_SIZE);
 }
 
-function drawTreeDetail(px, py) {
-    ctx.fillStyle = '#1a4d1a';
-    const positions = [[12, 10], [28, 15], [18, 28]];
-    positions.forEach(([ox, oy]) => {
+// Helper to lighten colors
+function lightenColor(color, percent) {
+    const num = parseInt(color.replace('#', ''), 16);
+    const amt = Math.round(2.55 * percent);
+    const R = Math.min(255, (num >> 16) + amt);
+    const G = Math.min(255, ((num >> 8) & 0x00FF) + amt);
+    const B = Math.min(255, (num & 0x0000FF) + amt);
+    return '#' + (0x1000000 + R * 0x10000 + G * 0x100 + B).toString(16).slice(1);
+}
+
+function drawGrassDetail(px, py, tileX, tileY) {
+    const size = CONFIG.TILE_SIZE;
+    // Pseudo-random based on position for consistent look
+    const seed = (tileX * 7 + tileY * 13) % 100;
+
+    // Add grass texture variations
+    ctx.fillStyle = 'rgba(90, 120, 70, 0.3)';
+    for (let i = 0; i < 5; i++) {
+        const gx = px + ((seed + i * 17) % size);
+        const gy = py + ((seed + i * 23) % size);
         ctx.beginPath();
-        ctx.moveTo(px + ox, py + oy - 8);
-        ctx.lineTo(px + ox + 6, py + oy + 6);
-        ctx.lineTo(px + ox - 6, py + oy + 6);
+        ctx.moveTo(gx, gy + 6);
+        ctx.lineTo(gx - 1, gy);
+        ctx.lineTo(gx + 1, gy);
         ctx.closePath();
         ctx.fill();
-    });
+    }
+
+    // Add some darker patches
+    ctx.fillStyle = 'rgba(50, 80, 40, 0.15)';
+    ctx.beginPath();
+    ctx.arc(px + (seed % 25) + 8, py + ((seed * 3) % 25) + 8, 6, 0, Math.PI * 2);
+    ctx.fill();
 }
 
-function drawWaterDetail(px, py, terrainType) {
-    const time = Date.now() / 2000;
-    ctx.fillStyle = 'rgba(255,255,255,0.15)';
+function drawTreeDetail(px, py, tileX, tileY) {
+    const size = CONFIG.TILE_SIZE;
+    const seed = (tileX * 11 + tileY * 7) % 100;
 
-    if (terrainType === 'deep_water') {
-        // Darker ripples for channel
-        ctx.fillStyle = 'rgba(0,0,0,0.1)';
-    } else if (terrainType === 'race_lane') {
-        // Race lane - show lane markers
-        ctx.fillStyle = 'rgba(255,107,0,0.3)';
-        ctx.fillRect(px + 2, py + 2, CONFIG.TILE_SIZE - 4, 3);
-        ctx.fillRect(px + 2, py + CONFIG.TILE_SIZE - 5, CONFIG.TILE_SIZE - 4, 3);
+    // Draw 2-4 trees per tile with variety
+    const treeCount = 2 + (seed % 3);
+    const treePositions = [
+        [10 + (seed % 8), 12 + (seed % 6)],
+        [28 - (seed % 6), 10 + (seed % 8)],
+        [18 + (seed % 4), 26 - (seed % 5)],
+        [8, 28]
+    ];
 
-        // Animated speed lines during Shootout
+    for (let i = 0; i < treeCount; i++) {
+        const [ox, oy] = treePositions[i];
+        const treeType = (seed + i) % 3; // Different tree types
+
+        // Tree shadow
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
+        ctx.beginPath();
+        ctx.ellipse(px + ox + 3, py + oy + 8, 6, 3, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Tree trunk
+        ctx.fillStyle = '#5D4E37';
+        ctx.fillRect(px + ox - 2, py + oy, 4, 8);
+
+        if (treeType === 0) {
+            // Oak tree - round canopy
+            ctx.fillStyle = '#2d4a27';
+            ctx.beginPath();
+            ctx.arc(px + ox, py + oy - 4, 8, 0, Math.PI * 2);
+            ctx.fill();
+            // Highlight
+            ctx.fillStyle = '#4a6b40';
+            ctx.beginPath();
+            ctx.arc(px + ox - 2, py + oy - 6, 4, 0, Math.PI * 2);
+            ctx.fill();
+        } else if (treeType === 1) {
+            // Pine/Cedar tree - triangular
+            ctx.fillStyle = '#1a4030';
+            ctx.beginPath();
+            ctx.moveTo(px + ox, py + oy - 14);
+            ctx.lineTo(px + ox + 8, py + oy + 2);
+            ctx.lineTo(px + ox - 8, py + oy + 2);
+            ctx.closePath();
+            ctx.fill();
+            // Second layer
+            ctx.fillStyle = '#254a38';
+            ctx.beginPath();
+            ctx.moveTo(px + ox, py + oy - 10);
+            ctx.lineTo(px + ox + 6, py + oy - 2);
+            ctx.lineTo(px + ox - 6, py + oy - 2);
+            ctx.closePath();
+            ctx.fill();
+        } else {
+            // Hickory - oval canopy
+            ctx.fillStyle = '#3a5a35';
+            ctx.beginPath();
+            ctx.ellipse(px + ox, py + oy - 5, 7, 10, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = '#4a6a45';
+            ctx.beginPath();
+            ctx.ellipse(px + ox - 1, py + oy - 7, 4, 5, 0, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    }
+}
+
+function drawWaterDetail(px, py, terrainType, tileX, tileY) {
+    const time = Date.now() / 1500;
+    const size = CONFIG.TILE_SIZE;
+    const seed = (tileX * 13 + tileY * 17) % 100;
+
+    if (terrainType === 'race_lane') {
+        // Race lane buoy markers
+        ctx.fillStyle = 'rgba(200, 80, 50, 0.4)';
+        ctx.fillRect(px + 2, py + 2, size - 4, 3);
+        ctx.fillRect(px + 2, py + size - 5, size - 4, 3);
+
+        // Animated wake during Shootout
         if (gameState.shootout.active) {
-            ctx.fillStyle = 'rgba(255,200,0,0.5)';
-            const offset = (Date.now() / 50) % CONFIG.TILE_SIZE;
-            ctx.fillRect(px + offset, py + 15, 8, 2);
-            ctx.fillRect(px + ((offset + 20) % CONFIG.TILE_SIZE), py + 22, 8, 2);
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+            const offset = (Date.now() / 30) % size;
+            ctx.beginPath();
+            ctx.moveTo(px + offset, py + 12);
+            ctx.lineTo(px + offset + 15, py + 18);
+            ctx.lineTo(px + offset, py + 24);
+            ctx.closePath();
+            ctx.fill();
         }
         return;
     } else if (terrainType === 'race_staging') {
-        // Staging area - checkered pattern hint
-        ctx.fillStyle = 'rgba(255,107,0,0.2)';
-        ctx.fillRect(px + 5, py + 5, 10, 10);
-        ctx.fillRect(px + 25, py + 25, 10, 10);
-        ctx.fillRect(px + 5, py + 25, 10, 10);
-        ctx.fillRect(px + 25, py + 5, 10, 10);
+        // Checkered buoy pattern
+        ctx.fillStyle = 'rgba(200, 80, 50, 0.25)';
+        for (let i = 0; i < 4; i++) {
+            for (let j = 0; j < 4; j++) {
+                if ((i + j) % 2 === 0) {
+                    ctx.fillRect(px + i * 10, py + j * 10, 10, 10);
+                }
+            }
+        }
         return;
     }
 
-    for (let i = 0; i < 2; i++) {
-        const wx = px + 8 + i * 15 + Math.sin(time + px * 0.1 + i) * 3;
-        const wy = py + 12 + i * 12;
-        ctx.fillRect(wx, wy, 12, 2);
+    // Animated water ripples
+    const waveOffset1 = Math.sin(time + tileX * 0.5 + tileY * 0.3) * 2;
+    const waveOffset2 = Math.cos(time * 0.7 + tileX * 0.3 + tileY * 0.5) * 2;
+
+    // Light reflection ripples
+    ctx.fillStyle = terrainType === 'deep_water'
+        ? 'rgba(100, 140, 130, 0.2)'
+        : 'rgba(150, 200, 180, 0.25)';
+
+    // Draw curved ripple lines
+    ctx.beginPath();
+    ctx.moveTo(px + 5, py + 10 + waveOffset1);
+    ctx.quadraticCurveTo(px + 20, py + 8 + waveOffset1, px + 35, py + 12 + waveOffset1);
+    ctx.lineTo(px + 35, py + 14 + waveOffset1);
+    ctx.quadraticCurveTo(px + 20, py + 10 + waveOffset1, px + 5, py + 12 + waveOffset1);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.moveTo(px + 8, py + 25 + waveOffset2);
+    ctx.quadraticCurveTo(px + 22, py + 23 + waveOffset2, px + 32, py + 27 + waveOffset2);
+    ctx.lineTo(px + 32, py + 29 + waveOffset2);
+    ctx.quadraticCurveTo(px + 22, py + 25 + waveOffset2, px + 8, py + 27 + waveOffset2);
+    ctx.closePath();
+    ctx.fill();
+
+    // Occasional sparkle effect on shallow water
+    if (terrainType === 'shallow' || terrainType === 'cove') {
+        const sparkle = (Date.now() / 200 + seed) % 20;
+        if (sparkle < 2) {
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+            ctx.beginPath();
+            ctx.arc(px + (seed % 30) + 5, py + ((seed * 2) % 30) + 5, 2, 0, Math.PI * 2);
+            ctx.fill();
+        }
     }
 }
 
 function drawDamDetail(px, py) {
-    // Dam structure
-    ctx.fillStyle = '#555';
-    ctx.fillRect(px + 5, py + 5, CONFIG.TILE_SIZE - 10, CONFIG.TILE_SIZE - 10);
-    ctx.fillStyle = '#777';
-    ctx.fillRect(px + 8, py + 15, CONFIG.TILE_SIZE - 16, 10);
+    const size = CONFIG.TILE_SIZE;
+
+    // Concrete dam base
+    const gradient = ctx.createLinearGradient(px, py, px, py + size);
+    gradient.addColorStop(0, '#9a9a90');
+    gradient.addColorStop(0.5, '#7a7a70');
+    gradient.addColorStop(1, '#6a6a60');
+    ctx.fillStyle = gradient;
+    ctx.fillRect(px + 3, py + 3, size - 6, size - 6);
+
+    // Dam texture - horizontal lines
+    ctx.strokeStyle = '#5a5a50';
+    ctx.lineWidth = 1;
+    for (let i = 0; i < 4; i++) {
+        ctx.beginPath();
+        ctx.moveTo(px + 5, py + 8 + i * 8);
+        ctx.lineTo(px + size - 5, py + 8 + i * 8);
+        ctx.stroke();
+    }
+
+    // Spillway detail
+    ctx.fillStyle = '#4a6a5a';
+    ctx.fillRect(px + 12, py + 12, 16, 16);
+
+    // Water spray effect at base
+    ctx.fillStyle = 'rgba(150, 200, 200, 0.4)';
+    ctx.beginPath();
+    ctx.ellipse(px + 20, py + size - 5, 12, 4, 0, 0, Math.PI * 2);
+    ctx.fill();
 }
 
 function drawStripDetail(px, py) {
-    // Road markings
-    ctx.fillStyle = '#6b5a45';
-    ctx.fillRect(px + 2, py + 2, CONFIG.TILE_SIZE - 4, CONFIG.TILE_SIZE - 4);
+    const size = CONFIG.TILE_SIZE;
+
+    // Asphalt road base
+    ctx.fillStyle = '#5a5048';
+    ctx.fillRect(px + 2, py + 2, size - 4, size - 4);
+
+    // Road texture - cracks and patches
+    ctx.strokeStyle = 'rgba(80, 70, 60, 0.5)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(px + 8, py + 5);
+    ctx.lineTo(px + 15, py + 20);
+    ctx.lineTo(px + 12, py + 35);
+    ctx.stroke();
+
+    // Center line markings (dashed)
+    ctx.fillStyle = '#d4a855';
+    for (let i = 0; i < 3; i++) {
+        ctx.fillRect(px + 17, py + 5 + i * 14, 6, 8);
+    }
+
+    // Sidewalk edge
+    ctx.fillStyle = '#8a8070';
+    ctx.fillRect(px + 2, py + 2, 4, size - 4);
+    ctx.fillRect(px + size - 6, py + 2, 4, size - 4);
+}
+
+function drawParkingDetail(px, py) {
+    const size = CONFIG.TILE_SIZE;
+
+    // Gravel texture
+    ctx.fillStyle = '#555550';
+    ctx.fillRect(px, py, size, size);
+
+    // Parking lines
+    ctx.strokeStyle = '#888880';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(px + 10, py + 5);
+    ctx.lineTo(px + 10, py + size - 5);
+    ctx.moveTo(px + 30, py + 5);
+    ctx.lineTo(px + 30, py + size - 5);
+    ctx.stroke();
+
+    // Gravel texture dots
+    ctx.fillStyle = 'rgba(100, 100, 95, 0.5)';
+    for (let i = 0; i < 8; i++) {
+        const gx = px + (i * 5 + 3) % size;
+        const gy = py + (i * 7 + 2) % size;
+        ctx.beginPath();
+        ctx.arc(gx, gy, 1.5, 0, Math.PI * 2);
+        ctx.fill();
+    }
 }
 
 function drawMileMarkers() {
-    ctx.font = 'bold 10px Arial';
-    ctx.textAlign = 'center';
-
     gameState.mileMarkers.forEach(marker => {
         const px = marker.x * CONFIG.TILE_SIZE + CONFIG.TILE_SIZE / 2;
         const py = marker.y * CONFIG.TILE_SIZE + CONFIG.TILE_SIZE / 2;
 
-        // Buoy
-        ctx.fillStyle = '#f4b942';
+        // Buoy shadow in water
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
         ctx.beginPath();
-        ctx.arc(px, py, 8, 0, Math.PI * 2);
+        ctx.ellipse(px + 2, py + 10, 7, 3, 0, 0, Math.PI * 2);
         ctx.fill();
 
-        ctx.fillStyle = '#000';
+        // Buoy body - cylindrical shape
+        const gradient = ctx.createLinearGradient(px - 7, py, px + 7, py);
+        gradient.addColorStop(0, '#d4a855');
+        gradient.addColorStop(0.3, '#f4c862');
+        gradient.addColorStop(0.7, '#f4c862');
+        gradient.addColorStop(1, '#c49845');
+        ctx.fillStyle = gradient;
+
+        // Main buoy body
+        ctx.beginPath();
+        ctx.ellipse(px, py, 8, 10, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Red stripe
+        ctx.fillStyle = '#c44';
+        ctx.fillRect(px - 8, py - 2, 16, 4);
+
+        // Buoy top
+        ctx.fillStyle = '#333';
+        ctx.beginPath();
+        ctx.moveTo(px - 3, py - 10);
+        ctx.lineTo(px + 3, py - 10);
+        ctx.lineTo(px + 2, py - 6);
+        ctx.lineTo(px - 2, py - 6);
+        ctx.closePath();
+        ctx.fill();
+
+        // Mile number on white background
+        ctx.fillStyle = '#fff';
+        ctx.beginPath();
+        ctx.arc(px, py + 3, 6, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = '#1a1a1a';
+        ctx.font = 'bold 8px Arial';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
         ctx.fillText(marker.mile, px, py + 3);
     });
 }
@@ -706,43 +1664,50 @@ function drawBuilding(building) {
     const def = BUILDINGS[building.type];
     const px = building.x * CONFIG.TILE_SIZE;
     const py = building.y * CONFIG.TILE_SIZE;
+    const size = CONFIG.TILE_SIZE;
+    const cx = px + size / 2;
+    const cy = py + size / 2;
 
-    // Building background
-    let bgColor = building.working ? '#f5f0e6' : '#d0c8b8';
-    let borderColor = building.working ? '#1e5f8a' : '#888';
+    // Building shadow
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+    ctx.beginPath();
+    ctx.ellipse(cx + 3, py + size - 3, size * 0.4, size * 0.15, 0, 0, Math.PI * 2);
+    ctx.fill();
 
-    if (def.category === 'entertainment') bgColor = building.working ? '#ffe4ec' : '#e0d0d8';
-    if (def.category === 'marina') bgColor = building.working ? '#e4f0ff' : '#d0dce8';
-    if (def.category === 'racing') {
-        bgColor = building.working ? '#fff0e0' : '#e8dcd0';
-        borderColor = building.working ? '#ff6b00' : '#996633';
+    // Draw custom icon if available, otherwise use emoji fallback
+    const iconDrawer = ICONS[building.type] || ICONS.default;
+
+    ctx.save();
+
+    // Dim if not working
+    if (!building.working && def.requiresWorkers) {
+        ctx.globalAlpha = 0.6;
     }
 
-    ctx.fillStyle = bgColor;
-    ctx.fillRect(px + 2, py + 2, CONFIG.TILE_SIZE - 4, CONFIG.TILE_SIZE - 4);
+    // Draw the custom icon
+    iconDrawer(ctx, cx, cy, size);
 
-    // Border
-    ctx.strokeStyle = borderColor;
-    ctx.lineWidth = 2;
-    ctx.strokeRect(px + 2, py + 2, CONFIG.TILE_SIZE - 4, CONFIG.TILE_SIZE - 4);
+    ctx.restore();
 
     // Shootout glow effect for racing buildings during event
     if (def.category === 'racing' && gameState.shootout.active) {
-        ctx.strokeStyle = 'rgba(255,107,0,0.6)';
+        const glowIntensity = 0.3 + Math.sin(Date.now() / 200) * 0.2;
+        ctx.strokeStyle = `rgba(200, 100, 50, ${glowIntensity})`;
         ctx.lineWidth = 3;
-        ctx.strokeRect(px, py, CONFIG.TILE_SIZE, CONFIG.TILE_SIZE);
+        ctx.strokeRect(px + 1, py + 1, size - 2, size - 2);
     }
 
-    // Icon
-    ctx.font = '22px Arial';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(def.icon, px + CONFIG.TILE_SIZE/2, py + CONFIG.TILE_SIZE/2);
-
-    // Not working indicator
+    // Not working indicator - red overlay
     if (!building.working && def.requiresWorkers) {
-        ctx.fillStyle = 'rgba(255,100,100,0.4)';
-        ctx.fillRect(px + 2, py + 2, CONFIG.TILE_SIZE - 4, CONFIG.TILE_SIZE - 4);
+        ctx.fillStyle = 'rgba(180, 80, 80, 0.3)';
+        ctx.fillRect(px + 2, py + 2, size - 4, size - 4);
+
+        // "Needs workers" icon
+        ctx.fillStyle = '#c44';
+        ctx.font = 'bold 12px Arial';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('!', cx, cy - size * 0.3);
     }
 }
 
