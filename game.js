@@ -10,6 +10,7 @@ const CONFIG = {
     SEASONS: ['Spring', 'Summer', 'Summer', 'Fall'], // Double summer for lake life!
     TICKS_PER_SEASON: 25,
     LAKE_MILE_MARKERS: 92, // The real lake has mile markers 0-92
+    SHOOTOUT_WEEK: 20, // Shootout happens late summer (tick 20 of summer)
 };
 
 // ==================== TERRAIN TYPES ====================
@@ -18,9 +19,11 @@ const TERRAIN = {
     FOREST: { id: 'forest', name: 'Woods', color: '#2d5a27', buildable: true },
     WATER: { id: 'water', name: 'Lake', color: '#2d7eb5', buildable: false, isWater: true },
     DEEP_WATER: { id: 'deep_water', name: 'Deep Channel', color: '#1a5a8a', buildable: false, isWater: true },
+    RACE_LANE: { id: 'race_lane', name: 'Race Lane', color: '#0d4a7a', buildable: false, isWater: true, isRaceLane: true },
     COVE: { id: 'cove', name: 'Cove', color: '#4090b8', buildable: false, isWater: true, isCove: true },
     SHALLOW: { id: 'shallow', name: 'Shallow Water', color: '#5ab0d0', buildable: false, isWater: true },
     DOCK_ZONE: { id: 'dock_zone', name: 'Dock Area', color: '#3a9ac0', buildable: true, isWater: true },
+    RACE_STAGING: { id: 'race_staging', name: 'Race Staging', color: '#2a7090', buildable: true, isWater: true, isRacing: true },
     DAM: { id: 'dam', name: 'Bagnell Dam', color: '#666666', buildable: false },
     STRIP: { id: 'strip', name: 'The Strip', color: '#8b7355', buildable: true, isStrip: true },
     PARKING: { id: 'parking', name: 'Parking Lot', color: '#555555', buildable: true },
@@ -341,6 +344,123 @@ const BUILDINGS = {
         requiresTerrain: ['water', 'shallow', 'cove'],
         size: 1,
     },
+
+    // Racing Category - THE SHOOTOUT!
+    race_dock: {
+        id: 'race_dock',
+        name: 'Race Dock',
+        icon: '🏁',
+        category: 'racing',
+        description: 'Launch point for speed boats. Essential for the Shootout!',
+        cost: { money: 2000 },
+        produces: { money: 20, speedBoats: 1 },
+        provides: { racingRep: 5 },
+        upkeep: { money: 15 },
+        requiresTerrain: ['race_staging', 'dock_zone'],
+        requiresWorkers: 2,
+        size: 1,
+    },
+    timing_tower: {
+        id: 'timing_tower',
+        name: 'Timing Tower',
+        icon: '🗼',
+        category: 'racing',
+        description: 'Official race timing and control. Major Shootout infrastructure!',
+        cost: { money: 8000 },
+        produces: { money: 50, racingRep: 2 },
+        provides: { racingRep: 15 },
+        upkeep: { money: 40 },
+        requiresTerrain: ['land'],
+        requiresAdjacent: ['race_lane', 'race_staging', 'deep_water'],
+        requiresWorkers: 4,
+        size: 1,
+    },
+    spectator_stands: {
+        id: 'spectator_stands',
+        name: 'Spectator Stands',
+        icon: '🏟️',
+        category: 'racing',
+        description: 'Bleachers for race fans. Packed during the Shootout!',
+        cost: { money: 3000 },
+        produces: { money: 30, tourism: 10 },
+        provides: { racingRep: 8 },
+        upkeep: { money: 15 },
+        requiresTerrain: ['land'],
+        requiresAdjacent: ['water', 'deep_water', 'race_lane', 'dock_zone'],
+        size: 1,
+    },
+    speed_boat_shop: {
+        id: 'speed_boat_shop',
+        name: 'Speed Boat Shop',
+        icon: '🔧',
+        category: 'racing',
+        description: 'Performance parts and racing boat sales. Feed the need for speed!',
+        cost: { money: 6000 },
+        produces: { money: 100, speedBoats: 2 },
+        provides: { racingRep: 10 },
+        upkeep: { money: 35 },
+        requiresTerrain: ['land', 'strip'],
+        requiresWorkers: 3,
+        size: 1,
+    },
+    race_fuel_station: {
+        id: 'race_fuel_station',
+        name: 'Race Fuel Station',
+        icon: '⛽',
+        category: 'racing',
+        description: 'High-octane fuel for racing boats. Required for serious racers.',
+        cost: { money: 4000 },
+        produces: { money: 60, speedBoats: 1 },
+        provides: { racingRep: 5 },
+        upkeep: { money: 25 },
+        requiresTerrain: ['dock_zone', 'race_staging'],
+        requiresWorkers: 2,
+        size: 1,
+    },
+    vip_race_lounge: {
+        id: 'vip_race_lounge',
+        name: 'VIP Race Lounge',
+        icon: '🥂',
+        category: 'racing',
+        description: 'Exclusive viewing for high rollers. Premium Shootout experience!',
+        cost: { money: 15000 },
+        produces: { money: 200, tourism: 20, racingRep: 3 },
+        provides: { racingRep: 20, reputation: 10 },
+        upkeep: { money: 80 },
+        requiresTerrain: ['land'],
+        requiresAdjacent: ['race_lane', 'deep_water'],
+        requiresWorkers: 6,
+        size: 1,
+    },
+    helicopter_pad: {
+        id: 'helicopter_pad',
+        name: 'Helicopter Pad',
+        icon: '🚁',
+        category: 'racing',
+        description: 'Aerial views and VIP transport. The ultimate race day experience!',
+        cost: { money: 20000 },
+        produces: { money: 150, tourism: 15, racingRep: 2 },
+        provides: { racingRep: 15, reputation: 8 },
+        upkeep: { money: 60 },
+        requiresTerrain: ['land'],
+        requiresWorkers: 3,
+        size: 1,
+    },
+    race_team_hq: {
+        id: 'race_team_hq',
+        name: 'Race Team HQ',
+        icon: '🏆',
+        category: 'racing',
+        description: 'Home base for a professional racing team. Boost your Shootout cred!',
+        cost: { money: 25000 },
+        produces: { money: 100, speedBoats: 5, racingRep: 5 },
+        provides: { racingRep: 30, reputation: 15 },
+        upkeep: { money: 100 },
+        requiresTerrain: ['land'],
+        requiresAdjacent: ['dock_zone', 'race_staging'],
+        requiresWorkers: 8,
+        size: 1,
+    },
 };
 
 // ==================== GAME STATE ====================
@@ -350,9 +470,11 @@ let gameState = {
         population: 0,
         money: 5000,
         boats: 0,
+        speedBoats: 0,
         tourism: 0,
         power: 100,
         reputation: 50,
+        racingRep: 0,
     },
     grid: [],
     buildings: [],
@@ -370,6 +492,15 @@ let gameState = {
     workers: { total: 0, employed: 0 },
     lakeLevel: 660, // Normal pool level
     weekendBonus: false,
+    // Shootout & Racing
+    shootout: {
+        active: false,
+        day: 0, // 0-3 for 4-day event
+        totalEarnings: 0,
+        bestSpeed: 0,
+        lastYearEarnings: 0,
+    },
+    raceResults: [], // Track past Shootout results
 };
 
 // Famous Lake of the Ozarks cove names
@@ -506,6 +637,28 @@ function drawWaterDetail(px, py, terrainType) {
     if (terrainType === 'deep_water') {
         // Darker ripples for channel
         ctx.fillStyle = 'rgba(0,0,0,0.1)';
+    } else if (terrainType === 'race_lane') {
+        // Race lane - show lane markers
+        ctx.fillStyle = 'rgba(255,107,0,0.3)';
+        ctx.fillRect(px + 2, py + 2, CONFIG.TILE_SIZE - 4, 3);
+        ctx.fillRect(px + 2, py + CONFIG.TILE_SIZE - 5, CONFIG.TILE_SIZE - 4, 3);
+
+        // Animated speed lines during Shootout
+        if (gameState.shootout.active) {
+            ctx.fillStyle = 'rgba(255,200,0,0.5)';
+            const offset = (Date.now() / 50) % CONFIG.TILE_SIZE;
+            ctx.fillRect(px + offset, py + 15, 8, 2);
+            ctx.fillRect(px + ((offset + 20) % CONFIG.TILE_SIZE), py + 22, 8, 2);
+        }
+        return;
+    } else if (terrainType === 'race_staging') {
+        // Staging area - checkered pattern hint
+        ctx.fillStyle = 'rgba(255,107,0,0.2)';
+        ctx.fillRect(px + 5, py + 5, 10, 10);
+        ctx.fillRect(px + 25, py + 25, 10, 10);
+        ctx.fillRect(px + 5, py + 25, 10, 10);
+        ctx.fillRect(px + 25, py + 5, 10, 10);
+        return;
     }
 
     for (let i = 0; i < 2; i++) {
@@ -555,16 +708,29 @@ function drawBuilding(building) {
 
     // Building background
     let bgColor = building.working ? '#f5f0e6' : '#d0c8b8';
+    let borderColor = building.working ? '#1e5f8a' : '#888';
+
     if (def.category === 'entertainment') bgColor = building.working ? '#ffe4ec' : '#e0d0d8';
     if (def.category === 'marina') bgColor = building.working ? '#e4f0ff' : '#d0dce8';
+    if (def.category === 'racing') {
+        bgColor = building.working ? '#fff0e0' : '#e8dcd0';
+        borderColor = building.working ? '#ff6b00' : '#996633';
+    }
 
     ctx.fillStyle = bgColor;
     ctx.fillRect(px + 2, py + 2, CONFIG.TILE_SIZE - 4, CONFIG.TILE_SIZE - 4);
 
     // Border
-    ctx.strokeStyle = building.working ? '#1e5f8a' : '#888';
+    ctx.strokeStyle = borderColor;
     ctx.lineWidth = 2;
     ctx.strokeRect(px + 2, py + 2, CONFIG.TILE_SIZE - 4, CONFIG.TILE_SIZE - 4);
+
+    // Shootout glow effect for racing buildings during event
+    if (def.category === 'racing' && gameState.shootout.active) {
+        ctx.strokeStyle = 'rgba(255,107,0,0.6)';
+        ctx.lineWidth = 3;
+        ctx.strokeRect(px, py, CONFIG.TILE_SIZE, CONFIG.TILE_SIZE);
+    }
 
     // Icon
     ctx.font = '22px Arial';
@@ -811,6 +977,52 @@ function generateBagnellDam() {
 
     // Mile marker 0 at dam
     gameState.mileMarkers.push({ x: damX - 2, y: damY, mile: 0 });
+
+    // Generate the Shootout race course (1-mile stretch near mile 30-35)
+    generateRaceCourse();
+}
+
+function generateRaceCourse() {
+    // The Shootout race course - a straight 1-mile stretch
+    // Located in a wider section of the lake (around mile 30 area)
+    const raceStartX = Math.floor(CONFIG.GRID_WIDTH * 0.4);
+    const raceEndX = raceStartX - 12; // ~12 tiles = 1 mile course
+    const raceY = Math.floor(CONFIG.GRID_HEIGHT / 2);
+
+    // Create the race lane (wider, straighter section)
+    for (let x = raceEndX; x <= raceStartX; x++) {
+        for (let dy = -2; dy <= 2; dy++) {
+            const y = raceY + dy;
+            if (y >= 0 && y < CONFIG.GRID_HEIGHT) {
+                if (Math.abs(dy) <= 1) {
+                    gameState.grid[y][x].terrain = 'race_lane';
+                } else {
+                    // Race staging areas on the sides
+                    if (gameState.grid[y][x].terrain !== 'land' && gameState.grid[y][x].terrain !== 'forest') {
+                        gameState.grid[y][x].terrain = 'race_staging';
+                    }
+                }
+            }
+        }
+    }
+
+    // Add staging areas at start and finish
+    for (let dy = -3; dy <= 3; dy++) {
+        const y = raceY + dy;
+        if (y >= 0 && y < CONFIG.GRID_HEIGHT) {
+            // Start staging
+            if (gameState.grid[y][raceStartX + 1]) {
+                gameState.grid[y][raceStartX + 1].terrain = 'race_staging';
+            }
+            // Finish staging
+            if (gameState.grid[y][raceEndX - 1]) {
+                gameState.grid[y][raceEndX - 1].terrain = 'race_staging';
+            }
+        }
+    }
+
+    // Add a mile marker for the race area
+    gameState.mileMarkers.push({ x: raceStartX, y: raceY, mile: 32 });
 }
 
 // ==================== BUILDING SYSTEM ====================
@@ -989,16 +1201,33 @@ function gameTick() {
         }
     }
 
+    // Check for Shootout event (late Summer - second summer season)
+    const tickInSeason = gameState.tick % CONFIG.TICKS_PER_SEASON;
+    const isSummer = CONFIG.SEASONS[gameState.season] === 'Summer';
+    const isLateAugust = gameState.season === 2 && tickInSeason >= CONFIG.SHOOTOUT_WEEK;
+
+    // Start Shootout
+    if (isLateAugust && tickInSeason === CONFIG.SHOOTOUT_WEEK && !gameState.shootout.active) {
+        startShootout();
+    }
+
+    // Process Shootout days
+    if (gameState.shootout.active) {
+        processShootoutDay();
+    }
+
     // Calculate production
     let income = 0;
     let boatProduction = 0;
+    let speedBoatProduction = 0;
     let tourismProduction = 0;
     let reputationChange = 0;
+    let racingRepChange = 0;
     let expenses = 0;
 
-    const isSummer = CONFIG.SEASONS[gameState.season] === 'Summer';
     const seasonMultiplier = isSummer ? 2.0 : (CONFIG.SEASONS[gameState.season] === 'Spring' ? 1.2 : 0.6);
     const weekendMultiplier = gameState.weekendBonus ? 1.5 : 1.0;
+    const shootoutMultiplier = gameState.shootout.active ? 3.0 : 1.0; // HUGE boost during Shootout!
 
     updateWorkerAssignments();
 
@@ -1008,10 +1237,17 @@ function gameTick() {
         if (building.working && def.produces) {
             let multiplier = seasonMultiplier * weekendMultiplier;
 
+            // Racing buildings get extra boost during Shootout
+            if (def.category === 'racing' && gameState.shootout.active) {
+                multiplier *= shootoutMultiplier;
+            }
+
             if (def.produces.money) income += def.produces.money * multiplier;
             if (def.produces.boats) boatProduction += def.produces.boats;
+            if (def.produces.speedBoats) speedBoatProduction += def.produces.speedBoats;
             if (def.produces.tourism) tourismProduction += def.produces.tourism * multiplier;
             if (def.produces.reputation) reputationChange += def.produces.reputation;
+            if (def.produces.racingRep) racingRepChange += def.produces.racingRep;
         }
 
         if (def.upkeep?.money) expenses += def.upkeep.money;
@@ -1020,12 +1256,23 @@ function gameTick() {
     // Tourism affects income
     income += gameState.resources.tourism * 2;
 
+    // Shootout bonus income based on racing reputation
+    if (gameState.shootout.active) {
+        const racingBonus = gameState.resources.racingRep * 10;
+        income += racingBonus;
+        gameState.shootout.totalEarnings += racingBonus;
+    }
+
     // Apply resources
     gameState.resources.money += Math.floor(income - expenses);
     gameState.resources.boats += boatProduction;
+    gameState.resources.speedBoats += speedBoatProduction;
     gameState.resources.tourism = Math.floor(Math.max(0, gameState.resources.tourism * 0.95 + tourismProduction));
     gameState.resources.reputation = Math.max(0, Math.min(100,
         gameState.resources.reputation + reputationChange * 0.1
+    ));
+    gameState.resources.racingRep = Math.max(0, Math.min(100,
+        gameState.resources.racingRep + racingRepChange * 0.1
     ));
 
     // Random events
@@ -1034,17 +1281,103 @@ function gameTick() {
     }
 
     // Weekend party event
-    if (gameState.weekendBonus && isSummer && Math.random() < 0.1) {
+    if (gameState.weekendBonus && isSummer && Math.random() < 0.1 && !gameState.shootout.active) {
         addEvent('Weekend warriors flood the lake! 🎉', 'party');
         gameState.resources.tourism += 20;
         gameState.resources.money += 500;
     }
 
     document.getElementById('income').textContent = `+$${Math.floor(income - expenses)}/s`;
-    document.getElementById('lake-level').textContent = `${gameState.lakeLevel} ft`;
+    document.getElementById('lake-level').textContent = gameState.shootout.active ?
+        `🏁 SHOOTOUT DAY ${gameState.shootout.day + 1}!` : `${gameState.lakeLevel} ft`;
 
     updateUI();
     render();
+}
+
+// ==================== SHOOTOUT EVENT SYSTEM ====================
+function startShootout() {
+    gameState.shootout.active = true;
+    gameState.shootout.day = 0;
+    gameState.shootout.totalEarnings = 0;
+    gameState.shootout.bestSpeed = 0;
+
+    addEvent('🏁 THE SHOOTOUT BEGINS! 🏁', 'racing');
+    addEvent('Thousands of racing fans descend on the lake!', 'racing');
+
+    // Massive tourism spike
+    gameState.resources.tourism += 100;
+}
+
+function processShootoutDay() {
+    const tickInSeason = gameState.tick % CONFIG.TICKS_PER_SEASON;
+    const dayOfShootout = tickInSeason - CONFIG.SHOOTOUT_WEEK;
+
+    if (dayOfShootout !== gameState.shootout.day) {
+        gameState.shootout.day = dayOfShootout;
+
+        if (dayOfShootout < 4) {
+            // Each day of the Shootout
+            const dayNames = ['Qualifying Day', 'Time Trials', 'Semi-Finals', 'FINALS DAY'];
+            addEvent(`🏁 Shootout ${dayNames[dayOfShootout]}!`, 'racing');
+
+            // Generate race results based on racing rep and speed boats
+            const speed = 150 + Math.floor(Math.random() * 50) +
+                (gameState.resources.racingRep / 2) +
+                (gameState.resources.speedBoats * 2);
+
+            if (speed > gameState.shootout.bestSpeed) {
+                gameState.shootout.bestSpeed = speed;
+                addEvent(`New top speed: ${speed} MPH! 🚀`, 'racing');
+            }
+
+            // Daily earnings based on infrastructure
+            const racingBuildings = gameState.buildings.filter(b =>
+                BUILDINGS[b.type].category === 'racing'
+            ).length;
+            const dailyBonus = 1000 * (racingBuildings + 1) * (1 + gameState.resources.racingRep / 50);
+            gameState.resources.money += dailyBonus;
+            gameState.shootout.totalEarnings += dailyBonus;
+
+            // Tourism surge each day
+            gameState.resources.tourism += 30;
+
+        } else {
+            // Shootout ends
+            endShootout();
+        }
+    }
+}
+
+function endShootout() {
+    gameState.shootout.active = false;
+
+    const earnings = Math.floor(gameState.shootout.totalEarnings);
+    const topSpeed = Math.floor(gameState.shootout.bestSpeed);
+
+    addEvent(`🏁 SHOOTOUT COMPLETE! 🏁`, 'racing');
+    addEvent(`Total Shootout earnings: $${earnings.toLocaleString()}`, 'positive');
+    addEvent(`Top recorded speed: ${topSpeed} MPH`, 'racing');
+
+    // Store results
+    gameState.raceResults.push({
+        year: gameState.year,
+        earnings: earnings,
+        topSpeed: topSpeed,
+        racingRep: gameState.resources.racingRep,
+    });
+
+    // Reputation boost from successful Shootout
+    if (earnings > gameState.shootout.lastYearEarnings) {
+        gameState.resources.reputation += 5;
+        gameState.resources.racingRep += 5;
+        addEvent('Your Shootout was bigger than last year!', 'positive');
+    }
+
+    gameState.shootout.lastYearEarnings = earnings;
+
+    // Cool down tourism after event
+    gameState.resources.tourism = Math.floor(gameState.resources.tourism * 0.7);
 }
 
 function updateWorkerAssignments() {
@@ -1061,6 +1394,7 @@ function updateWorkerAssignments() {
 
 function triggerRandomEvent() {
     const isSummer = CONFIG.SEASONS[gameState.season] === 'Summer';
+    const hasRacingInfra = gameState.buildings.some(b => BUILDINGS[b.type].category === 'racing');
 
     const events = [
         {
@@ -1106,9 +1440,65 @@ function triggerRandomEvent() {
             type: 'positive',
             requiresSummer: true
         },
+        // Racing Events
+        {
+            text: '🏁 Speed boat test run hits 180 MPH!',
+            effect: () => { gameState.resources.racingRep += 8; gameState.resources.tourism += 20; },
+            type: 'racing',
+            requiresRacing: true
+        },
+        {
+            text: '🏁 Racing team chooses your marina for practice!',
+            effect: () => { gameState.resources.money += 500; gameState.resources.racingRep += 5; gameState.resources.speedBoats += 2; },
+            type: 'racing',
+            requiresRacing: true
+        },
+        {
+            text: '🏁 Cigarette boat rally passes through!',
+            effect: () => { gameState.resources.tourism += 35; gameState.resources.racingRep += 3; },
+            type: 'racing',
+            requiresSummer: true
+        },
+        {
+            text: '🏁 Racing documentary crew filming at the lake!',
+            effect: () => { gameState.resources.reputation += 10; gameState.resources.racingRep += 10; gameState.resources.tourism += 25; },
+            type: 'racing',
+            requiresRacing: true
+        },
+        {
+            text: '🏁 Pro racer buys property on your stretch!',
+            effect: () => { gameState.resources.money += 1000; gameState.resources.racingRep += 8; gameState.resources.reputation += 5; },
+            type: 'racing',
+            requiresRacing: true
+        },
+        {
+            text: '🏁 Mini boat race draws a crowd!',
+            effect: () => { gameState.resources.money += 300; gameState.resources.tourism += 15; },
+            type: 'racing',
+            requiresSummer: true
+        },
+        {
+            text: '🏁 Speed record attempt announced for your area!',
+            effect: () => { gameState.resources.tourism += 50; gameState.resources.racingRep += 12; },
+            type: 'racing',
+            requiresRacing: true,
+            requiresSummer: true
+        },
+        {
+            text: 'Boat engine explosion - thankfully no injuries!',
+            effect: () => { gameState.resources.money -= 300; gameState.resources.speedBoats -= 1; },
+            type: 'negative',
+            requiresRacing: true
+        },
     ];
 
-    const validEvents = events.filter(e => !e.requiresSummer || isSummer);
+    // Filter events based on requirements
+    const validEvents = events.filter(e => {
+        if (e.requiresSummer && !isSummer) return false;
+        if (e.requiresRacing && !hasRacingInfra) return false;
+        return true;
+    });
+
     const event = validEvents[Math.floor(Math.random() * validEvents.length)];
     event.effect();
     addEvent(event.text, event.type);
@@ -1119,12 +1509,18 @@ function updateUI() {
     document.getElementById('population').textContent = gameState.resources.population;
     document.getElementById('money').textContent = Math.floor(gameState.resources.money);
     document.getElementById('boats').textContent = gameState.resources.boats;
+    document.getElementById('speedBoats').textContent = gameState.resources.speedBoats;
     document.getElementById('tourism').textContent = Math.floor(gameState.resources.tourism);
-    document.getElementById('power').textContent = gameState.resources.power;
+    document.getElementById('racingRep').textContent = Math.floor(gameState.resources.racingRep);
     document.getElementById('reputation').textContent = Math.floor(gameState.resources.reputation);
 
-    document.getElementById('season').textContent = CONFIG.SEASONS[gameState.season] +
-        (gameState.weekendBonus ? ' (Weekend!)' : '');
+    let seasonText = CONFIG.SEASONS[gameState.season];
+    if (gameState.shootout.active) {
+        seasonText = '🏁 SHOOTOUT!';
+    } else if (gameState.weekendBonus) {
+        seasonText += ' (Weekend!)';
+    }
+    document.getElementById('season').textContent = seasonText;
     document.getElementById('year').textContent = gameState.year;
     document.getElementById('town-name').textContent = gameState.playerName;
 
@@ -1364,6 +1760,7 @@ function init() {
     addEvent('Welcome to the Lake! 🚤', 'positive');
     addEvent('Start with boat docks on the water', 'neutral');
     addEvent('Build lodging to grow your workforce', 'neutral');
+    addEvent('🏁 Build racing infrastructure for THE SHOOTOUT!', 'racing');
 }
 
 window.addEventListener('load', init);

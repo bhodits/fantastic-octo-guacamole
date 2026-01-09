@@ -26,15 +26,20 @@
                     <span id="boats">0</span>
                     <span class="resource-label">Boats</span>
                 </div>
+                <div class="resource racing-resource">
+                    <span class="resource-icon">🏎️</span>
+                    <span id="speedBoats">0</span>
+                    <span class="resource-label">Speed</span>
+                </div>
                 <div class="resource">
                     <span class="resource-icon">🍺</span>
                     <span id="tourism">0</span>
                     <span class="resource-label">Tourists</span>
                 </div>
-                <div class="resource">
-                    <span class="resource-icon">⚡</span>
-                    <span id="power">100</span>
-                    <span class="resource-label">Power</span>
+                <div class="resource racing-resource">
+                    <span class="resource-icon">🏁</span>
+                    <span id="racingRep">0</span>
+                    <span class="resource-label">Racing</span>
                 </div>
                 <div class="resource">
                     <span class="resource-icon">⭐</span>
@@ -52,6 +57,7 @@
                     <button class="category-btn" data-category="lodging">🏨 Lodging</button>
                     <button class="category-btn" data-category="entertainment">🎉 Fun</button>
                     <button class="category-btn" data-category="dining">🍔 Food</button>
+                    <button class="category-btn racing-btn" data-category="racing">🏁 Racing</button>
                     <button class="category-btn" data-category="infrastructure">🛣️ Roads</button>
                 </div>
                 <div id="building-list"></div>
@@ -121,12 +127,14 @@
                 <li>⚓ Build <strong>marinas</strong> and <strong>boat docks</strong> on the water</li>
                 <li>🏨 Add <strong>resorts</strong> and <strong>condos</strong> to attract visitors</li>
                 <li>🍺 Open <strong>bars</strong> and <strong>restaurants</strong> on the Strip</li>
-                <li>🎢 Build <strong>attractions</strong> to boost tourism</li>
+                <li>🏁 Build <strong>racing infrastructure</strong> for THE SHOOTOUT!</li>
                 <li>🚤 Don't forget - it's all about the <strong>boats</strong>!</li>
             </ul>
-            <p><em>Remember: Memorial Day to Labor Day is prime season!</em></p>
+            <div class="shootout-info">
+                <p>🏁 <strong>THE SHOOTOUT</strong> - Every August, the world's fastest boats race on the lake. Build racing infrastructure to cash in BIG!</p>
+            </div>
             <input type="text" id="town-name-input" placeholder="Your developer name..." value="Lake Boss">
-            <button id="start-game">Let's Party! 🎉</button>
+            <button id="start-game">Let's Race! 🏁</button>
         </div>
     </div>
 

@@ -367,6 +367,54 @@ aside h3 {
     font-weight: bold;
 }
 
+.event-item.racing {
+    color: #ff6b00;
+    font-weight: bold;
+    background: rgba(255, 107, 0, 0.1);
+    padding: 3px 5px;
+    border-radius: 3px;
+}
+
+/* Racing Resources */
+.racing-resource {
+    border-color: #ff6b00 !important;
+    background: linear-gradient(180deg, #fff 0%, #ffe8d4 100%) !important;
+}
+
+.racing-resource span:nth-child(2) {
+    color: #ff6b00 !important;
+}
+
+/* Racing Category Button */
+.racing-btn {
+    background: linear-gradient(180deg, #ff8c00 0%, #ff6b00 100%) !important;
+    color: white !important;
+    border-color: #cc5500 !important;
+}
+
+.racing-btn:hover {
+    background: linear-gradient(180deg, #ffa500 0%, #ff8c00 100%) !important;
+}
+
+.racing-btn.active {
+    background: linear-gradient(180deg, #ff6b00 0%, #cc5500 100%) !important;
+    box-shadow: 0 0 10px rgba(255, 107, 0, 0.5);
+}
+
+/* Shootout Info Box */
+.shootout-info {
+    background: linear-gradient(180deg, #ff8c00 0%, #ff6b00 100%);
+    color: white;
+    padding: 12px;
+    border-radius: 8px;
+    margin: 15px 0;
+    text-align: center;
+}
+
+.shootout-info p {
+    margin: 0;
+}
+
 /* Footer */
 #game-footer {
     background: linear-gradient(180deg, var(--lake-blue) 0%, var(--lake-deep) 100%);
